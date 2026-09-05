@@ -1,0 +1,8 @@
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/sqlite3.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/astro_core_static.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/astro_core.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/test_astro.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/test_storage.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/test_capi.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Lactr/.gemini/antigravity-ide/scratch/astro_targets_tool/core/build/CMakeFiles/ZERO_CHECK.dir
