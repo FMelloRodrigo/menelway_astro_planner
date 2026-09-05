@@ -18,6 +18,7 @@ class FilterState {
   double observerLat;
   double observerLon;
   double observerElevation;
+  String observerLocationName;
 
   FilterState({
     this.minAltitude = 30.0,
@@ -31,12 +32,13 @@ class FilterState {
     this.minMagnitude = -5.0,
     this.minSizeArcmin = 0.0,
     this.maxSizeArcmin = 600.0,
-    Set<String> ? selectedCatalogs,
-    Set<String> ? selectedObjectTypes,
+    Set<String>? selectedCatalogs,
+    Set<String>? selectedObjectTypes,
     this.searchQuery = '',
     this.observerLat = 40.7128,
     this.observerLon = -74.0060,
     this.observerElevation = 10.0,
+    this.observerLocationName = 'New York, USA',
   })  : date = date ?? DateTime.now(),
         selectedCatalogs = selectedCatalogs ?? {'Messier', 'Caldwell'},
         selectedObjectTypes = selectedObjectTypes ?? {
@@ -67,6 +69,7 @@ class FilterState {
     double? observerLat,
     double? observerLon,
     double? observerElevation,
+    String? observerLocationName,
   }) {
     return FilterState(
       minAltitude: minAltitude ?? this.minAltitude,
@@ -86,6 +89,7 @@ class FilterState {
       observerLat: observerLat ?? this.observerLat,
       observerLon: observerLon ?? this.observerLon,
       observerElevation: observerElevation ?? this.observerElevation,
+      observerLocationName: observerLocationName ?? this.observerLocationName,
     );
   }
 }

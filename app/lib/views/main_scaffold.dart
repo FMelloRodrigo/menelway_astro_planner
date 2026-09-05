@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../core/astro_bridge.dart';
 import '../core/catalog_manager.dart';
+import '../core/geocoding_service.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -109,111 +110,313 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _editLocationDialog() {
-    final latController = TextEditingController(text: _filters.observerLat.toString());
-    final lonController = TextEditingController(text: _filters.observerLon.toString());
-    final eleController = TextEditingController(text: _filters.observerElevation.toString());
+    final searchController = TextEditingController();
+    final latController = TextEditingController(text: _filters.observerLat.toStringAsFixed(4));
+    final lonController = TextEditingController(text: _filters.observerLon.toStringAsFixed(4));
+    final eleController = TextEditingController(text: _filters.observerElevation.round().toString());
+
+    String currentLocationName = _filters.observerLocationName;
+    List<GeoLocationResult> searchResults = [];
+    bool isSearching = false;
+    String? searchError;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode
-            ? AstroColors.nightVisionSurface
-            : AstroColors.spaceDarkSurface,
-        title: Text(
-          "Observer Geographical Location",
-          style: TextStyle(
-            color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-            fontSize: 16,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: latController,
-              decoration: const InputDecoration(labelText: "Latitude (Degrees N +, S -)"),
-              keyboardType: TextInputType.number,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+          final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+
+          Future<void> doSearch() async {
+            final q = searchController.text.trim();
+            if (q.length < 2) return;
+
+            setDialogState(() {
+              isSearching = true;
+              searchError = null;
+            });
+
+            try {
+              final results = await GeocodingService.searchCities(q);
+              setDialogState(() {
+                searchResults = results;
+                isSearching = false;
+                if (results.isEmpty) {
+                  searchError = "No matching cities found for '$q'.";
+                }
+              });
+            } catch (e) {
+              setDialogState(() {
+                isSearching = false;
+                searchError = "Connection error. Check internet connection.";
+              });
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: widget.isRedNightMode
+                ? AstroColors.nightVisionSurface
+                : AstroColors.spaceDarkSurface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+              ),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: lonController,
-              decoration: const InputDecoration(labelText: "Longitude (Degrees E +, W -)"),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: eleController,
-              decoration: const InputDecoration(labelText: "Elevation (Meters)"),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
+            title: Row(
               children: [
-                ActionChip(
-                  label: const Text("NYC (40.7°N)", style: TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    latController.text = "40.7128";
-                    lonController.text = "-74.0060";
-                    eleController.text = "10";
-                  },
-                ),
-                ActionChip(
-                  label: const Text("London (51.5°N)", style: TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    latController.text = "51.5074";
-                    lonController.text = "-0.1278";
-                    eleController.text = "25";
-                  },
-                ),
-                ActionChip(
-                  label: const Text("Atacama (-23.0°S)", style: TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    latController.text = "-23.0293";
-                    lonController.text = "-67.7547";
-                    eleController.text = "2500";
-                  },
-                ),
-                ActionChip(
-                  label: const Text("Tokyo (35.7°N)", style: TextStyle(fontSize: 11)),
-                  onPressed: () {
-                    latController.text = "35.6762";
-                    lonController.text = "139.6503";
-                    eleController.text = "40";
-                  },
+                Icon(Icons.location_city_rounded, color: accentColor, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  "Observer Location",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-          FilledButton(
-            child: const Text("Save & Recompute"),
-            onPressed: () {
-              final newLat = double.tryParse(latController.text) ?? _filters.observerLat;
-              final newLon = double.tryParse(lonController.text) ?? _filters.observerLon;
-              final newEle = double.tryParse(eleController.text) ?? _filters.observerElevation;
+            content: SizedBox(
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Search by City & Country (Open-Meteo)
+                    Text(
+                      "Search City & Country (Online)",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: accentColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                          tooltip: "Search online",
+                          onPressed: doSearch,
+                        ),
+                      ),
+                      onSubmitted: (_) => doSearch(),
+                    ),
 
-              setState(() {
-                _filters.observerLat = newLat;
-                _filters.observerLon = newLon;
-                _filters.observerElevation = newEle;
-                _nightSummary = AstroBridge.instance.getNightSummary(
-                  latitude: newLat,
-                  longitude: newLon,
-                  elevation: newEle,
-                  date: _filters.date,
-                );
-              });
-              Navigator.of(ctx).pop();
-              _runFiltering();
-            },
-          ),
-        ],
+                    if (isSearching) ...[
+                      const SizedBox(height: 10),
+                      const LinearProgressIndicator(),
+                    ],
+
+                    if (searchError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        searchError!,
+                        style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6)),
+                      ),
+                    ],
+
+                    // Search Results
+                    if (searchResults.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        decoration: BoxDecoration(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionSurfaceVariant
+                              : AstroColors.spaceDarkSurfaceVariant,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: widget.isRedNightMode
+                                ? AstroColors.nightVisionBorder
+                                : AstroColors.spaceDarkBorder,
+                          ),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: searchResults.length,
+                          separatorBuilder: (_, index) => const Divider(height: 1),
+                          itemBuilder: (ctx, idx) {
+                            final r = searchResults[idx];
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                r.displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: textColor,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Lat: ${r.latitude.toStringAsFixed(2)}° | Lon: ${r.longitude.toStringAsFixed(2)}° | Elevation: ${r.elevation.round()}m",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: textColor.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              trailing: Icon(Icons.check_circle_outline_rounded, size: 18, color: accentColor),
+                              onTap: () {
+                                setDialogState(() {
+                                  latController.text = r.latitude.toStringAsFixed(4);
+                                  lonController.text = r.longitude.toStringAsFixed(4);
+                                  eleController.text = r.elevation.round().toString();
+                                  currentLocationName = r.displayName;
+                                  searchResults = [];
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+
+                    // Manual Coordinates Section
+                    Row(
+                      children: [
+                        Icon(Icons.tune_rounded, size: 14, color: textColor.withValues(alpha: 0.6)),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Selected Coordinates & Elevation",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textColor.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: latController,
+                            decoration: const InputDecoration(labelText: "Latitude (°)"),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: lonController,
+                            decoration: const InputDecoration(labelText: "Longitude (°)"),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: eleController,
+                            decoration: const InputDecoration(labelText: "Elevation (m)"),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+                    // Quick Presets
+                    Text(
+                      "Popular Astrophotography Sites:",
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.5)),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        ActionChip(
+                          label: const Text("Atacama Desert (2500m)", style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setDialogState(() {
+                              latController.text = "-23.0293";
+                              lonController.text = "-67.7547";
+                              eleController.text = "2500";
+                              currentLocationName = "Atacama Desert, Chile";
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          label: const Text("La Palma (2396m)", style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setDialogState(() {
+                              latController.text = "28.7636";
+                              lonController.text = "-17.8947";
+                              eleController.text = "2396";
+                              currentLocationName = "Roque de los Muchachos, La Palma";
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          label: const Text("NYC (10m)", style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setDialogState(() {
+                              latController.text = "40.7128";
+                              lonController.text = "-74.0060";
+                              eleController.text = "10";
+                              currentLocationName = "New York, USA";
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          label: const Text("London (25m)", style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            setDialogState(() {
+                              latController.text = "51.5074";
+                              lonController.text = "-0.1278";
+                              eleController.text = "25";
+                              currentLocationName = "London, UK";
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+              FilledButton(
+                child: const Text("Apply Location"),
+                onPressed: () {
+                  final newLat = double.tryParse(latController.text) ?? _filters.observerLat;
+                  final newLon = double.tryParse(lonController.text) ?? _filters.observerLon;
+                  final newEle = double.tryParse(eleController.text) ?? _filters.observerElevation;
+
+                  setState(() {
+                    _filters.observerLat = newLat;
+                    _filters.observerLon = newLon;
+                    _filters.observerElevation = newEle;
+                    _filters.observerLocationName = currentLocationName;
+                    _nightSummary = AstroBridge.instance.getNightSummary(
+                      latitude: newLat,
+                      longitude: newLon,
+                      elevation: newEle,
+                      date: _filters.date,
+                    );
+                  });
+                  Navigator.of(ctx).pop();
+                  _runFiltering();
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -327,7 +530,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   Icon(Icons.location_on_outlined, size: 14, color: accentColor),
                   const SizedBox(width: 4),
                   Text(
-                    "${_filters.observerLat >= 0 ? '${_filters.observerLat.toStringAsFixed(1)}°N' : '${(-_filters.observerLat).toStringAsFixed(1)}°S'}, ${_filters.observerLon >= 0 ? '${_filters.observerLon.toStringAsFixed(1)}°E' : '${(-_filters.observerLon).toStringAsFixed(1)}°W'}",
+                    "${_filters.observerLocationName} • ${_filters.observerLat >= 0 ? '${_filters.observerLat.toStringAsFixed(1)}°N' : '${(-_filters.observerLat).toStringAsFixed(1)}°S'}, ${_filters.observerLon >= 0 ? '${_filters.observerLon.toStringAsFixed(1)}°E' : '${(-_filters.observerLon).toStringAsFixed(1)}°W'} (${_filters.observerElevation.round()}m)",
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                   ),
                 ],
