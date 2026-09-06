@@ -422,45 +422,6 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 style: TextStyle(fontSize: 12, color: accentColor),
               ),
             ],
-
-            if (effectiveClose != null) ...[
-              const SizedBox(height: 24),
-              Center(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                        : const Color(0xFF222F42),
-                    foregroundColor: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                    side: BorderSide(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                          : Colors.white.withValues(alpha: 0.4),
-                      width: 1.4,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: Icon(
-                    Icons.close_rounded,
-                    size: 18,
-                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                  ),
-                  label: Text(
-                    "Close Target Window",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                    ),
-                  ),
-                  onPressed: effectiveClose,
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
           ],
         ),
       ),
