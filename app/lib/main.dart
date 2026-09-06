@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/equipment_manager.dart';
 import 'core/settings_service.dart';
 import 'theme/astro_theme.dart';
 import 'views/main_scaffold.dart';
@@ -7,6 +8,10 @@ import 'views/main_scaffold.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final initialSettings = await SettingsService.loadSettings();
+  EquipmentManager.instance.init(
+    savedProfiles: initialSettings.equipmentProfiles,
+    savedActiveId: initialSettings.activeEquipmentProfileId,
+  );
   runApp(AstroTargetsApp(initialSettings: initialSettings));
 }
 

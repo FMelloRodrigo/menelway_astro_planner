@@ -2,9 +2,13 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
+import '../core/equipment_manager.dart';
 import '../core/sky_image_service.dart';
+import '../models/equipment_profile.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import '../views/equipment_dialog.dart';
+import '../views/equipment_framing_dialog.dart';
 
 enum PreviewDisplayMode {
   photoWithReticle,
@@ -17,6 +21,7 @@ class TargetPreviewCanvas extends StatefulWidget {
   final bool isRedNightMode;
   final double height;
   final bool enableExpandDialog;
+  final bool initialFramingEnabled;
 
   const TargetPreviewCanvas({
     super.key,
@@ -24,16 +29,18 @@ class TargetPreviewCanvas extends StatefulWidget {
     required this.isRedNightMode,
     this.height = 240.0,
     this.enableExpandDialog = true,
+    this.initialFramingEnabled = false,
   });
 
   @override
-  State<TargetPreviewCanvas> createState() => _TargetPreviewCanvasState();
+  State<TargetPreviewCanvas> createState() => TargetPreviewCanvasState();
 }
 
-class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
+class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   late double _fovDeg;
   String _selectedSurveyId = SkyImageService.defaultSurveyId;
   PreviewDisplayMode _displayMode = PreviewDisplayMode.photoWithReticle;
+  late bool _isFramingEnabled;
 
   Uint8List? _imageBytes;
   bool _isLoading = false;
@@ -42,8 +49,20 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   @override
   void initState() {
     super.initState();
+    _isFramingEnabled = widget.initialFramingEnabled;
     _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
+    EquipmentManager.instance.addListener(_onEquipmentStateChanged);
     _loadImage();
+  }
+
+  @override
+  void dispose() {
+    EquipmentManager.instance.removeListener(_onEquipmentStateChanged);
+    super.dispose();
+  }
+
+  void _onEquipmentStateChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -55,6 +74,13 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
       _hasError = false;
       _loadImage();
     }
+  }
+
+  /// Allows external callers (e.g. Fit to Sensor) to set custom FOV
+  void setCustomFov(double fovDeg) {
+    final clamped = fovDeg.clamp(0.15, 14.0);
+    setState(() => _fovDeg = clamped);
+    _loadImage();
   }
 
   void _loadImage() async {
@@ -82,7 +108,6 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           _hasError = false;
         } else {
           _hasError = true;
-          // When network is unavailable, smoothly fallback to vector only
           if (_imageBytes == null) {
             _displayMode = PreviewDisplayMode.vectorOnly;
           }
@@ -92,7 +117,7 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   }
 
   void _zoomIn() {
-    final newFov = (_fovDeg * 0.75).clamp(0.15, 12.0);
+    final newFov = (_fovDeg * 0.75).clamp(0.15, 14.0);
     if (newFov != _fovDeg) {
       setState(() => _fovDeg = newFov);
       _loadImage();
@@ -100,7 +125,7 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   }
 
   void _zoomOut() {
-    final newFov = (_fovDeg * 1.35).clamp(0.15, 12.0);
+    final newFov = (_fovDeg * 1.35).clamp(0.15, 14.0);
     if (newFov != _fovDeg) {
       setState(() => _fovDeg = newFov);
       _loadImage();
@@ -115,67 +140,34 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     }
   }
 
-  void _openExpandedDialog() {
+  void _autoAlignWithTarget() {
+    EquipmentManager.instance.autoAlignWithTarget(35.0);
+  }
+
+  void _fitToSensor() {
+    final rig = EquipmentManager.instance.activeProfile;
+    final diag = rig.sensorFovDiagonalDeg;
+    setCustomFov(diag * 1.35);
+  }
+
+  void _openFramingSimulatorDialog() {
     if (!widget.enableExpandDialog) return;
 
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
-          ),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 680, maxHeight: 720),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.center_focus_strong_rounded,
-                      size: 20,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "${widget.target.displayName} — Sky Framing",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20),
-                      onPressed: () => Navigator.of(ctx).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: TargetPreviewCanvas(
-                      target: widget.target,
-                      isRedNightMode: widget.isRedNightMode,
-                      height: double.infinity,
-                      enableExpandDialog: false,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      builder: (ctx) => EquipmentFramingDialog(
+        target: widget.target,
+        isRedNightMode: widget.isRedNightMode,
+      ),
+    );
+  }
+
+  void _openEquipmentManagerDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => EquipmentDialog(
+        isRedNightMode: widget.isRedNightMode,
+        onSaved: () => setState(() {}),
       ),
     );
   }
@@ -194,6 +186,10 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
     final showPhoto = _imageBytes != null && _displayMode != PreviewDisplayMode.vectorOnly;
     final showReticle = _displayMode != PreviewDisplayMode.photoOnly;
+
+    final rig = EquipmentManager.instance.activeProfile;
+    final angle = EquipmentManager.instance.cameraAngleDeg;
+    final showRuleOfThirds = EquipmentManager.instance.showRuleOfThirds;
 
     return Container(
       height: widget.height,
@@ -217,7 +213,7 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               colorBlendMode: widget.isRedNightMode ? BlendMode.modulate : null,
             ),
 
-          // 2. Vector Sky Canvas Layer (Apparent size ellipse, reticle, scale)
+          // 2. Vector Sky Canvas Layer (Apparent size ellipse, reticle, scale, and sensor box)
           CustomPaint(
             painter: TargetVectorPainter(
               target: widget.target,
@@ -225,6 +221,10 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               isRedNightMode: widget.isRedNightMode,
               isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || !showPhoto,
               showReticle: showReticle,
+              showFraming: _isFramingEnabled,
+              equipment: rig,
+              cameraAngleDeg: angle,
+              showRuleOfThirds: showRuleOfThirds,
             ),
           ),
 
@@ -294,7 +294,7 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               ),
             ),
 
-          // 5. Header Control Bar (Survey selector, Mode switcher, FOV Badge)
+          // 5. Header Control Bar (Survey selector, Mode switcher, FOV Badge, Framing Toggle)
           Positioned(
             top: 6,
             left: 6,
@@ -377,7 +377,48 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     ),
                   ),
 
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+
+                  // Framing Simulator Mode Toggle
+                  Tooltip(
+                    message: "Toggle Sensor Framing Box",
+                    child: InkWell(
+                      onTap: () {
+                        setState(() => _isFramingEnabled = !_isFramingEnabled);
+                        if (_isFramingEnabled) {
+                          _fitToSensor();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _isFramingEnabled ? AstroColors.starGold.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _isFramingEnabled ? AstroColors.starGold : Colors.white.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.crop_rotate_rounded, size: 12, color: _isFramingEnabled ? AstroColors.starGold : textColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Framing",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: _isFramingEnabled ? AstroColors.starGold : textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 6),
 
                   // Mode Toggle: Photo+Reticle / Photo / Vector
                   Container(
@@ -418,7 +459,7 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   if (widget.enableExpandDialog) ...[
                     const SizedBox(width: 6),
                     InkWell(
-                      onTap: _openExpandedDialog,
+                      onTap: _openFramingSimulatorDialog,
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         padding: const EdgeInsets.all(4),
@@ -436,19 +477,88 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
             ),
           ),
 
-          // 6. Bottom Zoom & Reset Controls Bar
+          // 6. Active Rig Indicator Badge (When framing is on)
+          if (_isFramingEnabled)
+            Positioned(
+              top: 36,
+              left: 6,
+              child: InkWell(
+                onTap: _openEquipmentManagerDialog,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AstroColors.starGold.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune_rounded, size: 11, color: AstroColors.starGold),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${rig.telescope.name.split('(').first.trim()} • ${rig.camera.name.split('(').first.trim()}",
+                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AstroColors.starGold),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        "(${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px)",
+                        style: TextStyle(fontSize: 8, color: Colors.white.withValues(alpha: 0.7)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 7. Bottom Controls Bar (Zoom, Framing Rotate, Auto-Align, Fit)
           Positioned(
             bottom: 6,
             left: 6,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildActionButton(Icons.remove_rounded, "Zoom Out", _zoomOut, textColor),
-                const SizedBox(width: 4),
-                _buildActionButton(Icons.add_rounded, "Zoom In", _zoomIn, textColor),
-                const SizedBox(width: 4),
-                _buildActionButton(Icons.restart_alt_rounded, "Reset Framing", _resetFov, textColor),
-              ],
+            right: 6,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildActionButton(Icons.remove_rounded, "Zoom Out", _zoomOut, textColor),
+                  const SizedBox(width: 4),
+                  _buildActionButton(Icons.add_rounded, "Zoom In", _zoomIn, textColor),
+                  const SizedBox(width: 4),
+                  _buildActionButton(Icons.restart_alt_rounded, "Reset Framing", _resetFov, textColor),
+
+                  if (_isFramingEnabled) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AstroColors.starGold.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildActionButton(Icons.rotate_left_rounded, "Rotate -15°", () => EquipmentManager.instance.rotateBy(-15), textColor),
+                          const SizedBox(width: 2),
+                          Text(
+                            "${angle.toStringAsFixed(0)}°",
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AstroColors.starGold),
+                          ),
+                          const SizedBox(width: 2),
+                          _buildActionButton(Icons.rotate_right_rounded, "Rotate +15°", () => EquipmentManager.instance.rotateBy(15), textColor),
+                          const SizedBox(width: 4),
+                          _buildActionButton(Icons.auto_awesome_rounded, "Auto-Align with Target", _autoAlignWithTarget, AstroColors.starlightCyan),
+                          const SizedBox(width: 4),
+                          _buildActionButton(Icons.fit_screen_rounded, "Fit to Sensor", _fitToSensor, AstroColors.starGold),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -510,13 +620,17 @@ class _TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 }
 
 /// CustomPainter rendering the target's physical apparent dimensions, celestial reticle,
-/// cardinal indicators, and astronomical scale bar.
+/// cardinal indicators, astronomical scale bar, and rotatable camera sensor frame.
 class TargetVectorPainter extends CustomPainter {
   final TargetItem target;
   final double fovDeg;
   final bool isRedNightMode;
   final bool isVectorOnly;
   final bool showReticle;
+  final bool showFraming;
+  final EquipmentProfile? equipment;
+  final double cameraAngleDeg;
+  final bool showRuleOfThirds;
 
   TargetVectorPainter({
     required this.target,
@@ -524,6 +638,10 @@ class TargetVectorPainter extends CustomPainter {
     required this.isRedNightMode,
     required this.isVectorOnly,
     required this.showReticle,
+    this.showFraming = false,
+    this.equipment,
+    this.cameraAngleDeg = 0.0,
+    this.showRuleOfThirds = false,
   });
 
   @override
@@ -550,7 +668,6 @@ class TargetVectorPainter extends CustomPainter {
         ).createShader(bgRect);
       canvas.drawRect(bgRect, bgPaint);
 
-      // Deterministic field stars based on target ID for realistic sky context
       final starRandom = math.Random(target.id * 31 + 17);
       final starPaint = Paint()..style = PaintingStyle.fill;
       for (var i = 0; i < 45; i++) {
@@ -558,7 +675,6 @@ class TargetVectorPainter extends CustomPainter {
         final sy = starRandom.nextDouble() * size.height;
         final distToCenter = (Offset(sx, sy) - center).distance;
 
-        // Skip stars directly inside target center
         if (distToCenter < 18) continue;
 
         final magNorm = starRandom.nextDouble();
@@ -573,7 +689,7 @@ class TargetVectorPainter extends CustomPainter {
     // 2. Draw Target Apparent Dimensions (Ellipse / Cloud / Cluster)
     final majorArcmin = target.majorAxisArcmin;
     final minorArcmin = target.surfaceBrightness != null && majorArcmin != null
-        ? majorArcmin * 0.65 // Sensible aspect ratio fallback if minor axis is not stored separately
+        ? majorArcmin * 0.65
         : majorArcmin;
 
     if (majorArcmin != null && majorArcmin > 0) {
@@ -582,13 +698,12 @@ class TargetVectorPainter extends CustomPainter {
 
       canvas.save();
       canvas.translate(center.dx, center.dy);
-      // Subtle tilt for galaxies/nebulae
       canvas.rotate(math.pi / 5.0);
 
       final lowerType = target.objectType.toLowerCase();
 
       if (lowerType.contains('galaxy')) {
-        // GALAXY: Elliptical luminous glow + bright core
+        // GALAXY
         final haloPaint = Paint()
           ..shader = RadialGradient(
             colors: [
@@ -599,7 +714,6 @@ class TargetVectorPainter extends CustomPainter {
           ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
         canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), haloPaint);
 
-        // Core
         final corePaint = Paint()
           ..shader = RadialGradient(
             colors: [
@@ -609,27 +723,25 @@ class TargetVectorPainter extends CustomPainter {
           ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4));
         canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4), corePaint);
 
-        // Contour outline
         final outlinePaint = Paint()
           ..color = primaryColor.withValues(alpha: 0.6)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.2;
         canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
       } else if (lowerType.contains('planetary')) {
-        // PLANETARY NEBULA: Ionized ring + central star
+        // PLANETARY NEBULA
         final ringPaint = Paint()
           ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.deepSkyTeal).withValues(alpha: 0.7)
           ..style = PaintingStyle.stroke
           ..strokeWidth = math.max(2.0, radX * 0.25);
         canvas.drawCircle(Offset.zero, radX, ringPaint);
 
-        // Central white dwarf
         final dwarfPaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill;
         canvas.drawCircle(Offset.zero, 1.8, dwarfPaint);
       } else if (lowerType.contains('globular')) {
-        // GLOBULAR CLUSTER: Dense radial gradient with core
+        // GLOBULAR CLUSTER
         final globPaint = Paint()
           ..shader = RadialGradient(
             colors: [
@@ -647,7 +759,7 @@ class TargetVectorPainter extends CustomPainter {
           ..strokeWidth = 1.0;
         canvas.drawCircle(Offset.zero, radX, globBorder);
       } else if (lowerType.contains('open cluster') || lowerType.contains('cluster')) {
-        // OPEN CLUSTER: Boundary circle with interior stars
+        // OPEN CLUSTER
         final clusterBorder = Paint()
           ..color = goldColor.withValues(alpha: 0.55)
           ..style = PaintingStyle.stroke
@@ -663,7 +775,7 @@ class TargetVectorPainter extends CustomPainter {
           canvas.drawCircle(Offset(r * math.cos(th), r * math.sin(th)), 1.2, starP);
         }
       } else {
-        // NEBULA / SUPERNOVA REMNANT / OTHER: Organic cloud glow
+        // NEBULA / SUPERNOVA REMNANT
         final nebPaint = Paint()
           ..shader = RadialGradient(
             colors: [
@@ -684,7 +796,6 @@ class TargetVectorPainter extends CustomPainter {
 
       canvas.restore();
     } else {
-      // Point source marker
       final pointPaint = Paint()
         ..color = goldColor.withValues(alpha: 0.8)
         ..style = PaintingStyle.stroke
@@ -692,17 +803,82 @@ class TargetVectorPainter extends CustomPainter {
       canvas.drawCircle(center, 6.0, pointPaint);
     }
 
-    // 3. Astrometric Reticle & Concentric Guides
+    // 3. Equipment Framing Simulator Sensor Frame Overlay
+    if (showFraming && equipment != null) {
+      final fovW = equipment!.sensorFovWidthArcmin;
+      final fovH = equipment!.sensorFovHeightArcmin;
+
+      final rectW = fovW * pixelsPerArcmin;
+      final rectH = fovH * pixelsPerArcmin;
+
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(cameraAngleDeg * math.pi / 180.0);
+
+      final sensorRect = Rect.fromCenter(center: Offset.zero, width: rectW, height: rectH);
+
+      // Sensor frame rectangle
+      final framePaint = Paint()
+        ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold).withValues(alpha: 0.9)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawRect(sensorRect, framePaint);
+
+      // Corner accent brackets
+      final bracketPaint = Paint()
+        ..color = isRedNightMode ? Colors.white : AstroColors.starlightCyan
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2;
+      const bLen = 12.0;
+      canvas.drawLine(sensorRect.topLeft, sensorRect.topLeft + const Offset(bLen, 0), bracketPaint);
+      canvas.drawLine(sensorRect.topLeft, sensorRect.topLeft + const Offset(0, bLen), bracketPaint);
+      canvas.drawLine(sensorRect.topRight, sensorRect.topRight + const Offset(-bLen, 0), bracketPaint);
+      canvas.drawLine(sensorRect.topRight, sensorRect.topRight + const Offset(0, bLen), bracketPaint);
+      canvas.drawLine(sensorRect.bottomLeft, sensorRect.bottomLeft + const Offset(bLen, 0), bracketPaint);
+      canvas.drawLine(sensorRect.bottomLeft, sensorRect.bottomLeft + const Offset(0, -bLen), bracketPaint);
+      canvas.drawLine(sensorRect.bottomRight, sensorRect.bottomRight + const Offset(-bLen, 0), bracketPaint);
+      canvas.drawLine(sensorRect.bottomRight, sensorRect.bottomRight + const Offset(0, -bLen), bracketPaint);
+
+      // Rule of thirds grid
+      if (showRuleOfThirds) {
+        final gridPaint = Paint()
+          ..color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.28)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8;
+        canvas.drawLine(Offset(-rectW / 6, -rectH / 2), Offset(-rectW / 6, rectH / 2), gridPaint);
+        canvas.drawLine(Offset(rectW / 6, -rectH / 2), Offset(rectW / 6, rectH / 2), gridPaint);
+        canvas.drawLine(Offset(-rectW / 2, -rectH / 6), Offset(rectW / 2, -rectH / 6), gridPaint);
+        canvas.drawLine(Offset(-rectW / 2, rectH / 6), Offset(rectW / 2, rectH / 6), gridPaint);
+      }
+
+      // Sensor frame dimensions label
+      final labelPainter = TextPainter(
+        text: TextSpan(
+          text: "${equipment!.sensorFovWidthDeg.toStringAsFixed(1)}° × ${equipment!.sensorFovHeightDeg.toStringAsFixed(1)}°",
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+            backgroundColor: Colors.black.withValues(alpha: 0.65),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      labelPainter.layout();
+      labelPainter.paint(canvas, Offset(-rectW / 2 + 3, rectH / 2 - labelPainter.height - 3));
+
+      canvas.restore();
+    }
+
+    // 4. Astrometric Reticle & Concentric Guides
     if (showReticle) {
       final reticlePaint = Paint()
         ..color = primaryColor.withValues(alpha: isVectorOnly ? 0.35 : 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.8;
 
-      // Subtle 50% FOV range circle
       canvas.drawCircle(center, minDim * 0.35, reticlePaint);
 
-      // Center crosshair with 10px center gap
       final crosshairPaint = Paint()
         ..color = primaryColor.withValues(alpha: 0.5)
         ..style = PaintingStyle.stroke
@@ -716,39 +892,29 @@ class TargetVectorPainter extends CustomPainter {
       canvas.drawLine(Offset(center.dx, center.dy + gap), Offset(center.dx, center.dy + gap + crossLen), crosshairPaint);
     }
 
-    // 4. Orientation Indicator (North at top, East at left — standard astronomy)
+    // 5. Orientation Indicator (North at top, East at left)
     _drawOrientation(canvas, size, primaryColor);
 
-    // 5. Physical Scale Ruler Bar (Bottom Left)
+    // 6. Physical Scale Ruler Bar (Bottom Left)
     _drawScaleBar(canvas, size, fovArcmin, pixelsPerArcmin, primaryColor);
 
-    // 6. Apparent Size Label (Bottom Right)
+    // 7. Apparent Size Label (Bottom Right)
     _drawApparentSizeLabel(canvas, size, primaryColor);
   }
 
   void _drawOrientation(Canvas canvas, Size size, Color color) {
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
-    // North Indicator (Top Center)
     textPainter.text = TextSpan(
       text: "N ↑",
-      style: TextStyle(
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-        color: color.withValues(alpha: 0.65),
-      ),
+      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color.withValues(alpha: 0.65)),
     );
     textPainter.layout();
     textPainter.paint(canvas, Offset(size.width / 2 - textPainter.width / 2, 28));
 
-    // East Indicator (Left Center)
     textPainter.text = TextSpan(
       text: "← E",
-      style: TextStyle(
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-        color: color.withValues(alpha: 0.65),
-      ),
+      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color.withValues(alpha: 0.65)),
     );
     textPainter.layout();
     textPainter.paint(canvas, Offset(8, size.height / 2 - textPainter.height / 2));
@@ -761,7 +927,6 @@ class TargetVectorPainter extends CustomPainter {
     double pixelsPerArcmin,
     Color color,
   ) {
-    // Choose sensible scale bar size
     double scaleArcmin = 10.0;
     if (fovArcmin < 20.0) {
       scaleArcmin = 5.0;
@@ -790,20 +955,14 @@ class TargetVectorPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4;
 
-    // Horizontal bar
     canvas.drawLine(Offset(startX, y), Offset(startX + barPixels, y), barPaint);
-    // Left & right vertical end ticks
     canvas.drawLine(Offset(startX, y - 3), Offset(startX, y + 3), barPaint);
     canvas.drawLine(Offset(startX + barPixels, y - 3), Offset(startX + barPixels, y + 3), barPaint);
 
     final textPainter = TextPainter(
       text: TextSpan(
         text: scaleLabel,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          color: color.withValues(alpha: 0.85),
-        ),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.85)),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -844,6 +1003,10 @@ class TargetVectorPainter extends CustomPainter {
         oldDelegate.fovDeg != fovDeg ||
         oldDelegate.isRedNightMode != isRedNightMode ||
         oldDelegate.isVectorOnly != isVectorOnly ||
-        oldDelegate.showReticle != showReticle;
+        oldDelegate.showReticle != showReticle ||
+        oldDelegate.showFraming != showFraming ||
+        oldDelegate.equipment?.id != equipment?.id ||
+        oldDelegate.cameraAngleDeg != cameraAngleDeg ||
+        oldDelegate.showRuleOfThirds != showRuleOfThirds;
   }
 }

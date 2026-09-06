@@ -1,0 +1,763 @@
+import '../models/equipment_profile.dart';
+
+class EquipmentDatabase {
+  static final List<TelescopeProfile> telescopes = [
+    // William Optics
+    const TelescopeProfile(
+      id: 'wo_redcat51',
+      name: 'William Optics RedCat 51 III (250mm f/4.9)',
+      focalLengthMm: 250.0,
+      apertureMm: 51.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'wo_redcat71',
+      name: 'William Optics RedCat 71 (350mm f/4.9)',
+      focalLengthMm: 350.0,
+      apertureMm: 71.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'wo_zenithstar61',
+      name: 'William Optics Zenithstar 61 (360mm f/5.9)',
+      focalLengthMm: 360.0,
+      apertureMm: 61.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'wo_zenithstar73',
+      name: 'William Optics Zenithstar 73 (430mm f/5.9)',
+      focalLengthMm: 430.0,
+      apertureMm: 73.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'wo_gt81',
+      name: 'William Optics Gran Turismo 81 (478mm f/5.9)',
+      focalLengthMm: 478.0,
+      apertureMm: 81.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Askar
+    const TelescopeProfile(
+      id: 'askar_fra300',
+      name: 'Askar FRA300 Pro (300mm f/5.0)',
+      focalLengthMm: 300.0,
+      apertureMm: 60.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'askar_fra400',
+      name: 'Askar FRA400 (400mm f/5.6)',
+      focalLengthMm: 400.0,
+      apertureMm: 72.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'askar_fra400_red',
+      name: 'Askar FRA400 + 0.7x Reducer (280mm f/3.9)',
+      focalLengthMm: 400.0,
+      apertureMm: 72.0,
+      reducerFactor: 0.7,
+    ),
+    const TelescopeProfile(
+      id: 'askar_fra500',
+      name: 'Askar FRA500 (500mm f/5.6)',
+      focalLengthMm: 500.0,
+      apertureMm: 90.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'askar_fra600',
+      name: 'Askar FRA600 (600mm f/5.6)',
+      focalLengthMm: 600.0,
+      apertureMm: 108.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'askar_103apo',
+      name: 'Askar 103APO (700mm f/6.8)',
+      focalLengthMm: 700.0,
+      apertureMm: 103.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Sky-Watcher
+    const TelescopeProfile(
+      id: 'sw_evostar72ed',
+      name: 'Sky-Watcher Evostar 72ED (420mm f/5.8)',
+      focalLengthMm: 420.0,
+      apertureMm: 72.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_evostar72ed_red',
+      name: 'Sky-Watcher Evostar 72ED + 0.85x Reducer (357mm f/4.9)',
+      focalLengthMm: 420.0,
+      apertureMm: 72.0,
+      reducerFactor: 0.85,
+    ),
+    const TelescopeProfile(
+      id: 'sw_evostar80ed',
+      name: 'Sky-Watcher Evostar 80ED (600mm f/7.5)',
+      focalLengthMm: 600.0,
+      apertureMm: 80.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_esprit80',
+      name: 'Sky-Watcher Esprit 80ED (400mm f/5.0)',
+      focalLengthMm: 400.0,
+      apertureMm: 80.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_esprit100',
+      name: 'Sky-Watcher Esprit 100ED (550mm f/5.5)',
+      focalLengthMm: 550.0,
+      apertureMm: 100.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_esprit120',
+      name: 'Sky-Watcher Esprit 120ED (840mm f/7.0)',
+      focalLengthMm: 840.0,
+      apertureMm: 120.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_quattro150p',
+      name: 'Sky-Watcher Quattro 150P (600mm f/4.0)',
+      focalLengthMm: 600.0,
+      apertureMm: 150.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sw_quattro200p',
+      name: 'Sky-Watcher Quattro 200P (800mm f/4.0)',
+      focalLengthMm: 800.0,
+      apertureMm: 200.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Celestron
+    const TelescopeProfile(
+      id: 'cel_edgehd800',
+      name: 'Celestron EdgeHD 800 (2032mm f/10)',
+      focalLengthMm: 2032.0,
+      apertureMm: 203.2,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_edgehd800_red',
+      name: 'Celestron EdgeHD 800 + 0.7x Reducer (1422mm f/7.0)',
+      focalLengthMm: 2032.0,
+      apertureMm: 203.2,
+      reducerFactor: 0.7,
+    ),
+    const TelescopeProfile(
+      id: 'cel_c8_hyperstar',
+      name: 'Celestron C8 + HyperStar v4 (390mm f/1.9)',
+      focalLengthMm: 390.0,
+      apertureMm: 203.2,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_c6_sct',
+      name: 'Celestron C6 SCT (1500mm f/10)',
+      focalLengthMm: 1500.0,
+      apertureMm: 150.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_c8_sct',
+      name: 'Celestron C8 XLT (2032mm f/10)',
+      focalLengthMm: 2032.0,
+      apertureMm: 203.2,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_c925_edgehd',
+      name: 'Celestron EdgeHD 925 (2350mm f/10)',
+      focalLengthMm: 2350.0,
+      apertureMm: 235.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_c11_edgehd',
+      name: 'Celestron EdgeHD 1100 (2800mm f/10)',
+      focalLengthMm: 2800.0,
+      apertureMm: 279.4,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_rasa8',
+      name: 'Celestron RASA 8 (400mm f/2.0)',
+      focalLengthMm: 400.0,
+      apertureMm: 203.2,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'cel_rasa11',
+      name: 'Celestron RASA 11 V2 (620mm f/2.2)',
+      focalLengthMm: 620.0,
+      apertureMm: 279.4,
+      reducerFactor: 1.0,
+    ),
+
+    // Takahashi
+    const TelescopeProfile(
+      id: 'tak_fsq85',
+      name: 'Takahashi FSQ-85EDX (450mm f/5.3)',
+      focalLengthMm: 450.0,
+      apertureMm: 85.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'tak_fsq106',
+      name: 'Takahashi FSQ-106EDX IV (530mm f/5.0)',
+      focalLengthMm: 530.0,
+      apertureMm: 106.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'tak_tsa120',
+      name: 'Takahashi TSA-120 (882mm f/7.35)',
+      focalLengthMm: 882.0,
+      apertureMm: 120.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Sharpstar
+    const TelescopeProfile(
+      id: 'sharpstar_61edph',
+      name: 'Sharpstar 61EDPH III (274mm f/4.5)',
+      focalLengthMm: 274.0,
+      apertureMm: 61.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'sharpstar_76edph',
+      name: 'Sharpstar 76EDPH (342mm f/4.5)',
+      focalLengthMm: 342.0,
+      apertureMm: 76.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Smart Scopes & All-in-One
+    const TelescopeProfile(
+      id: 'zwo_seestar_s50',
+      name: 'ZWO Seestar S50 (250mm f/5.0)',
+      focalLengthMm: 250.0,
+      apertureMm: 50.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'dwarf_3',
+      name: 'DwarfLab DWARF 3 (150mm f/4.3)',
+      focalLengthMm: 150.0,
+      apertureMm: 35.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'dwarf_2',
+      name: 'DwarfLab DWARF II (100mm f/4.2)',
+      focalLengthMm: 100.0,
+      apertureMm: 24.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'vaonis_vespera2',
+      name: 'Vaonis Vespera II (250mm f/5.0)',
+      focalLengthMm: 250.0,
+      apertureMm: 50.0,
+      reducerFactor: 1.0,
+    ),
+
+    // Generic / Universal Guidescopes
+    const TelescopeProfile(
+      id: 'gen_guide50',
+      name: 'Generic 50mm Guide Scope (200mm f/4.0)',
+      focalLengthMm: 200.0,
+      apertureMm: 50.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'gen_guide30',
+      name: 'Generic 30mm Guide Scope (120mm f/4.0)',
+      focalLengthMm: 120.0,
+      apertureMm: 30.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'gen_refractor80',
+      name: 'Generic 80mm Refractor (480mm f/6.0)',
+      focalLengthMm: 480.0,
+      apertureMm: 80.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'gen_newton150',
+      name: 'Generic 150/750 Newton (750mm f/5.0)',
+      focalLengthMm: 750.0,
+      apertureMm: 150.0,
+      reducerFactor: 1.0,
+    ),
+    const TelescopeProfile(
+      id: 'gen_newton200',
+      name: 'Generic 200/1000 Newton (1000mm f/5.0)',
+      focalLengthMm: 1000.0,
+      apertureMm: 200.0,
+      reducerFactor: 1.0,
+    ),
+  ];
+
+  static final List<CameraProfile> cameras = [
+    // ZWO ASI
+    const CameraProfile(
+      id: 'zwo_asi2600mc',
+      name: 'ZWO ASI2600MC / MM Pro (Sony IMX571 APS-C)',
+      sensorWidthMm: 23.5,
+      sensorHeightMm: 15.6,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 6248,
+      resolutionHeightPx: 4176,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi533mc',
+      name: 'ZWO ASI533MC / MM Pro (Sony IMX533 Square 1")',
+      sensorWidthMm: 11.31,
+      sensorHeightMm: 11.31,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 3008,
+      resolutionHeightPx: 3008,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi6200mc',
+      name: 'ZWO ASI6200MC / MM Pro (Sony IMX455 Full Frame)',
+      sensorWidthMm: 36.0,
+      sensorHeightMm: 24.0,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 9576,
+      resolutionHeightPx: 6388,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi294mc',
+      name: 'ZWO ASI294MC / MM Pro (Sony IMX294 4/3")',
+      sensorWidthMm: 19.1,
+      sensorHeightMm: 13.0,
+      pixelSizeMicrons: 4.63,
+      resolutionWidthPx: 4144,
+      resolutionHeightPx: 2822,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi585mc',
+      name: 'ZWO ASI585MC (Sony IMX585 1/1.2")',
+      sensorWidthMm: 11.14,
+      sensorHeightMm: 6.26,
+      pixelSizeMicrons: 2.9,
+      resolutionWidthPx: 3840,
+      resolutionHeightPx: 2160,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi678mc',
+      name: 'ZWO ASI678MC (Sony IMX678 1/1.8")',
+      sensorWidthMm: 7.68,
+      sensorHeightMm: 4.32,
+      pixelSizeMicrons: 2.0,
+      resolutionWidthPx: 3840,
+      resolutionHeightPx: 2160,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi462mc',
+      name: 'ZWO ASI462MC (Sony IMX462 1/2.8")',
+      sensorWidthMm: 5.6,
+      sensorHeightMm: 3.2,
+      pixelSizeMicrons: 2.9,
+      resolutionWidthPx: 1920,
+      resolutionHeightPx: 1080,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi183mc',
+      name: 'ZWO ASI183MC / MM Pro (Sony IMX183 1")',
+      sensorWidthMm: 13.2,
+      sensorHeightMm: 8.8,
+      pixelSizeMicrons: 2.4,
+      resolutionWidthPx: 5496,
+      resolutionHeightPx: 3672,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi1600mm',
+      name: 'ZWO ASI1600MM / MC Pro (Panasonic 4/3")',
+      sensorWidthMm: 17.7,
+      sensorHeightMm: 13.4,
+      pixelSizeMicrons: 3.8,
+      resolutionWidthPx: 4656,
+      resolutionHeightPx: 3520,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi120mm',
+      name: 'ZWO ASI120MM / MC Mini (Guide 1/3")',
+      sensorWidthMm: 4.8,
+      sensorHeightMm: 3.6,
+      pixelSizeMicrons: 3.75,
+      resolutionWidthPx: 1280,
+      resolutionHeightPx: 960,
+    ),
+    const CameraProfile(
+      id: 'zwo_asi220mm',
+      name: 'ZWO ASI220MM Mini (Guide 1/1.8")',
+      sensorWidthMm: 7.68,
+      sensorHeightMm: 4.32,
+      pixelSizeMicrons: 4.0,
+      resolutionWidthPx: 1920,
+      resolutionHeightPx: 1080,
+    ),
+
+    // QHYCCD
+    const CameraProfile(
+      id: 'qhy_268m',
+      name: 'QHY268M / C (Sony IMX571 APS-C)',
+      sensorWidthMm: 23.5,
+      sensorHeightMm: 15.6,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 6280,
+      resolutionHeightPx: 4210,
+    ),
+    const CameraProfile(
+      id: 'qhy_533m',
+      name: 'QHY533M / C (Sony IMX533 Square 1")',
+      sensorWidthMm: 11.31,
+      sensorHeightMm: 11.31,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 3008,
+      resolutionHeightPx: 3008,
+    ),
+    const CameraProfile(
+      id: 'qhy_600m',
+      name: 'QHY600M / C (Sony IMX455 Full Frame)',
+      sensorWidthMm: 36.0,
+      sensorHeightMm: 24.0,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 9576,
+      resolutionHeightPx: 6388,
+    ),
+    const CameraProfile(
+      id: 'qhy_294m',
+      name: 'QHY294M / C Pro (Sony IMX294 4/3")',
+      sensorWidthMm: 19.1,
+      sensorHeightMm: 13.0,
+      pixelSizeMicrons: 4.63,
+      resolutionWidthPx: 4144,
+      resolutionHeightPx: 2822,
+    ),
+
+    // Player One
+    const CameraProfile(
+      id: 'po_poseidon',
+      name: 'Player One Poseidon-C / M (Sony IMX571 APS-C)',
+      sensorWidthMm: 23.5,
+      sensorHeightMm: 15.6,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 6252,
+      resolutionHeightPx: 4176,
+    ),
+    const CameraProfile(
+      id: 'po_ares',
+      name: 'Player One Ares-C / M (Sony IMX533 Square 1")',
+      sensorWidthMm: 11.31,
+      sensorHeightMm: 11.31,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 3008,
+      resolutionHeightPx: 3008,
+    ),
+    const CameraProfile(
+      id: 'po_uranus',
+      name: 'Player One Uranus-C (Sony IMX585 1/1.2")',
+      sensorWidthMm: 11.14,
+      sensorHeightMm: 6.26,
+      pixelSizeMicrons: 2.9,
+      resolutionWidthPx: 3840,
+      resolutionHeightPx: 2160,
+    ),
+
+    // Canon DSLRs & Mirrorless
+    const CameraProfile(
+      id: 'canon_eos_ra',
+      name: 'Canon EOS Ra / EOS R (Full Frame)',
+      sensorWidthMm: 36.0,
+      sensorHeightMm: 24.0,
+      pixelSizeMicrons: 5.36,
+      resolutionWidthPx: 6720,
+      resolutionHeightPx: 4480,
+    ),
+    const CameraProfile(
+      id: 'canon_eos_r5',
+      name: 'Canon EOS R5 (Full Frame 45MP)',
+      sensorWidthMm: 36.0,
+      sensorHeightMm: 24.0,
+      pixelSizeMicrons: 4.39,
+      resolutionWidthPx: 8192,
+      resolutionHeightPx: 5464,
+    ),
+    const CameraProfile(
+      id: 'canon_eos_6d',
+      name: 'Canon EOS 6D / 6D Mk II (Full Frame)',
+      sensorWidthMm: 35.8,
+      sensorHeightMm: 23.9,
+      pixelSizeMicrons: 6.55,
+      resolutionWidthPx: 5472,
+      resolutionHeightPx: 3648,
+    ),
+    // Canon 18MP APS-C (Rebel T2i/T3i/T4i/T5i/T5/T6, 60D/60Da, 7D, 550D/600D/650D/700D/1200D/1300D)
+    const CameraProfile(
+      id: 'canon_eos_rebel_t3i_18mp',
+      name: 'Canon EOS Rebel T3i / T2i / T4i / T5i / T5 / T6 / 60D / 60Da / 7D / 600D (18MP APS-C)',
+      sensorWidthMm: 22.3,
+      sensorHeightMm: 14.9,
+      pixelSizeMicrons: 4.30,
+      resolutionWidthPx: 5184,
+      resolutionHeightPx: 3456,
+    ),
+    // Canon 24MP APS-C (Rebel T6i/T7/T7i/T8i, 80D, 77D, SL2/200D, SL3/250D, EOS M50, R10, R50)
+    const CameraProfile(
+      id: 'canon_eos_rebel_t7i_24mp',
+      name: 'Canon EOS Rebel T6i / T7 / T7i / T8i / 80D / 77D / SL2 / SL3 / M50 (24MP APS-C)',
+      sensorWidthMm: 22.3,
+      sensorHeightMm: 14.9,
+      pixelSizeMicrons: 3.72,
+      resolutionWidthPx: 6000,
+      resolutionHeightPx: 4000,
+    ),
+    // Canon 32.5MP APS-C (EOS 90D, EOS R7, M6 Mark II)
+    const CameraProfile(
+      id: 'canon_eos_90d_32mp',
+      name: 'Canon EOS 90D / EOS R7 / M6 Mk II (32.5MP APS-C)',
+      sensorWidthMm: 22.3,
+      sensorHeightMm: 14.8,
+      pixelSizeMicrons: 3.20,
+      resolutionWidthPx: 6960,
+      resolutionHeightPx: 4640,
+    ),
+
+    // Nikon DSLRs & Mirrorless
+    const CameraProfile(
+      id: 'nikon_d810a',
+      name: 'Nikon D810A / D850 (Full Frame)',
+      sensorWidthMm: 35.9,
+      sensorHeightMm: 23.9,
+      pixelSizeMicrons: 4.88,
+      resolutionWidthPx: 7360,
+      resolutionHeightPx: 4912,
+    ),
+    const CameraProfile(
+      id: 'nikon_z6',
+      name: 'Nikon Z6 / Z6 II (Full Frame 24MP)',
+      sensorWidthMm: 35.9,
+      sensorHeightMm: 23.9,
+      pixelSizeMicrons: 5.94,
+      resolutionWidthPx: 6048,
+      resolutionHeightPx: 4024,
+    ),
+    const CameraProfile(
+      id: 'nikon_z7',
+      name: 'Nikon Z7 / Z8 / Z9 (Full Frame 45MP)',
+      sensorWidthMm: 35.9,
+      sensorHeightMm: 23.9,
+      pixelSizeMicrons: 4.35,
+      resolutionWidthPx: 8256,
+      resolutionHeightPx: 5504,
+    ),
+    const CameraProfile(
+      id: 'nikon_apsc',
+      name: 'Nikon DX APS-C (D5300 / D5600 / D7500 / Z50)',
+      sensorWidthMm: 23.5,
+      sensorHeightMm: 15.6,
+      pixelSizeMicrons: 3.92,
+      resolutionWidthPx: 6000,
+      resolutionHeightPx: 4000,
+    ),
+
+    // Sony Mirrorless
+    const CameraProfile(
+      id: 'sony_a7_iii',
+      name: 'Sony A7 III / A7 IV (Full Frame)',
+      sensorWidthMm: 35.6,
+      sensorHeightMm: 23.8,
+      pixelSizeMicrons: 5.94,
+      resolutionWidthPx: 6000,
+      resolutionHeightPx: 4000,
+    ),
+    const CameraProfile(
+      id: 'sony_a7s_iii',
+      name: 'Sony A7S / A7S II / A7S III (Full Frame 12MP)',
+      sensorWidthMm: 35.6,
+      sensorHeightMm: 23.8,
+      pixelSizeMicrons: 8.4,
+      resolutionWidthPx: 4240,
+      resolutionHeightPx: 2832,
+    ),
+    const CameraProfile(
+      id: 'sony_a7r_iv',
+      name: 'Sony A7R IV / A7R V (Full Frame 61MP)',
+      sensorWidthMm: 35.7,
+      sensorHeightMm: 23.8,
+      pixelSizeMicrons: 3.76,
+      resolutionWidthPx: 9504,
+      resolutionHeightPx: 6336,
+    ),
+    const CameraProfile(
+      id: 'sony_apsc',
+      name: 'Sony A6000 / A6400 / A6600 / A6700 (APS-C)',
+      sensorWidthMm: 23.5,
+      sensorHeightMm: 15.6,
+      pixelSizeMicrons: 3.92,
+      resolutionWidthPx: 6000,
+      resolutionHeightPx: 4000,
+    ),
+
+    // Smart Scope Sensors
+    const CameraProfile(
+      id: 'seestar_sensor',
+      name: 'ZWO Seestar S50 Internal Sensor (IMX462)',
+      sensorWidthMm: 5.6,
+      sensorHeightMm: 3.2,
+      pixelSizeMicrons: 2.9,
+      resolutionWidthPx: 1920,
+      resolutionHeightPx: 1080,
+    ),
+    const CameraProfile(
+      id: 'dwarf3_sensor',
+      name: 'DwarfLab DWARF 3 Internal Sensor (IMX678 4K)',
+      sensorWidthMm: 7.68,
+      sensorHeightMm: 4.32,
+      pixelSizeMicrons: 2.0,
+      resolutionWidthPx: 3840,
+      resolutionHeightPx: 2160,
+    ),
+  ];
+
+  /// Searches telescopes by matching name, brand, aperture, or focal length
+  static List<TelescopeProfile> searchTelescopes(String query) {
+    final clean = query.trim().toLowerCase();
+    if (clean.isEmpty) return telescopes;
+
+    final tokens = clean.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
+
+    return telescopes.where((t) {
+      final nameLower = t.name.toLowerCase();
+      final flStr = t.focalLengthMm.toString();
+      final apStr = t.apertureMm.toString();
+
+      return tokens.every((tok) =>
+          nameLower.contains(tok) ||
+          flStr.contains(tok) ||
+          apStr.contains(tok) ||
+          t.id.contains(tok));
+    }).toList();
+  }
+
+  /// Searches cameras by matching name, brand, sensor chip (e.g. IMX571), or sensor size
+  static List<CameraProfile> searchCameras(String query) {
+    final clean = query.trim().toLowerCase();
+    if (clean.isEmpty) return cameras;
+
+    final tokens = clean.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
+
+    return cameras.where((c) {
+      final nameLower = c.name.toLowerCase();
+      final idLower = c.id.toLowerCase();
+      final pxStr = c.pixelSizeMicrons.toString();
+
+      return tokens.every((tok) =>
+          nameLower.contains(tok) ||
+          idLower.contains(tok) ||
+          pxStr.contains(tok));
+    }).toList();
+  }
+
+  /// Default starter rigs for immediate out-of-the-box use
+  static List<EquipmentProfile> get defaultProfiles => [
+        const EquipmentProfile(
+          id: 'rig_redcat_asi2600',
+          name: 'Widefield Rig: RedCat 51 + ASI2600MC',
+          telescope: TelescopeProfile(
+            id: 'wo_redcat51',
+            name: 'William Optics RedCat 51 III (250mm f/4.9)',
+            focalLengthMm: 250.0,
+            apertureMm: 51.0,
+            reducerFactor: 1.0,
+          ),
+          camera: CameraProfile(
+            id: 'zwo_asi2600mc',
+            name: 'ZWO ASI2600MC / MM Pro (Sony IMX571 APS-C)',
+            sensorWidthMm: 23.5,
+            sensorHeightMm: 15.6,
+            pixelSizeMicrons: 3.76,
+            resolutionWidthPx: 6248,
+            resolutionHeightPx: 4176,
+          ),
+        ),
+        const EquipmentProfile(
+          id: 'rig_askar_asi533',
+          name: 'Mid-Range Rig: Askar FRA400 + ASI533MC',
+          telescope: TelescopeProfile(
+            id: 'askar_fra400',
+            name: 'Askar FRA400 (400mm f/5.6)',
+            focalLengthMm: 400.0,
+            apertureMm: 72.0,
+            reducerFactor: 1.0,
+          ),
+          camera: CameraProfile(
+            id: 'zwo_asi533mc',
+            name: 'ZWO ASI533MC / MM Pro (Sony IMX533 Square 1")',
+            sensorWidthMm: 11.31,
+            sensorHeightMm: 11.31,
+            pixelSizeMicrons: 3.76,
+            resolutionWidthPx: 3008,
+            resolutionHeightPx: 3008,
+          ),
+        ),
+        const EquipmentProfile(
+          id: 'rig_edgehd_asi2600',
+          name: 'Deep Sky / Planetary: EdgeHD 800 + 0.7x',
+          telescope: TelescopeProfile(
+            id: 'cel_edgehd800_red',
+            name: 'Celestron EdgeHD 800 + 0.7x Reducer (1422mm f/7.0)',
+            focalLengthMm: 2032.0,
+            apertureMm: 203.2,
+            reducerFactor: 0.7,
+          ),
+          camera: CameraProfile(
+            id: 'zwo_asi2600mc',
+            name: 'ZWO ASI2600MC / MM Pro (Sony IMX571 APS-C)',
+            sensorWidthMm: 23.5,
+            sensorHeightMm: 15.6,
+            pixelSizeMicrons: 3.76,
+            resolutionWidthPx: 6248,
+            resolutionHeightPx: 4176,
+          ),
+        ),
+        const EquipmentProfile(
+          id: 'rig_seestar',
+          name: 'Smart Scope: ZWO Seestar S50',
+          telescope: TelescopeProfile(
+            id: 'zwo_seestar_s50',
+            name: 'ZWO Seestar S50 (250mm f/5.0)',
+            focalLengthMm: 250.0,
+            apertureMm: 50.0,
+            reducerFactor: 1.0,
+          ),
+          camera: CameraProfile(
+            id: 'seestar_sensor',
+            name: 'ZWO Seestar S50 Internal Sensor (IMX462)',
+            sensorWidthMm: 5.6,
+            sensorHeightMm: 3.2,
+            pixelSizeMicrons: 2.9,
+            resolutionWidthPx: 1920,
+            resolutionHeightPx: 1080,
+          ),
+        ),
+      ];
+}

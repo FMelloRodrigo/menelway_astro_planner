@@ -12,6 +12,7 @@ import '../models/yearly_visibility.dart';
 import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
+import 'equipment_dialog.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -644,7 +645,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Visual Sky Preview & Apparent Size",
+                  "Visual Sky Preview & Framing",
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -661,6 +662,38 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 style: TextStyle(
                   fontSize: 11,
                   color: textColor.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => EquipmentDialog(
+                      isRedNightMode: widget.isRedNightMode,
+                      onSaved: () => setState(() {}),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune_rounded, size: 12, color: AstroColors.starGold),
+                      const SizedBox(width: 3),
+                      Text(
+                        "Gear",
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AstroColors.starGold),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

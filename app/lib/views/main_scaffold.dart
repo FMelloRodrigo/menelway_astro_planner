@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../core/astro_bridge.dart';
 import '../core/catalog_manager.dart';
+import '../core/equipment_manager.dart';
 import '../core/geocoding_service.dart';
 import '../core/settings_service.dart';
 import '../models/filter_state.dart';
@@ -10,6 +11,7 @@ import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import 'equipment_dialog.dart';
 import 'observing_lists_view.dart';
 import 'planner_view.dart';
 import 'target_search_view.dart';
@@ -139,6 +141,8 @@ class _MainScaffoldState extends State<MainScaffold> {
       filters: _filters,
       isRedNightMode: widget.isRedNightMode,
       observingLists: _observingLists,
+      equipmentProfiles: EquipmentManager.instance.profiles,
+      activeEquipmentProfileId: EquipmentManager.instance.activeProfileId,
     );
   }
 
@@ -942,6 +946,43 @@ class _MainScaffoldState extends State<MainScaffold> {
               color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
             ),
             onPressed: _handleToggleNightMode,
+          ),
+          const SizedBox(width: 8),
+
+          // Equipment Rigs Manager Button
+          IconButton(
+            tooltip: "Equipment Rigs & Optics",
+            style: IconButton.styleFrom(
+              backgroundColor: widget.isRedNightMode
+                  ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                  : AstroColors.starGold.withValues(alpha: 0.08),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                      : AstroColors.starGold.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+            ),
+            icon: Icon(
+              Icons.camera_alt_rounded,
+              size: 16,
+              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+            ),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => EquipmentDialog(
+                  isRedNightMode: widget.isRedNightMode,
+                  onSaved: () {
+                    _saveSettings();
+                    setState(() {});
+                  },
+                ),
+              );
+            },
           ),
           const SizedBox(width: 8),
 

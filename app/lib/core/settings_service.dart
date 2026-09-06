@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
+import '../models/equipment_profile.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
 
@@ -11,6 +12,8 @@ class AppSettingsData {
   final String? sortMode;
   final int? selectedTargetId;
   final List<ObservingListModel>? observingListsBackup;
+  final List<EquipmentProfile>? equipmentProfiles;
+  final String? activeEquipmentProfileId;
 
   AppSettingsData({
     required this.filters,
@@ -18,6 +21,8 @@ class AppSettingsData {
     this.sortMode,
     this.selectedTargetId,
     this.observingListsBackup,
+    this.equipmentProfiles,
+    this.activeEquipmentProfileId,
   });
 }
 
@@ -117,25 +122,37 @@ class SettingsService {
             .toList();
       }
 
+      List<EquipmentProfile>? equipmentProfiles;
+      if (data.containsKey('equipmentProfiles') && data['equipmentProfiles'] is List) {
+        equipmentProfiles = (data['equipmentProfiles'] as List<dynamic>)
+            .map((e) => EquipmentProfile.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
+
       return AppSettingsData(
         filters: filters,
         isRedNightMode: isRedNightMode,
         sortMode: sortMode,
         selectedTargetId: selectedTargetId,
         observingListsBackup: observingBackup,
+        equipmentProfiles: equipmentProfiles,
+        activeEquipmentProfileId: activeEquipmentProfileId,
       );
     } catch (_) {
       return AppSettingsData(filters: FilterState());
     }
   }
 
-  /// Saves current filters, location, night mode, and observing lists backup.
+  /// Saves current filters, location, night mode, observing lists backup, and equipment profiles.
   static Future<void> saveSettings({
     required FilterState filters,
     required bool isRedNightMode,
     String? sortMode,
     int? selectedTargetId,
     List<ObservingListModel>? observingLists,
+    List<EquipmentProfile>? equipmentProfiles,
+    String? activeEquipmentProfileId,
   }) async {
     try {
       final file = await getSettingsFile();
@@ -154,6 +171,12 @@ class SettingsService {
       }
       if (observingLists != null) {
         data['observingLists'] = observingLists.map((l) => l.toJson()).toList();
+      }
+      if (equipmentProfiles != null) {
+        data['equipmentProfiles'] = equipmentProfiles.map((p) => p.toJson()).toList();
+      }
+      if (activeEquipmentProfileId != null) {
+        data['activeEquipmentProfileId'] = activeEquipmentProfileId;
       }
 
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
