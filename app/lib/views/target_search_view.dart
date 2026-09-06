@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -47,27 +48,86 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   SortMode _sortMode = SortMode.peakAltitude;
   final TextEditingController _searchController = TextEditingController();
   TargetItem? _selectedTarget;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _searchController.text = widget.filters.searchQuery;
+    if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
+      _selectedTarget = widget.targets.first;
+    }
+  }
+
+  @override
+  void didUpdateWidget(TargetSearchView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.filters.searchQuery != oldWidget.filters.searchQuery) {
+      if (_searchController.text != widget.filters.searchQuery) {
+        _searchController.text = widget.filters.searchQuery;
+      }
+    }
+    // When a search query is active and targets are available:
+    // Auto-select the first target so the split view Target Details Sheet with the
+    // Yearly Observing Window card appears immediately without extra clicks.
+    if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
+      final exists = _selectedTarget != null && widget.targets.any((t) => t.id == _selectedTarget!.id);
+      if (!exists) {
+        _selectedTarget = widget.targets.first;
+      }
+    } else if (widget.filters.searchQuery.isEmpty && oldWidget.filters.searchQuery.isNotEmpty) {
+      _selectedTarget = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
+    });
   }
 
   List<TargetItem> get _sortedTargets {
     final list = List<TargetItem>.from(widget.targets);
     switch (_sortMode) {
       case SortMode.peakAltitude:
-        list.sort((a, b) => b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg));
+        list.sort((a, b) {
+          if (a.meetsCriteria != b.meetsCriteria) {
+            return a.meetsCriteria ? -1 : 1;
+          }
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
+        });
         break;
       case SortMode.visibleDuration:
-        list.sort((a, b) => b.visibleDurationHours.compareTo(a.visibleDurationHours));
+        list.sort((a, b) {
+          if (a.meetsCriteria != b.meetsCriteria) {
+            return a.meetsCriteria ? -1 : 1;
+          }
+          return b.visibleDurationHours.compareTo(a.visibleDurationHours);
+        });
         break;
       case SortMode.brightness:
-        list.sort((a, b) => (a.magnitude ?? 99).compareTo(b.magnitude ?? 99));
+        list.sort((a, b) {
+          if (a.meetsCriteria != b.meetsCriteria) {
+            return a.meetsCriteria ? -1 : 1;
+          }
+          return (a.magnitude ?? 99).compareTo(b.magnitude ?? 99);
+        });
         break;
       case SortMode.transitTime:
-        list.sort((a, b) => a.transitTime.compareTo(b.transitTime));
+        list.sort((a, b) {
+          if (a.meetsCriteria != b.meetsCriteria) {
+            return a.meetsCriteria ? -1 : 1;
+          }
+          return a.transitTime.compareTo(b.transitTime);
+        });
         break;
     }
     return list;
@@ -117,19 +177,42 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: "Search DSO by name, Messier, NGC, or common name...",
+                        hintText: "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)...",
                         prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
                         suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
-                                },
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    tooltip: "Clear search",
+                                    onPressed: () {
+                                      _debounceTimer?.cancel();
+                                      _searchController.clear();
+                                      setState(() {});
+                                      widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
+                                    tooltip: "Search target",
+                                    onPressed: () {
+                                      _debounceTimer?.cancel();
+                                      widget.onFilterChanged(
+                                        widget.filters.copyWith(searchQuery: _searchController.text.trim()),
+                                      );
+                                    },
+                                  ),
+                                ],
                               )
                             : null,
                       ),
+                      onChanged: (text) {
+                        setState(() {});
+                        _onSearchChanged(text);
+                      },
                       onSubmitted: (query) {
+                        _debounceTimer?.cancel();
                         widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
                       },
                     ),
@@ -273,11 +356,41 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildTargetList(List<TargetItem> targets) {
+    final hasOffSeason = targets.any((t) => !t.meetsCriteria);
+
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: targets.length,
+      itemCount: targets.length + (hasOffSeason ? 1 : 0),
       itemBuilder: (context, index) {
-        final target = targets[index];
+        if (hasOffSeason && index == 0) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 16, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Search includes targets below tonight's limits. Click any target to view its yearly window.",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final targetIndex = hasOffSeason ? index - 1 : index;
+        final target = targets[targetIndex];
         final isSelected = _selectedTarget?.id == target.id;
         return _buildTargetCard(target, isSelected);
       },
@@ -423,21 +536,39 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AstroColors.visibleGreen.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°",
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AstroColors.visibleGreen,
+                    if (target.meetsCriteria)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AstroColors.visibleGreen.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°",
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AstroColors.visibleGreen,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                        ),
+                        child: const Text(
+                          "Off-Season Tonight",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.amber,
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(height: 4),
                     Text(
                       "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
@@ -446,12 +577,19 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
-              Icon(
-                isSelected ? Icons.close_rounded : Icons.chevron_right_rounded,
-                size: 18,
-                color: isSelected ? accentColor : textColor.withValues(alpha: 0.3),
-              ),
+              const SizedBox(width: 6),
+              if (isSelected)
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: accentColor.withValues(alpha: 0.6), width: 1.2),
+                  ),
+                  child: Icon(Icons.close_rounded, size: 14, color: accentColor),
+                )
+              else
+                Icon(Icons.chevron_right_rounded, size: 18, color: textColor.withValues(alpha: 0.3)),
             ],
           ),
         ),

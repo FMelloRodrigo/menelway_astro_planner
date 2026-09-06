@@ -161,6 +161,17 @@ ASTRO_API int32_t astro_remove_from_observing_list(
 );
 ASTRO_API const char* astro_get_observing_lists_json(AstroEngine* engine);
 ASTRO_API int32_t astro_clear_all_observing_lists(AstroEngine* engine);
+
+// Yearly Target Visibility Simulation (JSON format)
+ASTRO_API const char* astro_get_target_yearly_visibility_json(
+    AstroEngine* engine,
+    int64_t target_id,
+    const AstroObserver* observer,
+    double min_altitude_deg,
+    double min_duration_hours,
+    int32_t year
+);
+
 ASTRO_API void astro_free_string(const char* str);
 
 #ifdef __cplusplus

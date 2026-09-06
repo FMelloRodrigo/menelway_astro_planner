@@ -10,6 +10,7 @@ import '../models/night_summary.dart';
 import '../models/altitude_point.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
+import '../models/yearly_visibility.dart';
 
 // Typedefs for Native and Dart functions
 typedef _AstroEngineCreateC = Pointer<AstroEngineContext> Function(Pointer<Utf8> dbPath);
@@ -122,6 +123,23 @@ typedef _AstroGetListsJsonDart = Pointer<Utf8> Function(Pointer<AstroEngineConte
 typedef _AstroClearAllObservingListsC = Int32 Function(Pointer<AstroEngineContext> engine);
 typedef _AstroClearAllObservingListsDart = int Function(Pointer<AstroEngineContext> engine);
 
+typedef _AstroGetTargetYearlyVisibilityJsonC = Pointer<Utf8> Function(
+  Pointer<AstroEngineContext> engine,
+  Int64 targetId,
+  Pointer<AstroObserver> observer,
+  Double minAltitudeDeg,
+  Double minDurationHours,
+  Int32 year,
+);
+typedef _AstroGetTargetYearlyVisibilityJsonDart = Pointer<Utf8> Function(
+  Pointer<AstroEngineContext> engine,
+  int targetId,
+  Pointer<AstroObserver> observer,
+  double minAltitudeDeg,
+  double minDurationHours,
+  int year,
+);
+
 typedef _AstroFreeStringC = Void Function(Pointer<Utf8> str);
 typedef _AstroFreeStringDart = void Function(Pointer<Utf8> str);
 
@@ -144,6 +162,7 @@ class AstroBridge {
   late final _AstroRemoveFromListDart _removeFromList;
   late final _AstroGetListsJsonDart _getListsJson;
   late final _AstroClearAllObservingListsDart _clearAllLists;
+  late final _AstroGetTargetYearlyVisibilityJsonDart _getTargetYearlyVisibilityJson;
   late final _AstroFreeStringDart _freeString;
 
   AstroBridge._() {
@@ -232,6 +251,9 @@ class AstroBridge {
     _clearAllLists = _lib
         .lookup<NativeFunction<_AstroClearAllObservingListsC>>('astro_clear_all_observing_lists')
         .asFunction<_AstroClearAllObservingListsDart>();
+    _getTargetYearlyVisibilityJson = _lib
+        .lookup<NativeFunction<_AstroGetTargetYearlyVisibilityJsonC>>('astro_get_target_yearly_visibility_json')
+        .asFunction<_AstroGetTargetYearlyVisibilityJsonDart>();
     _freeString = _lib
         .lookup<NativeFunction<_AstroFreeStringC>>('astro_free_string')
         .asFunction<_AstroFreeStringDart>();
@@ -546,5 +568,47 @@ class AstroBridge {
   bool clearAllObservingLists() {
     if (_engine == null) return false;
     return _clearAllLists(_engine!) == 1;
+  }
+
+  YearlyVisibilityModel? getTargetYearlyVisibility({
+    required int targetId,
+    required double latitude,
+    required double longitude,
+    required double elevation,
+    required double minAltitude,
+    required double minDurationHours,
+    int year = 2026,
+  }) {
+    if (_engine == null) return null;
+
+    final obsPtr = calloc<AstroObserver>();
+    obsPtr.ref.latitudeDeg = latitude;
+    obsPtr.ref.longitudeDeg = longitude;
+    obsPtr.ref.elevationM = elevation;
+
+    try {
+      final jsonPtr = _getTargetYearlyVisibilityJson(
+        _engine!,
+        targetId,
+        obsPtr,
+        minAltitude,
+        minDurationHours,
+        year,
+      );
+
+      if (jsonPtr == nullptr) return null;
+      try {
+        final jsonStr = jsonPtr.toDartString();
+        if (jsonStr.isEmpty || jsonStr == '{}') return null;
+        final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+        return YearlyVisibilityModel.fromJson(decoded);
+      } finally {
+        _freeString(jsonPtr);
+      }
+    } catch (_) {
+      return null;
+    } finally {
+      calloc.free(obsPtr);
+    }
   }
 }

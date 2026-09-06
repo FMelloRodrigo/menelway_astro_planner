@@ -2,7 +2,9 @@
 #include "sqlite3.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <regex>
 #include <sstream>
 
 namespace astro::storage {
@@ -78,6 +80,104 @@ catalog::DsoObject row_to_dso(sqlite3_stmt* stmt) {
     if (ident) obj.identifiers = ident;
 
     return obj;
+}
+
+std::string build_fts_query(const std::string& input) {
+    if (input.empty()) return "";
+
+    // Trim leading and trailing whitespace
+    size_t start = input.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) return "";
+    size_t end = input.find_last_not_of(" \t\r\n");
+    std::string s = input.substr(start, end - start + 1);
+
+    // Clean special FTS characters that might cause syntax errors: " * ( ) : ^ { } [ ] ;
+    std::string cleaned;
+    for (char c : s) {
+        if (c == '"' || c == '*' || c == '(' || c == ')' || c == ':' || 
+            c == '^' || c == '{' || c == '}' || c == '[' || c == ']' || c == ';') {
+            cleaned += ' ';
+        } else {
+            cleaned += c;
+        }
+    }
+
+    // Collapse multiple spaces
+    std::string collapsed;
+    bool in_space = false;
+    for (char c : cleaned) {
+        if (std::isspace(static_cast<unsigned char>(c))) {
+            if (!in_space) {
+                collapsed += ' ';
+                in_space = true;
+            }
+        } else {
+            collapsed += c;
+            in_space = false;
+        }
+    }
+
+    // Trim collapsed
+    start = collapsed.find_first_not_of(" ");
+    if (start == std::string::npos) return "";
+    end = collapsed.find_last_not_of(" ");
+    collapsed = collapsed.substr(start, end - start + 1);
+
+    // Regex check for standard astronomical catalog patterns:
+    // e.g. M42 / M 42, NGC1976 / NGC 1976, IC434 / IC 434, C14 / C 14, Arp220 / Arp 220, H400 / H 400
+    static const std::regex m_re(R"(^[Mm]\s*(\d+)$)");
+    static const std::regex ngc_re(R"(^[Nn][Gg][Cc]\s*(\d+)$)");
+    static const std::regex ic_re(R"(^[Ii][Cc]\s*(\d+)$)");
+    static const std::regex c_re(R"(^[Cc]\s*(\d+)$)");
+    static const std::regex arp_re(R"(^[Aa][Rr][Pp]\s*(\d+)$)");
+    static const std::regex h_re(R"(^[Hh]\s*(\d+.*)$)");
+    static const std::regex b_re(R"(^[Bb]\s*(\d+)$)");
+
+    std::smatch m;
+    if (std::regex_match(collapsed, m, m_re)) {
+        std::string num = m[1].str();
+        return "\"M " + num + "\"* OR M" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, ngc_re)) {
+        std::string num = m[1].str();
+        return "\"NGC " + num + "\"* OR NGC" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, ic_re)) {
+        std::string num = m[1].str();
+        return "\"IC " + num + "\"* OR IC" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, c_re)) {
+        std::string num = m[1].str();
+        return "\"C " + num + "\"* OR C" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, arp_re)) {
+        std::string num = m[1].str();
+        return "\"Arp " + num + "\"* OR Arp" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, h_re)) {
+        std::string num = m[1].str();
+        return "\"H " + num + "\"* OR H" + num + "*";
+    }
+    if (std::regex_match(collapsed, m, b_re)) {
+        std::string num = m[1].str();
+        return "\"B " + num + "\"* OR B" + num + "*";
+    }
+
+    // Single token query: prefix match
+    if (collapsed.find(' ') == std::string::npos) {
+        return collapsed + "*";
+    }
+
+    // Multi-token: search exact phrase OR AND-combination of prefix tokens
+    std::string phrase = "\"" + collapsed + "\"*";
+    std::istringstream iss(collapsed);
+    std::string tok;
+    std::string prefix_and;
+    while (iss >> tok) {
+        if (!prefix_and.empty()) prefix_and += " ";
+        prefix_and += tok + "*";
+    }
+    return phrase + " OR (" + prefix_and + ")";
 }
 
 } // namespace
@@ -163,23 +263,65 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
     std::vector<catalog::DsoObject> results;
     if (!db_) return results;
 
-    std::ostringstream sql;
     bool has_search = !options.search_query.empty();
 
     if (has_search) {
+        std::ostringstream sql;
         sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
             << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
             << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
             << "FROM dso_objects d "
             << "JOIN dso_fts f ON d.id = f.rowid "
-            << "WHERE dso_fts MATCH ? ";
-    } else {
-        sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
-            << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-            << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
-            << "FROM dso_objects d "
-            << "WHERE 1=1 ";
+            << "WHERE dso_fts MATCH ? "
+            << "ORDER BY bm25(dso_fts) "
+            << "LIMIT " << options.limit << " OFFSET " << options.offset << ";";
+
+        std::string fts_query = build_fts_query(options.search_query);
+
+        sqlite3_stmt* raw_stmt = nullptr;
+        std::string sql_str = sql.str();
+        int rc = sqlite3_prepare_v2(db_, sql_str.c_str(), -1, &raw_stmt, nullptr);
+        if (rc == SQLITE_OK) {
+            UniqueStmt stmt(raw_stmt);
+            sqlite3_bind_text(stmt.get(), 1, fts_query.c_str(), -1, SQLITE_TRANSIENT);
+            while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+                results.push_back(row_to_dso(stmt.get()));
+            }
+        }
+
+        // Fallback: If FTS returned 0 candidates, execute LIKE fallback on exact fields
+        if (results.empty()) {
+            const char* fallback_sql =
+                "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
+                "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
+                "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+                "FROM dso_objects d "
+                "WHERE d.name LIKE ? OR d.messier LIKE ? OR d.caldwell LIKE ? OR d.arp LIKE ? "
+                "   OR d.herschel LIKE ? OR d.ngc_ic LIKE ? OR d.common_names LIKE ? OR d.identifiers LIKE ? "
+                "LIMIT 50;";
+            sqlite3_stmt* fb_stmt = nullptr;
+            if (sqlite3_prepare_v2(db_, fallback_sql, -1, &fb_stmt, nullptr) == SQLITE_OK) {
+                UniqueStmt stmt(fb_stmt);
+                std::string like_pattern = "%" + options.search_query + "%";
+                for (int i = 1; i <= 8; ++i) {
+                    sqlite3_bind_text(stmt.get(), i, like_pattern.c_str(), -1, SQLITE_TRANSIENT);
+                }
+                while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+                    results.push_back(row_to_dso(stmt.get()));
+                }
+            }
+        }
+
+        return results;
     }
+
+    // Normal browsing (no explicit search query)
+    std::ostringstream sql;
+    sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
+        << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
+        << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+        << "FROM dso_objects d "
+        << "WHERE 1=1 ";
 
     // Catalogs filter
     if (!options.catalogs.empty()) {
@@ -234,12 +376,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
     }
 
     // Order and Limit
-    if (has_search) {
-        sql << "ORDER BY bm25(dso_fts) ";
-    } else {
-        sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
-    }
-
+    sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
     sql << "LIMIT " << options.limit << " OFFSET " << options.offset << ";";
 
     sqlite3_stmt* raw_stmt = nullptr;
@@ -250,15 +387,6 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         return results;
     }
     UniqueStmt stmt(raw_stmt);
-
-    if (has_search) {
-        // Append wildcard for prefix search if not present
-        std::string query = options.search_query;
-        if (!query.empty() && query.back() != '*') {
-            query += "*";
-        }
-        sqlite3_bind_text(stmt.get(), 1, query.c_str(), -1, SQLITE_TRANSIENT);
-    }
 
     while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
         results.push_back(row_to_dso(stmt.get()));
@@ -306,6 +434,7 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
     }
 
     std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
+    bool has_search_query = !filter_options.search_query.empty();
 
     for (const auto& dso : candidates) {
         auto vis = visibility::evaluate_visibility(
@@ -316,13 +445,18 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
             /*include_samples=*/false
         );
 
-        if (vis.meets_criteria) {
+        // When actively searching by name/query, keep targets even if they do not meet
+        // tonight's criteria so the user can inspect their yearly observing window.
+        if (vis.meets_criteria || has_search_query) {
             results.push_back({dso, vis});
         }
     }
 
-    // Sort by peak altitude descending
+    // Sort: objects meeting criteria tonight first, then by peak altitude descending
     std::sort(results.begin(), results.end(), [](const auto& a, const auto& b) {
+        if (a.visibility.meets_criteria != b.visibility.meets_criteria) {
+            return a.visibility.meets_criteria > b.visibility.meets_criteria;
+        }
         return a.visibility.peak_altitude.value > b.visibility.peak_altitude.value;
     });
 

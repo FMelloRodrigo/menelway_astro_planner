@@ -259,6 +259,7 @@ def main():
         caldwell,
         arp,
         herschel,
+        ngc_ic,
         common_names,
         identifiers,
         content='dso_objects',
@@ -405,6 +406,25 @@ def main():
         else:
             catalog = "Other"
 
+        # Add alias identifiers so both spaced and unspaced forms match (e.g. M 42 and M42)
+        aliases = []
+        if messier:
+            aliases.append(messier.replace(" ", ""))
+        if caldwell:
+            aliases.append(caldwell.replace(" ", ""))
+        if arp:
+            aliases.append(arp.replace(" ", ""))
+        if herschel:
+            aliases.append(herschel.replace(" ", ""))
+        if formatted_name:
+            aliases.append(formatted_name.replace(" ", ""))
+        if raw_name and raw_name != formatted_name:
+            aliases.append(raw_name)
+
+        if aliases:
+            alias_str = ",".join(aliases)
+            identifiers = f"{identifiers},{alias_str}" if identifiers else alias_str
+
         records.append((
             formatted_name,
             messier,
@@ -433,6 +453,8 @@ def main():
         if num not in mapped_arp_numbers and view["ra_deg"] is not None and view["dec_deg"] is not None:
             arp_label = f"Arp {num}"
             raw_n = view["raw_name"]
+            arp_alias = f"Arp{num}"
+            arp_ident = f"{arp_label},{raw_n},{arp_alias}" if raw_n else f"{arp_label},{arp_alias}"
             records.append((
                 arp_label,
                 None,             # messier
@@ -452,7 +474,7 @@ def main():
                 None,             # minor_axis_arcmin
                 None,             # surface_brightness
                 raw_n if raw_n else None, # common_names
-                f"{arp_label},{raw_n}" if raw_n else arp_label # identifiers
+                arp_ident         # identifiers
             ))
             standalone_arp_count += 1
             mapped_arp_numbers.add(num)
@@ -470,8 +492,8 @@ def main():
 
     # Populate FTS
     cur.execute("""
-    INSERT INTO dso_fts (rowid, name, messier, caldwell, arp, herschel, common_names, identifiers)
-    SELECT id, name, messier, caldwell, arp, herschel, common_names, identifiers FROM dso_objects;
+    INSERT INTO dso_fts (rowid, name, messier, caldwell, arp, herschel, ngc_ic, common_names, identifiers)
+    SELECT id, name, messier, caldwell, arp, herschel, ngc_ic, common_names, identifiers FROM dso_objects;
     """)
 
     conn.commit()

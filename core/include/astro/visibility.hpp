@@ -69,4 +69,34 @@ std::vector<AltitudePoint> generate_altitude_curve(
     int step_minutes = 5
 );
 
+struct MonthVisibility {
+    int month{1};                 // 1 = Jan, 12 = Dec
+    std::string month_name;       // "Jan", "Feb", etc.
+    double hours_observable{0.0}; // continuous hours meeting criteria during darkness
+    double peak_altitude_deg{0.0};// peak altitude reached during darkness
+    bool is_observable{false};    // true if hours_observable >= min_duration
+};
+
+struct YearlyVisibilityResult {
+    double theoretical_max_altitude_deg{0.0}; // 90 - |lat - dec|
+    bool can_ever_reach_min_alt{true};
+    std::vector<MonthVisibility> months;      // 12 elements
+    int peak_month{0};                        // 1-12
+    int best_window_start{0};                 // 1-12
+    int best_window_end{0};                   // 1-12
+    double max_hours_in_peak{0.0};
+    std::string best_window_summary;          // e.g. "October – February (Peak: December)"
+};
+
+/**
+ * @brief Computes 12-month visibility simulation for a target given observer & criteria.
+ */
+YearlyVisibilityResult calculate_yearly_visibility(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    int year = 2026
+);
+
 } // namespace astro::visibility
+

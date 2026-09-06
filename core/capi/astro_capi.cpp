@@ -396,6 +396,68 @@ int32_t astro_clear_all_observing_lists(AstroEngine* engine) {
     return ctx->storage->clear_all_lists() ? 1 : 0;
 }
 
+const char* astro_get_target_yearly_visibility_json(
+    AstroEngine* engine,
+    int64_t target_id,
+    const AstroObserver* observer,
+    double min_altitude_deg,
+    double min_duration_hours,
+    int32_t year
+) {
+    if (!engine || !observer) return duplicate_string("{}");
+    auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
+
+    try {
+        auto opt_dso = ctx->storage->get_object_by_id(target_id);
+        if (!opt_dso.has_value()) {
+            return duplicate_string("{\"error\":\"Target not found\"}");
+        }
+
+        astro::coordinates::ObserverLocation obs{
+            astro::units::Degrees{observer->latitude_deg},
+            astro::units::Degrees{observer->longitude_deg},
+            observer->elevation_m
+        };
+
+        astro::visibility::VisibilityCriteria crit;
+        crit.min_altitude = astro::units::Degrees{min_altitude_deg};
+        crit.min_duration_hours = min_duration_hours;
+
+        int sim_year = year > 1900 ? year : 2026;
+        auto res = astro::visibility::calculate_yearly_visibility(opt_dso->coordinates, obs, crit, sim_year);
+
+        std::ostringstream ss;
+        ss << "{"
+           << "\"target_id\":" << target_id << ","
+           << "\"theoretical_max_altitude_deg\":" << res.theoretical_max_altitude_deg << ","
+           << "\"can_ever_reach_min_alt\":" << (res.can_ever_reach_min_alt ? "true" : "false") << ","
+           << "\"peak_month\":" << res.peak_month << ","
+           << "\"best_window_start\":" << res.best_window_start << ","
+           << "\"best_window_end\":" << res.best_window_end << ","
+           << "\"max_hours_in_peak\":" << res.max_hours_in_peak << ","
+           << "\"best_window_summary\":\"" << escape_json(res.best_window_summary) << "\","
+           << "\"months\":[";
+
+        for (size_t i = 0; i < res.months.size(); ++i) {
+            if (i > 0) ss << ",";
+            const auto& m = res.months[i];
+            ss << "{"
+               << "\"month\":" << m.month << ","
+               << "\"name\":\"" << m.month_name << "\","
+               << "\"hours_observable\":" << m.hours_observable << ","
+               << "\"peak_altitude_deg\":" << m.peak_altitude_deg << ","
+               << "\"is_observable\":" << (m.is_observable ? "true" : "false")
+               << "}";
+        }
+        ss << "]}";
+
+        return duplicate_string(ss.str());
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return duplicate_string("{}");
+    }
+}
+
 void astro_free_string(const char* str) {
     if (str) {
         free(const_cast<char*>(str));

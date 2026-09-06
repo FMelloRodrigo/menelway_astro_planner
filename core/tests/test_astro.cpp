@@ -155,6 +155,40 @@ void test_horizon_and_visibility() {
     std::cout << "  ✓ Horizon & Visibility passed.\n";
 }
 
+void test_yearly_visibility() {
+    std::cout << "[TEST] Yearly Visibility Solver...\n";
+    using namespace astro::coordinates;
+    using namespace astro::units;
+    using namespace astro::visibility;
+
+    ObserverLocation nyc{Degrees{40.7}, Degrees{-74.0}, 10.0};
+
+    // M 42 Orion Nebula (RA ~5.588h, Dec -5.39 deg)
+    EquatorialCoordinates m42{Hours{5.588}, Degrees{-5.39}};
+
+    VisibilityCriteria crit;
+    crit.min_altitude = Degrees{25.0};
+    crit.min_duration_hours = 2.0;
+
+    auto yearly_m42 = calculate_yearly_visibility(m42, nyc, crit, 2026);
+    assert(yearly_m42.can_ever_reach_min_alt == true);
+    // Theoretical max altitude at 40.7°N: 90 - (40.7 - (-5.39)) = 90 - 46.09 = ~43.9°
+    assert(yearly_m42.theoretical_max_altitude_deg > 40.0);
+    // Peak month for Orion is December or January (winter)
+    assert(yearly_m42.peak_month == 12 || yearly_m42.peak_month == 1);
+    // In June (month 6), M 42 is behind the Sun and not observable
+    assert(yearly_m42.months[5].is_observable == false);
+    // In December (month 12), M 42 is observable for multiple hours
+    assert(yearly_m42.months[11].is_observable == true);
+
+    // Southern object: Carina Nebula (Dec -59.87 deg) from NYC (Lat 40.7 N)
+    EquatorialCoordinates carina{Hours{10.75}, Degrees{-59.87}};
+    auto yearly_carina = calculate_yearly_visibility(carina, nyc, crit, 2026);
+    assert(yearly_carina.can_ever_reach_min_alt == false);
+
+    std::cout << "  ✓ Yearly Visibility passed: " << yearly_m42.best_window_summary << "\n";
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  RUNNING ASTRO CORE C++20 TESTS        \n";
@@ -165,6 +199,7 @@ int main() {
     test_coordinates();
     test_ephemeris();
     test_horizon_and_visibility();
+    test_yearly_visibility();
 
     std::cout << "\n>>> ALL C++20 CORE TESTS PASSED SUCCESSFULLY! <<<\n";
     return 0;

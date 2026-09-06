@@ -54,6 +54,14 @@ void test_sqlite_catalog() {
     }
     assert(found_m31);
 
+    // 2b. Test unspaced catalog search for "M42"
+    astro::catalog::DsoFilterOptions m42_opts;
+    m42_opts.search_query = "M42";
+    auto m42_objs = storage.query_objects(m42_opts);
+    assert(!m42_objs.empty());
+    assert(m42_objs[0].messier.has_value() && *m42_objs[0].messier == "M 42");
+    std::cout << "  ✓ Found M42 via unspaced query 'M42': " << m42_objs[0].display_name() << "\n";
+
     // 3. Test filter_targets visibility solver on real database
     std::cout << "[TEST] Real-database Visibility Filter...\n";
     astro::coordinates::ObserverLocation obs{
@@ -86,6 +94,16 @@ void test_sqlite_catalog() {
                   << " | Peak Alt: " << t.visibility.peak_altitude.value << " deg"
                   << " | Visible: " << t.visibility.max_continuous_hours << " hrs\n";
     }
+
+    // 3b. Test filter_targets with search_query = "M42" (off-season target is preserved)
+    astro::catalog::DsoFilterOptions m42_search_opts;
+    m42_search_opts.search_query = "M42";
+    auto m42_filter_results = storage.filter_targets(obs, m42_search_opts, crit, 10);
+    assert(!m42_filter_results.empty());
+    assert(m42_filter_results[0].dso.messier.has_value() && *m42_filter_results[0].dso.messier == "M 42");
+    std::cout << "  ✓ filter_targets with search 'M42' successfully returned " 
+              << m42_filter_results[0].dso.display_name() << " (meets_criteria = " 
+              << (m42_filter_results[0].visibility.meets_criteria ? "true" : "false") << ")\n";
 
     // 4. Test Observing Lists
     std::cout << "[TEST] User Observing Lists...\n";
