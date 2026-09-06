@@ -400,8 +400,7 @@ const char* astro_get_target_yearly_visibility_json(
     AstroEngine* engine,
     int64_t target_id,
     const AstroObserver* observer,
-    double min_altitude_deg,
-    double min_duration_hours,
+    const AstroFilterCriteria* criteria,
     int32_t year
 ) {
     if (!engine || !observer) return duplicate_string("{}");
@@ -420,8 +419,24 @@ const char* astro_get_target_yearly_visibility_json(
         };
 
         astro::visibility::VisibilityCriteria crit;
-        crit.min_altitude = astro::units::Degrees{min_altitude_deg};
-        crit.min_duration_hours = min_duration_hours;
+        if (criteria) {
+            crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
+            crit.min_duration_hours = criteria->min_duration_hours > 0 ? criteria->min_duration_hours : 2.0;
+            crit.azimuth_range = astro::horizon::AzimuthRange{
+                astro::units::Degrees{criteria->min_azimuth_deg},
+                astro::units::Degrees{criteria->max_azimuth_deg}
+            };
+            crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
+            crit.use_custom_time_window = (criteria->use_custom_time_window != 0);
+            crit.custom_start_hour = criteria->custom_start_hour;
+            crit.custom_start_minute = criteria->custom_start_minute;
+            crit.custom_end_hour = criteria->custom_end_hour;
+            crit.custom_end_minute = criteria->custom_end_minute;
+            crit.utc_offset_minutes = criteria->utc_offset_minutes;
+        } else {
+            crit.min_altitude = astro::units::Degrees{30.0};
+            crit.min_duration_hours = 2.0;
+        }
 
         int sim_year = year > 1900 ? year : 2026;
         auto res = astro::visibility::calculate_yearly_visibility(opt_dso->coordinates, obs, crit, sim_year);
@@ -432,8 +447,14 @@ const char* astro_get_target_yearly_visibility_json(
            << "\"theoretical_max_altitude_deg\":" << res.theoretical_max_altitude_deg << ","
            << "\"can_ever_reach_min_alt\":" << (res.can_ever_reach_min_alt ? "true" : "false") << ","
            << "\"peak_month\":" << res.peak_month << ","
+           << "\"peak_day\":" << res.peak_day << ","
+           << "\"start_month\":" << res.start_month << ","
+           << "\"start_day\":" << res.start_day << ","
+           << "\"end_month\":" << res.end_month << ","
+           << "\"end_day\":" << res.end_day << ","
            << "\"best_window_start\":" << res.best_window_start << ","
            << "\"best_window_end\":" << res.best_window_end << ","
+           << "\"total_observable_days\":" << res.total_observable_days << ","
            << "\"max_hours_in_peak\":" << res.max_hours_in_peak << ","
            << "\"best_window_summary\":\"" << escape_json(res.best_window_summary) << "\","
            << "\"months\":[";
@@ -446,7 +467,11 @@ const char* astro_get_target_yearly_visibility_json(
                << "\"name\":\"" << m.month_name << "\","
                << "\"hours_observable\":" << m.hours_observable << ","
                << "\"peak_altitude_deg\":" << m.peak_altitude_deg << ","
-               << "\"is_observable\":" << (m.is_observable ? "true" : "false")
+               << "\"is_observable\":" << (m.is_observable ? "true" : "false") << ","
+               << "\"observable_days_count\":" << m.observable_days_count << ","
+               << "\"start_day\":" << m.start_day << ","
+               << "\"end_day\":" << m.end_day << ","
+               << "\"total_days_in_month\":" << m.total_days_in_month
                << "}";
         }
         ss << "]}";

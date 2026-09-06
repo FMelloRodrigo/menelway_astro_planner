@@ -176,17 +176,90 @@ void test_yearly_visibility() {
     assert(yearly_m42.theoretical_max_altitude_deg > 40.0);
     // Peak month for Orion is December or January (winter)
     assert(yearly_m42.peak_month == 12 || yearly_m42.peak_month == 1);
+    assert(yearly_m42.peak_day >= 1 && yearly_m42.peak_day <= 31);
+    assert(yearly_m42.start_month >= 1 && yearly_m42.start_day >= 1);
+    assert(yearly_m42.end_month >= 1 && yearly_m42.end_day >= 1);
+    assert(yearly_m42.total_observable_days > 100);
     // In June (month 6), M 42 is behind the Sun and not observable
     assert(yearly_m42.months[5].is_observable == false);
     // In December (month 12), M 42 is observable for multiple hours
     assert(yearly_m42.months[11].is_observable == true);
+    assert(yearly_m42.months[11].observable_days_count == 31);
+
+    // Rosette Nebula / Caldwell 49 (RA ~6.53h, Dec +5.0 deg)
+    // Testing precision: With 30 deg min alt & 2.0h min duration from NYC,
+    // Rosette enters visibility only at the very end of September!
+    EquatorialCoordinates rosette{Hours{6.53}, Degrees{5.0}};
+    VisibilityCriteria rosette_crit;
+    rosette_crit.min_altitude = Degrees{30.0};
+    rosette_crit.min_duration_hours = 2.0;
+
+    auto yearly_rosette = calculate_yearly_visibility(rosette, nyc, rosette_crit, 2026);
+    assert(yearly_rosette.can_ever_reach_min_alt == true);
+    // Rosette becomes observable in late September (day >= 20)
+    assert(yearly_rosette.start_month == 9);
+    assert(yearly_rosette.start_day >= 20); // Only available at the very end of September!
+    // In September, only a few days are observable (< 15 days)
+    assert(yearly_rosette.months[8].observable_days_count > 0);
+    assert(yearly_rosette.months[8].observable_days_count < 15);
+    assert(yearly_rosette.months[8].start_day >= 20);
+
+    // Test Rosette under user's specific directional & custom time window filters:
+    // NW Azimuth (270-360 deg), 30 deg min altitude, 21:00 to 23:00 window.
+    // Rosette is deep below horizon in September between 21:00 and 23:00 and never enters NW at >= 30 deg.
+    VisibilityCriteria rosette_user_filters;
+    rosette_user_filters.min_altitude = Degrees{30.0};
+    rosette_user_filters.min_duration_hours = 2.0;
+    rosette_user_filters.azimuth_range = astro::horizon::AzimuthRange{Degrees{270.0}, Degrees{360.0}};
+    rosette_user_filters.quadrant = astro::horizon::Quadrant::NorthWest;
+    rosette_user_filters.use_custom_time_window = true;
+    rosette_user_filters.custom_start_hour = 21;
+    rosette_user_filters.custom_start_minute = 0;
+    rosette_user_filters.custom_end_hour = 23;
+    rosette_user_filters.custom_end_minute = 0;
+    rosette_user_filters.utc_offset_minutes = -180; // UTC-3
+
+    auto yearly_rosette_filtered = calculate_yearly_visibility(rosette, nyc, rosette_user_filters, 2026);
+    // Must NOT be observable in September with these filters
+    assert(yearly_rosette_filtered.months[8].is_observable == false);
+    assert(yearly_rosette_filtered.months[8].observable_days_count == 0);
+    assert(yearly_rosette_filtered.total_observable_days == 0);
+    assert(yearly_rosette_filtered.best_window_summary == "Not observable with current filters");
 
     // Southern object: Carina Nebula (Dec -59.87 deg) from NYC (Lat 40.7 N)
     EquatorialCoordinates carina{Hours{10.75}, Degrees{-59.87}};
     auto yearly_carina = calculate_yearly_visibility(carina, nyc, crit, 2026);
     assert(yearly_carina.can_ever_reach_min_alt == false);
+    assert(yearly_carina.total_observable_days == 0);
 
-    std::cout << "  ✓ Yearly Visibility passed: " << yearly_m42.best_window_summary << "\n";
+    std::cout << "  ✓ Yearly Visibility M42 passed: " << yearly_m42.best_window_summary << "\n";
+    std::cout << "  ✓ Yearly Visibility Rosette (C49 Unrestricted) passed: " << yearly_rosette.best_window_summary << "\n";
+    std::cout << "    (Rosette Sep Unrestricted: " << yearly_rosette.months[8].observable_days_count << " days, starting Sep "
+              << yearly_rosette.months[8].start_day << ")\n";
+    // Test from Southern Hemisphere (e.g. Brazil -23.55 deg Lat, UTC-3)
+    ObserverLocation brazil{Degrees{-23.55}, Degrees{-46.63}, 760.0};
+    auto yearly_rosette_brazil = calculate_yearly_visibility(rosette, brazil, rosette_user_filters, 2026);
+    std::cout << "  ✓ Yearly Visibility Rosette from Brazil (-23.55 Lat, NW, 21-23h): "
+              << yearly_rosette_brazil.best_window_summary << " (Total days: "
+              << yearly_rosette_brazil.total_observable_days << ")\n";
+    for (int m = 1; m <= 12; ++m) {
+        const auto& md = yearly_rosette_brazil.months[m - 1];
+        if (md.is_observable) {
+            std::cout << "    - " << md.month_name << ": " << md.observable_days_count << " days (from day "
+                      << md.start_day << " to " << md.end_day << " at max "
+                      << md.peak_altitude_deg << "°)\n";
+        }
+    }
+    // In September, Rosette is NOT visible between 21:00 and 23:00 in NW from Brazil
+    assert(yearly_rosette_brazil.months[8].observable_days_count == 0);
+    assert(yearly_rosette_brazil.months[8].is_observable == false);
+    // In February, Rosette IS visible in NW between 21:00 and 23:00
+    assert(yearly_rosette_brazil.months[1].observable_days_count > 0);
+    assert(yearly_rosette_brazil.months[1].is_observable == true);
+    // In March, Rosette IS visible in NW between 21:00 and 23:00
+    assert(yearly_rosette_brazil.months[2].observable_days_count > 0);
+    assert(yearly_rosette_brazil.months[2].is_observable == true);
+    assert(yearly_rosette_brazil.total_observable_days > 0);
 }
 
 int main() {

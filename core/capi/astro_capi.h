@@ -62,6 +62,12 @@ typedef struct {
     const char* search_query;      // optional text search
     int32_t limit;
     int32_t offset;
+    int32_t use_custom_time_window; // 0 or 1
+    int32_t custom_start_hour;
+    int32_t custom_start_minute;
+    int32_t custom_end_hour;
+    int32_t custom_end_minute;
+    int32_t utc_offset_minutes;
 } AstroFilterCriteria;
 
 typedef struct {
@@ -167,8 +173,7 @@ ASTRO_API const char* astro_get_target_yearly_visibility_json(
     AstroEngine* engine,
     int64_t target_id,
     const AstroObserver* observer,
-    double min_altitude_deg,
-    double min_duration_hours,
+    const AstroFilterCriteria* criteria,
     int32_t year
 );
 

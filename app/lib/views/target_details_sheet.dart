@@ -48,6 +48,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   YearlyVisibilityModel? _yearlyVisibility;
   bool _isLoadingYearly = true;
   String? _onlineInfo;
+  bool _showFilteredYearly = true;
 
   @override
   void initState() {
@@ -63,7 +64,13 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       _loadCurve();
       _loadYearlyVisibility();
     } else if (oldWidget.filters?.minAltitude != widget.filters?.minAltitude ||
-        oldWidget.filters?.minDurationHours != widget.filters?.minDurationHours) {
+        oldWidget.filters?.minDurationHours != widget.filters?.minDurationHours ||
+        oldWidget.filters?.minAzimuth != widget.filters?.minAzimuth ||
+        oldWidget.filters?.maxAzimuth != widget.filters?.maxAzimuth ||
+        oldWidget.filters?.quadrant != widget.filters?.quadrant ||
+        oldWidget.filters?.useCustomTimeWindow != widget.filters?.useCustomTimeWindow ||
+        oldWidget.filters?.customStartHour != widget.filters?.customStartHour ||
+        oldWidget.filters?.customEndHour != widget.filters?.customEndHour) {
       _loadYearlyVisibility();
     }
   }
@@ -77,6 +84,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           latitude: widget.latitude,
           longitude: widget.longitude,
           elevation: widget.elevation,
+          filters: _showFilteredYearly ? widget.filters : null,
           minAltitude: widget.filters?.minAltitude ?? 30.0,
           minDurationHours: widget.filters?.minDurationHours ?? 2.0,
           year: widget.filters?.date.year ?? DateTime.now().year,
@@ -587,6 +595,24 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     );
   }
 
+  String _describeFilters(FilterState f) {
+    final parts = <String>[];
+    if (f.quadrant != 0) {
+      const quadNames = ["All", "North", "East", "South", "West", "NE", "SE", "SW", "NW"];
+      parts.add(f.quadrant < quadNames.length ? quadNames[f.quadrant] : "Quadrant ${f.quadrant}");
+    } else if (f.minAzimuth != 0.0 || f.maxAzimuth != 360.0) {
+      parts.add("${f.minAzimuth.round()}°–${f.maxAzimuth.round()}°");
+    }
+    if (f.useCustomTimeWindow) {
+      parts.add(f.formattedWindow);
+    } else {
+      parts.add("Dusk–Dawn");
+    }
+    parts.add("Min ${f.minAltitude.round()}°");
+    parts.add("${f.minDurationHours.toStringAsFixed(1)}h");
+    return parts.join(" · ");
+  }
+
   Widget _buildYearlyVisibilityCard() {
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
@@ -624,6 +650,47 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final y = _yearlyVisibility!;
     final isVisibleTonight = widget.target.meetsCriteria;
 
+    // Determine tonight status text factoring in days remaining until season start
+    String tonightStatusText;
+    final now = widget.night.sunset;
+    final currentMonth = now.month;
+    final currentDay = now.day;
+
+    if (isVisibleTonight) {
+      tonightStatusText = "Visible Tonight";
+    } else if (!y.canEverReachMinAlt) {
+      tonightStatusText = "Unreachable";
+    } else if (y.totalObservableDays == 0) {
+      tonightStatusText = _showFilteredYearly
+          ? "Not observable with active filters"
+          : "Not observable (below limits)";
+    } else {
+      final thisYear = now.year;
+      DateTime seasonStart = DateTime(thisYear, y.startMonth, y.startDay);
+      if (seasonStart.isBefore(now) && y.startMonth > y.endMonth && currentMonth <= y.endMonth) {
+        seasonStart = DateTime(thisYear - 1, y.startMonth, y.startDay);
+      }
+      DateTime seasonEnd = DateTime(thisYear, y.endMonth, y.endDay);
+      if (y.endMonth < y.startMonth && currentMonth >= y.startMonth) {
+        seasonEnd = DateTime(thisYear + 1, y.endMonth, y.endDay);
+      }
+
+      if (now.isBefore(seasonStart)) {
+        final diffDays = seasonStart.difference(DateTime(thisYear, currentMonth, currentDay)).inDays;
+        if (diffDays == 1) {
+          tonightStatusText = "Starts tomorrow (${y.months[y.startMonth - 1].name} ${y.startDay})";
+        } else if (diffDays <= 60) {
+          tonightStatusText = "Starts in $diffDays days (${y.months[y.startMonth - 1].name} ${y.startDay})";
+        } else {
+          tonightStatusText = "Starts ${y.months[y.startMonth - 1].name} ${y.startDay}";
+        }
+      } else if (!now.isAfter(seasonEnd)) {
+        tonightStatusText = "In Season · Below limits tonight";
+      } else {
+        tonightStatusText = "Off-Season (Ended ${y.months[y.endMonth - 1].name} ${y.endDay})";
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -641,79 +708,220 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // View Mode Selector: Filtered vs Full Sky & Darkness
+          if (widget.filters != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Text(
+                    "SIMULATION MODE:",
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      if (!_showFilteredYearly) {
+                        setState(() => _showFilteredYearly = true);
+                        _loadYearlyVisibility();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _showFilteredYearly
+                            ? accentColor.withValues(alpha: 0.2)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: _showFilteredYearly
+                              ? accentColor.withValues(alpha: 0.6)
+                              : textColor.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        "Active Filters",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: _showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
+                          color: _showFilteredYearly ? accentColor : textColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () {
+                      if (_showFilteredYearly) {
+                        setState(() => _showFilteredYearly = false);
+                        _loadYearlyVisibility();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: !_showFilteredYearly
+                            ? accentColor.withValues(alpha: 0.2)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: !_showFilteredYearly
+                              ? accentColor.withValues(alpha: 0.6)
+                              : textColor.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        "Full Sky & Night",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: !_showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
+                          color: !_showFilteredYearly ? accentColor : textColor.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Header: Season Title + Tonight Status Badge
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.date_range_rounded, size: 16, color: accentColor),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "YEARLY OBSERVING WINDOW",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.0,
-                        color: textColor.withValues(alpha: 0.6),
-                      ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 460;
+              final seasonHeader = Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      y.bestWindowSummary,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                      ),
+                    child: Icon(Icons.date_range_rounded, size: 16, color: accentColor),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "YEARLY OBSERVING WINDOW",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                            color: textColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          y.bestWindowSummary,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                        if (_showFilteredYearly && widget.filters != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              "Filters: ${_describeFilters(widget.filters!)}",
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                        if (y.totalObservableDays > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              "${y.totalObservableDays} days observable this year • Peak: ${y.maxHoursInPeak.toStringAsFixed(1)}h on ${y.months[y.peakMonth - 1].name} ${y.peakDay}",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              // Tonight status pill
-              Container(
+                  ),
+                ],
+              );
+
+              final isZeroDays = y.totalObservableDays == 0;
+              final statusPill = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isVisibleTonight
                       ? AstroColors.visibleGreen.withValues(alpha: 0.15)
-                      : Colors.amber.withValues(alpha: 0.15),
+                      : (isZeroDays
+                          ? Colors.orange.withValues(alpha: 0.15)
+                          : Colors.amber.withValues(alpha: 0.15)),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isVisibleTonight
                         ? AstroColors.visibleGreen.withValues(alpha: 0.5)
-                        : Colors.amber.withValues(alpha: 0.5),
+                        : (isZeroDays
+                            ? Colors.orange.withValues(alpha: 0.5)
+                            : Colors.amber.withValues(alpha: 0.5)),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isVisibleTonight ? Icons.check_circle_outline_rounded : Icons.schedule_rounded,
+                      isVisibleTonight
+                          ? Icons.check_circle_outline_rounded
+                          : (isZeroDays ? Icons.filter_alt_off_rounded : Icons.schedule_rounded),
                       size: 13,
-                      color: isVisibleTonight ? AstroColors.visibleGreen : Colors.amber,
+                      color: isVisibleTonight
+                          ? AstroColors.visibleGreen
+                          : (isZeroDays ? Colors.orange : Colors.amber),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isVisibleTonight ? "Visible Tonight" : "Off-Season Tonight",
+                      tonightStatusText,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: isVisibleTonight ? AstroColors.visibleGreen : Colors.amber,
+                        color: isVisibleTonight
+                            ? AstroColors.visibleGreen
+                            : (isZeroDays ? Colors.orange : Colors.amber),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              );
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    seasonHeader,
+                    const SizedBox(height: 8),
+                    statusPill,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: seasonHeader),
+                  const SizedBox(width: 8),
+                  statusPill,
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 14),
@@ -723,6 +931,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             children: y.months.map((m) {
               final isPeak = m.month == y.peakMonth && m.hoursObservable > 0;
               final isObservable = m.isObservable;
+              final isPartial = m.isPartialMonth;
 
               Color bgColor;
               Color borderColor;
@@ -736,11 +945,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 monthTextColor = isRed ? AstroColors.nightVisionRed : AstroColors.starGold;
               } else if (isObservable) {
                 bgColor = isRed
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.15);
+                    ? AstroColors.nightVisionRed.withValues(alpha: isPartial ? 0.08 : 0.15)
+                    : AstroColors.starlightCyan.withValues(alpha: isPartial ? 0.08 : 0.15);
                 borderColor = isRed
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.4)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.4);
+                    ? AstroColors.nightVisionRed.withValues(alpha: isPartial ? 0.6 : 0.4)
+                    : AstroColors.starlightCyan.withValues(alpha: isPartial ? 0.6 : 0.4);
                 monthTextColor = isRed ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
               } else {
                 bgColor = Colors.black.withValues(alpha: 0.25);
@@ -749,37 +958,66 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               }
 
               return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: borderColor, width: isPeak ? 1.4 : 1.0),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        m.name.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: monthTextColor,
-                        ),
+                child: Tooltip(
+                  message: m.dateRangeLabel,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: borderColor,
+                        width: isPeak ? 1.4 : 1.0,
                       ),
-                      const SizedBox(height: 3),
-                      if (isPeak)
-                        Icon(Icons.star_rounded, size: 10, color: monthTextColor)
-                      else
+                    ),
+                    child: Column(
+                      children: [
                         Text(
-                          m.hoursObservable > 0 ? "${m.hoursObservable.toStringAsFixed(1)}h" : "—",
+                          m.name.toUpperCase(),
                           style: TextStyle(
                             fontSize: 9,
-                            fontWeight: isObservable ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: FontWeight.w700,
                             color: monthTextColor,
                           ),
                         ),
-                    ],
+                        const SizedBox(height: 2),
+                        if (isPeak)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${m.observableDaysCount}d",
+                                style: TextStyle(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: monthTextColor,
+                                ),
+                              ),
+                              Icon(Icons.star_rounded, size: 9, color: monthTextColor),
+                            ],
+                          )
+                        else if (isObservable)
+                          Text(
+                            "${m.observableDaysCount}d",
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: monthTextColor.withValues(alpha: 0.9),
+                            ),
+                          )
+                        else
+                          Text(
+                            "—",
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.normal,
+                              color: monthTextColor,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -792,12 +1030,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Peak theoretical altitude: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit",
-                style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
+              Expanded(
+                child: Text(
+                  "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
+                  style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
-                "Filter limits: ≥${widget.filters?.minAltitude.round() ?? 30}° for ≥${widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0'}h",
+                "Limits: ≥${widget.filters?.minAltitude.round() ?? 30}° for ≥${widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0'}h",
                 style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
               ),
             ],

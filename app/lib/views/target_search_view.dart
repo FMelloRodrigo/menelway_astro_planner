@@ -49,6 +49,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   final TextEditingController _searchController = TextEditingController();
   TargetItem? _selectedTarget;
   Timer? _debounceTimer;
+  bool _hideOutsideFilters = false;
 
   @override
   void initState() {
@@ -153,7 +154,10 @@ class _TargetSearchViewState extends State<TargetSearchView> {
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
     final isWideScreen = MediaQuery.of(context).size.width >= 900;
-    final displayTargets = _sortedTargets;
+    final allSorted = _sortedTargets;
+    final displayTargets = _hideOutsideFilters && widget.filters.searchQuery.isNotEmpty
+        ? allSorted.where((t) => t.meetsCriteria).toList()
+        : allSorted;
 
     return Column(
       children: [
@@ -424,7 +428,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildTargetList(List<TargetItem> targets) {
-    final hasOffSeason = targets.any((t) => !t.meetsCriteria);
+    final hasOffSeason = widget.filters.searchQuery.isNotEmpty && widget.targets.any((t) => !t.meetsCriteria);
 
     return ListView.builder(
       padding: const EdgeInsets.all(12),
@@ -445,11 +449,30 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Search includes targets below tonight's limits. Click any target to view its yearly window.",
+                    _hideOutsideFilters
+                        ? "Showing only targets matching active filters tonight."
+                        : "Search includes targets outside active filters tonight. Click any target to view its yearly window.",
                     style: TextStyle(
                       fontSize: 11,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
                     ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _hideOutsideFilters = !_hideOutsideFilters;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    _hideOutsideFilters ? "Show All" : "Hide Non-Matching",
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber),
                   ),
                 ),
               ],
@@ -469,7 +492,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
-    return Card(
+    final card = Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: isSelected
           ? (widget.isRedNightMode
@@ -601,7 +624,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
                     ),
                     child: Text(
-                      isNarrow ? "Off-Season" : "Off-Season Tonight",
+                      isNarrow ? "Outside Filters" : "Outside Active Filters",
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -637,7 +660,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             Icon(Icons.trending_up_rounded, size: 13, color: AstroColors.starGold),
                             const SizedBox(width: 3),
                             Text(
-                              "${target.peakAltitudeDeg.toStringAsFixed(0)}°",
+                              target.peakAltitudeDeg > 0
+                                  ? "${target.peakAltitudeDeg.toStringAsFixed(0)}°"
+                                  : "Below 0°",
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -693,7 +718,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             Icon(Icons.trending_up_rounded, size: 14, color: AstroColors.starGold),
                             const SizedBox(width: 4),
                             Text(
-                              "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°",
+                              target.peakAltitudeDeg > 0
+                                  ? "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°"
+                                  : "Below Horizon",
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -737,6 +764,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         ),
       ),
     );
+
+    if (!target.meetsCriteria) {
+      return Opacity(opacity: 0.78, child: card);
+    }
+    return card;
   }
 
   Widget _buildSummaryChip(String label, IconData icon) {

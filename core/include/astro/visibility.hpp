@@ -27,6 +27,14 @@ struct VisibilityCriteria {
     horizon::AzimuthRange azimuth_range{units::Degrees{0.0}, units::Degrees{360.0}};
     horizon::Quadrant quadrant{horizon::Quadrant::All};
     std::optional<horizon::HorizonProfile> custom_horizon{std::nullopt};
+
+    // Custom observing session window (if enabled, overrides full dusk-to-dawn window in simulations)
+    bool use_custom_time_window{false};
+    int custom_start_hour{21};
+    int custom_start_minute{0};
+    int custom_end_hour{23};
+    int custom_end_minute{0};
+    int utc_offset_minutes{0};
 };
 
 struct TargetVisibilityResult {
@@ -72,9 +80,13 @@ std::vector<AltitudePoint> generate_altitude_curve(
 struct MonthVisibility {
     int month{1};                 // 1 = Jan, 12 = Dec
     std::string month_name;       // "Jan", "Feb", etc.
-    double hours_observable{0.0}; // continuous hours meeting criteria during darkness
+    double hours_observable{0.0}; // peak continuous hours during this month
     double peak_altitude_deg{0.0};// peak altitude reached during darkness
-    bool is_observable{false};    // true if hours_observable >= min_duration
+    bool is_observable{false};    // true if any day in month is observable
+    int observable_days_count{0}; // number of days meeting criteria in this month
+    int start_day{0};             // first observable day in this month (1-31, 0 if none)
+    int end_day{0};               // last observable day in this month (1-31, 0 if none)
+    int total_days_in_month{31};  // 28, 29, 30, or 31
 };
 
 struct YearlyVisibilityResult {
@@ -82,10 +94,16 @@ struct YearlyVisibilityResult {
     bool can_ever_reach_min_alt{true};
     std::vector<MonthVisibility> months;      // 12 elements
     int peak_month{0};                        // 1-12
-    int best_window_start{0};                 // 1-12
-    int best_window_end{0};                   // 1-12
+    int peak_day{0};                          // 1-31
+    int start_month{0};                       // 1-12
+    int start_day{0};                         // 1-31
+    int end_month{0};                         // 1-12
+    int end_day{0};                           // 1-31
+    int best_window_start{0};                 // 1-12 (for backward compatibility)
+    int best_window_end{0};                   // 1-12 (for backward compatibility)
+    int total_observable_days{0};             // 0-366
     double max_hours_in_peak{0.0};
-    std::string best_window_summary;          // e.g. "October – February (Peak: December)"
+    std::string best_window_summary;          // e.g. "Sep 27 – Mar 22 (Peak: Dec 21)"
 };
 
 /**

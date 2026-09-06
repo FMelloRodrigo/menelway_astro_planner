@@ -127,16 +127,14 @@ typedef _AstroGetTargetYearlyVisibilityJsonC = Pointer<Utf8> Function(
   Pointer<AstroEngineContext> engine,
   Int64 targetId,
   Pointer<AstroObserver> observer,
-  Double minAltitudeDeg,
-  Double minDurationHours,
+  Pointer<AstroFilterCriteria> criteria,
   Int32 year,
 );
 typedef _AstroGetTargetYearlyVisibilityJsonDart = Pointer<Utf8> Function(
   Pointer<AstroEngineContext> engine,
   int targetId,
   Pointer<AstroObserver> observer,
-  double minAltitudeDeg,
-  double minDurationHours,
+  Pointer<AstroFilterCriteria> criteria,
   int year,
 );
 
@@ -394,6 +392,12 @@ class AstroBridge {
 
       critPtr.ref.limit = 200;
       critPtr.ref.offset = 0;
+      critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
+      critPtr.ref.customStartHour = filters.customStartHour;
+      critPtr.ref.customStartMinute = filters.customStartMinute;
+      critPtr.ref.customEndHour = filters.customEndHour;
+      critPtr.ref.customEndMinute = filters.customEndMinute;
+      critPtr.ref.utcOffsetMinutes = filters.date.timeZoneOffset.inMinutes;
 
       final listPtr = _filterTargets(_engine!, obsPtr, critPtr, stepMinutes);
       if (listPtr == nullptr) return [];
@@ -575,8 +579,9 @@ class AstroBridge {
     required double latitude,
     required double longitude,
     required double elevation,
-    required double minAltitude,
-    required double minDurationHours,
+    FilterState? filters,
+    double minAltitude = 30.0,
+    double minDurationHours = 2.0,
     int year = 2026,
   }) {
     if (_engine == null) return null;
@@ -586,13 +591,26 @@ class AstroBridge {
     obsPtr.ref.longitudeDeg = longitude;
     obsPtr.ref.elevationM = elevation;
 
+    final critPtr = calloc<AstroFilterCriteria>();
+    critPtr.ref.minAltitudeDeg = filters?.minAltitude ?? minAltitude;
+    critPtr.ref.minDurationHours = filters?.minDurationHours ?? minDurationHours;
+    critPtr.ref.minAzimuthDeg = filters?.minAzimuth ?? 0.0;
+    critPtr.ref.maxAzimuthDeg = filters?.maxAzimuth ?? 360.0;
+    critPtr.ref.quadrant = filters?.quadrant ?? 0;
+    critPtr.ref.minMoonSeparationDeg = 0.0;
+    critPtr.ref.useCustomTimeWindow = (filters?.useCustomTimeWindow ?? false) ? 1 : 0;
+    critPtr.ref.customStartHour = filters?.customStartHour ?? 21;
+    critPtr.ref.customStartMinute = filters?.customStartMinute ?? 0;
+    critPtr.ref.customEndHour = filters?.customEndHour ?? 23;
+    critPtr.ref.customEndMinute = filters?.customEndMinute ?? 0;
+    critPtr.ref.utcOffsetMinutes = filters?.date.timeZoneOffset.inMinutes ?? DateTime.now().timeZoneOffset.inMinutes;
+
     try {
       final jsonPtr = _getTargetYearlyVisibilityJson(
         _engine!,
         targetId,
         obsPtr,
-        minAltitude,
-        minDurationHours,
+        critPtr,
         year,
       );
 
@@ -609,6 +627,7 @@ class AstroBridge {
       return null;
     } finally {
       calloc.free(obsPtr);
+      calloc.free(critPtr);
     }
   }
 }

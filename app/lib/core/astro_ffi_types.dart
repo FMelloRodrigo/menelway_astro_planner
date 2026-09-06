@@ -100,6 +100,24 @@ final class AstroFilterCriteria extends Struct {
 
   @Int32()
   external int offset;
+
+  @Int32()
+  external int useCustomTimeWindow;
+
+  @Int32()
+  external int customStartHour;
+
+  @Int32()
+  external int customStartMinute;
+
+  @Int32()
+  external int customEndHour;
+
+  @Int32()
+  external int customEndMinute;
+
+  @Int32()
+  external int utcOffsetMinutes;
 }
 
 final class AstroTargetItem extends Struct {
