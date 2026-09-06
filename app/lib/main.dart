@@ -1,26 +1,41 @@
 import 'package:flutter/material.dart';
 
+import 'core/settings_service.dart';
 import 'theme/astro_theme.dart';
 import 'views/main_scaffold.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AstroTargetsApp());
+  final initialSettings = await SettingsService.loadSettings();
+  runApp(AstroTargetsApp(initialSettings: initialSettings));
 }
 
 class AstroTargetsApp extends StatefulWidget {
-  const AstroTargetsApp({super.key});
+  final AppSettingsData? initialSettings;
+  const AstroTargetsApp({super.key, this.initialSettings});
 
   @override
   State<AstroTargetsApp> createState() => _AstroTargetsAppState();
 }
 
 class _AstroTargetsAppState extends State<AstroTargetsApp> {
-  bool _isRedNightMode = false;
+  late bool _isRedNightMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _isRedNightMode = widget.initialSettings?.isRedNightMode ?? false;
+  }
 
   void _toggleNightMode() {
     setState(() {
       _isRedNightMode = !_isRedNightMode;
+    });
+  }
+
+  void _resetNightMode() {
+    setState(() {
+      _isRedNightMode = false;
     });
   }
 
@@ -33,6 +48,8 @@ class _AstroTargetsAppState extends State<AstroTargetsApp> {
       home: MainScaffold(
         isRedNightMode: _isRedNightMode,
         onToggleNightMode: _toggleNightMode,
+        onResetNightMode: _resetNightMode,
+        initialSettings: widget.initialSettings,
       ),
     );
   }

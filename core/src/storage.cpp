@@ -509,4 +509,17 @@ std::vector<ObservingListItem> SqliteStorage::get_items_in_list(std::int64_t lis
     return items;
 }
 
+bool SqliteStorage::clear_all_lists() {
+    if (!db_) return false;
+    const char* sql = "DELETE FROM user_list_items; DELETE FROM user_lists;";
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(db_, sql, nullptr, nullptr, &err_msg);
+    if (err_msg) {
+        last_error_ = err_msg;
+        sqlite3_free(err_msg);
+        return false;
+    }
+    return rc == SQLITE_OK;
+}
+
 } // namespace astro::storage

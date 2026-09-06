@@ -390,6 +390,12 @@ const char* astro_get_observing_lists_json(AstroEngine* engine) {
     return duplicate_string(ss.str());
 }
 
+int32_t astro_clear_all_observing_lists(AstroEngine* engine) {
+    if (!engine) return 0;
+    auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
+    return ctx->storage->clear_all_lists() ? 1 : 0;
+}
+
 void astro_free_string(const char* str) {
     if (str) {
         free(const_cast<char*>(str));

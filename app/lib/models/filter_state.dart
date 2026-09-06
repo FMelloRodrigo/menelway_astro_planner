@@ -160,4 +160,61 @@ class FilterState {
       observerLocationName: observerLocationName ?? this.observerLocationName,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'minAltitude': minAltitude,
+    'minDurationHours': minDurationHours,
+    'minMoonSeparation': minMoonSeparation,
+    'minAzimuth': minAzimuth,
+    'maxAzimuth': maxAzimuth,
+    'quadrant': quadrant,
+    'maxMagnitude': maxMagnitude,
+    'minMagnitude': minMagnitude,
+    'minSizeArcmin': minSizeArcmin,
+    'maxSizeArcmin': maxSizeArcmin,
+    'selectedCatalogs': selectedCatalogs.toList(),
+    'selectedObjectTypes': selectedObjectTypes.toList(),
+    'searchQuery': searchQuery,
+    'useCustomTimeWindow': useCustomTimeWindow,
+    'customStartHour': customStartHour,
+    'customStartMinute': customStartMinute,
+    'customEndHour': customEndHour,
+    'customEndMinute': customEndMinute,
+    'observerLat': observerLat,
+    'observerLon': observerLon,
+    'observerElevation': observerElevation,
+    'observerLocationName': observerLocationName,
+  };
+
+  factory FilterState.fromJson(Map<String, dynamic> json) {
+    return FilterState(
+      minAltitude: (json['minAltitude'] as num?)?.toDouble() ?? 30.0,
+      minDurationHours: (json['minDurationHours'] as num?)?.toDouble() ?? 2.0,
+      minMoonSeparation: (json['minMoonSeparation'] as num?)?.toDouble() ?? 15.0,
+      minAzimuth: (json['minAzimuth'] as num?)?.toDouble() ?? 0.0,
+      maxAzimuth: (json['maxAzimuth'] as num?)?.toDouble() ?? 360.0,
+      quadrant: json['quadrant'] as int? ?? 0,
+      maxMagnitude: (json['maxMagnitude'] as num?)?.toDouble() ?? 14.0,
+      minMagnitude: (json['minMagnitude'] as num?)?.toDouble() ?? -5.0,
+      minSizeArcmin: (json['minSizeArcmin'] as num?)?.toDouble() ?? 0.0,
+      maxSizeArcmin: (json['maxSizeArcmin'] as num?)?.toDouble() ?? 600.0,
+      selectedCatalogs: (json['selectedCatalogs'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toSet() ??
+          {'Messier', 'Caldwell'},
+      selectedObjectTypes: (json['selectedObjectTypes'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toSet(),
+      searchQuery: json['searchQuery'] as String? ?? '',
+      useCustomTimeWindow: json['useCustomTimeWindow'] as bool? ?? false,
+      customStartHour: json['customStartHour'] as int? ?? 21,
+      customStartMinute: json['customStartMinute'] as int? ?? 0,
+      customEndHour: json['customEndHour'] as int? ?? 23,
+      customEndMinute: json['customEndMinute'] as int? ?? 0,
+      observerLat: (json['observerLat'] as num?)?.toDouble() ?? 40.7128,
+      observerLon: (json['observerLon'] as num?)?.toDouble() ?? -74.0060,
+      observerElevation: (json['observerElevation'] as num?)?.toDouble() ?? 10.0,
+      observerLocationName: json['observerLocationName'] as String? ?? 'New York, USA',
+    );
+  }
 }

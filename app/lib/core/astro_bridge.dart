@@ -119,6 +119,9 @@ typedef _AstroRemoveFromListDart = int Function(
 typedef _AstroGetListsJsonC = Pointer<Utf8> Function(Pointer<AstroEngineContext> engine);
 typedef _AstroGetListsJsonDart = Pointer<Utf8> Function(Pointer<AstroEngineContext> engine);
 
+typedef _AstroClearAllObservingListsC = Int32 Function(Pointer<AstroEngineContext> engine);
+typedef _AstroClearAllObservingListsDart = int Function(Pointer<AstroEngineContext> engine);
+
 typedef _AstroFreeStringC = Void Function(Pointer<Utf8> str);
 typedef _AstroFreeStringDart = void Function(Pointer<Utf8> str);
 
@@ -140,6 +143,7 @@ class AstroBridge {
   late final _AstroAddToListDart _addToList;
   late final _AstroRemoveFromListDart _removeFromList;
   late final _AstroGetListsJsonDart _getListsJson;
+  late final _AstroClearAllObservingListsDart _clearAllLists;
   late final _AstroFreeStringDart _freeString;
 
   AstroBridge._() {
@@ -225,6 +229,9 @@ class AstroBridge {
     _getListsJson = _lib
         .lookup<NativeFunction<_AstroGetListsJsonC>>('astro_get_observing_lists_json')
         .asFunction<_AstroGetListsJsonDart>();
+    _clearAllLists = _lib
+        .lookup<NativeFunction<_AstroClearAllObservingListsC>>('astro_clear_all_observing_lists')
+        .asFunction<_AstroClearAllObservingListsDart>();
     _freeString = _lib
         .lookup<NativeFunction<_AstroFreeStringC>>('astro_free_string')
         .asFunction<_AstroFreeStringDart>();
@@ -534,5 +541,10 @@ class AstroBridge {
     } finally {
       _freeString(jsonPtr);
     }
+  }
+
+  bool clearAllObservingLists() {
+    if (_engine == null) return false;
+    return _clearAllLists(_engine!) == 1;
   }
 }

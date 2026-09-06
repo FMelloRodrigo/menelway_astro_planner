@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/astro_bridge.dart';
 import '../core/catalog_manager.dart';
 import '../core/geocoding_service.dart';
+import '../core/settings_service.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -15,11 +16,15 @@ import 'target_search_view.dart';
 class MainScaffold extends StatefulWidget {
   final bool isRedNightMode;
   final VoidCallback onToggleNightMode;
+  final VoidCallback? onResetNightMode;
+  final AppSettingsData? initialSettings;
 
   const MainScaffold({
     super.key,
     required this.isRedNightMode,
     required this.onToggleNightMode,
+    this.onResetNightMode,
+    this.initialSettings,
   });
 
   @override
@@ -41,7 +46,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   void initState() {
     super.initState();
-    _filters = FilterState();
+    _filters = widget.initialSettings?.filters ?? FilterState();
     _bootstrap();
   }
 
@@ -61,6 +66,25 @@ class _MainScaffoldState extends State<MainScaffold> {
       );
 
       _observingLists = AstroBridge.instance.getObservingLists();
+
+      // Auto-restore observing lists from settings backup if SQLite user lists are empty
+      if (_observingLists.isEmpty &&
+          widget.initialSettings?.observingListsBackup != null &&
+          widget.initialSettings!.observingListsBackup!.isNotEmpty) {
+        for (final list in widget.initialSettings!.observingListsBackup!) {
+          final newId = AstroBridge.instance.createObservingList(
+            list.name,
+            list.description,
+            list.sessionDate,
+          );
+          if (newId > 0) {
+            for (final item in list.items) {
+              AstroBridge.instance.addTargetToList(newId, item.dsoId, item.notes);
+            }
+          }
+        }
+        _observingLists = AstroBridge.instance.getObservingLists();
+      }
 
       setState(() {
         _isInitializing = false;
@@ -107,6 +131,180 @@ class _MainScaffoldState extends State<MainScaffold> {
     setState(() {
       _observingLists = AstroBridge.instance.getObservingLists();
     });
+  }
+
+  void _saveSettings() {
+    SettingsService.saveSettings(
+      filters: _filters,
+      isRedNightMode: widget.isRedNightMode,
+      observingLists: _observingLists,
+    );
+  }
+
+  void _handleToggleNightMode() {
+    widget.onToggleNightMode();
+    Future.microtask(() => _saveSettings());
+  }
+
+  void _resetFiltersOnly() {
+    setState(() {
+      _filters = FilterState(
+        observerLat: _filters.observerLat,
+        observerLon: _filters.observerLon,
+        observerElevation: _filters.observerElevation,
+        observerLocationName: _filters.observerLocationName,
+      );
+    });
+    _saveSettings();
+    _runFiltering();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Target filters reset to default (location preserved)."),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _buildCleanItem(String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
+      ),
+    );
+  }
+
+  void _showCleanDataDialog() {
+    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+    final isRed = widget.isRedNightMode;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isRed ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Clear All Saved Data?",
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "This will permanently erase your local configuration and reset everything back to factory defaults:",
+              style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.8)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCleanItem("• Reset observer location and coordinates to default (New York, USA)", textColor),
+                  _buildCleanItem("• Reset all target filters, altitude, and observing time limits", textColor),
+                  _buildCleanItem("• Delete all custom observing lists and planned session targets", textColor),
+                  _buildCleanItem("• Delete local portable settings file (user_settings.json)", textColor),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "This action cannot be undone.",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.redAccent,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.delete_forever_rounded, size: 16),
+            label: const Text("Clear All Data"),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _performCleanAllData();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performCleanAllData() async {
+    // 1. Clear user settings file
+    await SettingsService.clearSettings();
+
+    // 2. Clear SQLite user lists and items
+    AstroBridge.instance.clearAllObservingLists();
+
+    // 3. Reset night mode if enabled
+    widget.onResetNightMode?.call();
+
+    // 4. Reset in-memory filters
+    setState(() {
+      _filters = FilterState();
+      _observingLists = [];
+      _nightSummary = AstroBridge.instance.getNightSummary(
+        latitude: _filters.observerLat,
+        longitude: _filters.observerLon,
+        elevation: _filters.observerElevation,
+        date: _filters.date,
+      );
+    });
+
+    _runFiltering();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("All saved data, settings, and observing lists have been cleared."),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _editLocationDialog() {
@@ -411,6 +609,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     );
                   });
                   Navigator.of(ctx).pop();
+                  _saveSettings();
                   _runFiltering();
                 },
               ),
@@ -599,18 +798,169 @@ class _MainScaffoldState extends State<MainScaffold> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
 
           // Red Night-Vision Mode Toggle
           IconButton(
             tooltip: widget.isRedNightMode ? "Switch to Deep Space Obsidian" : "Switch to Telescope Red Mode",
+            style: IconButton.styleFrom(
+              backgroundColor: widget.isRedNightMode
+                  ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                  : AstroColors.starlightCyan.withValues(alpha: 0.08),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                      : AstroColors.starlightCyan.withValues(alpha: 0.35),
+                  width: 1.2,
+                ),
+              ),
+            ),
             icon: Icon(
               widget.isRedNightMode ? Icons.nightlight_round : Icons.remove_red_eye_rounded,
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+              size: 16,
+              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
             ),
-            onPressed: widget.onToggleNightMode,
+            onPressed: _handleToggleNightMode,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+
+          // Settings & Clean Data Menu Pill
+          PopupMenuButton<String>(
+            tooltip: "Settings & Data",
+            color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
+            elevation: 10,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                    : AstroColors.starlightCyan.withValues(alpha: 0.45),
+                width: 1.2,
+              ),
+            ),
+            onSelected: (value) {
+              if (value == 'reset_filters') {
+                _resetFiltersOnly();
+              } else if (value == 'clean_data') {
+                _showCleanDataDialog();
+              }
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'reset_filters',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 18,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Reset Target Filters",
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          "Clear filter limits & keep observer location",
+                          style: TextStyle(color: textColor.withValues(alpha: 0.75), fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'clean_data',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_forever_rounded, size: 18, color: Colors.redAccent),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Clean All Saved Data...",
+                          style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          "Wipe lists, custom location, & local settings",
+                          style: TextStyle(
+                            color: widget.isRedNightMode
+                                ? textColor.withValues(alpha: 0.8)
+                                : Colors.redAccent.withValues(alpha: 0.85),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
+                      : AstroColors.starlightCyan.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
+                        : AstroColors.starlightCyan.withValues(alpha: 0.55),
+                    width: 1.4,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
+                          : AstroColors.starlightCyan.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.settings_suggest_rounded,
+                      size: 15,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Settings & Data",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
+                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.arrow_drop_down_rounded,
+                      size: 17,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
         ],
       ),
       body: Row(
@@ -652,11 +1002,13 @@ class _MainScaffoldState extends State<MainScaffold> {
                       setState(() {
                         _filters = updated;
                       });
+                      _saveSettings();
                       _runFiltering();
                     },
                     onAddToList: (listId, dsoId, notes) {
                       AstroBridge.instance.addTargetToList(listId, dsoId, notes);
                       _refreshObservingLists();
+                      _saveSettings();
                     },
                   )
                 : ObservingListsView(
@@ -665,14 +1017,17 @@ class _MainScaffoldState extends State<MainScaffold> {
                     onCreateList: (name, desc, date) {
                       AstroBridge.instance.createObservingList(name, desc, date);
                       _refreshObservingLists();
+                      _saveSettings();
                     },
                     onDeleteList: (listId) {
                       AstroBridge.instance.deleteObservingList(listId);
                       _refreshObservingLists();
+                      _saveSettings();
                     },
                     onRemoveItem: (listId, dsoId) {
                       AstroBridge.instance.removeTargetFromList(listId, dsoId);
                       _refreshObservingLists();
+                      _saveSettings();
                     },
                   ),
           ),

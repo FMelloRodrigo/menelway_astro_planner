@@ -40,6 +40,20 @@ class ObservingListItemModel {
       addedAt: json['added_at'] as int? ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'list_id': listId,
+    'dso_id': dsoId,
+    'name': name,
+    'display_name': displayName,
+    'catalog': catalog,
+    'object_type': objectType,
+    'constellation': constellation,
+    'magnitude': magnitude,
+    'notes': notes,
+    'status': status,
+    'added_at': addedAt,
+  };
 }
 
 class ObservingListModel {
@@ -74,4 +88,13 @@ class ObservingListModel {
       items: itemsList,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'session_date': sessionDate,
+    'created_at': createdAt,
+    'items': items.map((e) => e.toJson()).toList(),
+  };
 }

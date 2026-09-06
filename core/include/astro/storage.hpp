@@ -74,6 +74,8 @@ public:
     ) = 0;
 
     virtual std::vector<ObservingListItem> get_items_in_list(std::int64_t list_id) = 0;
+
+    virtual bool clear_all_lists() = 0;
 };
 
 class SqliteStorage : public ICatalogRepository, public IObservingListRepository {
@@ -126,6 +128,7 @@ public:
     ) override;
 
     std::vector<ObservingListItem> get_items_in_list(std::int64_t list_id) override;
+    bool clear_all_lists() override;
 
 private:
     sqlite3* db_{nullptr};

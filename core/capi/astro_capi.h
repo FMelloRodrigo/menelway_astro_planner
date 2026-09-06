@@ -160,6 +160,7 @@ ASTRO_API int32_t astro_remove_from_observing_list(
     int64_t dso_id
 );
 ASTRO_API const char* astro_get_observing_lists_json(AstroEngine* engine);
+ASTRO_API int32_t astro_clear_all_observing_lists(AstroEngine* engine);
 ASTRO_API void astro_free_string(const char* str);
 
 #ifdef __cplusplus
