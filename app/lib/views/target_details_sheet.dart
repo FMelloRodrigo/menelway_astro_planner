@@ -10,6 +10,7 @@ import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
 import '../theme/astro_theme.dart';
+import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
@@ -487,6 +488,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
             const SizedBox(height: 18),
 
+            // Visual Sky Preview & Apparent Size
+            _buildVisualPreviewCard(),
+
+            const SizedBox(height: 18),
+
             // Yearly Observing Window & 12-Month Mini-Strip Chart
             _buildYearlyVisibilityCard(),
 
@@ -611,6 +617,64 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     parts.add("Min ${f.minAltitude.round()}°");
     parts.add("${f.minDurationHours.toStringAsFixed(1)}h");
     return parts.join(" · ");
+  }
+
+  Widget _buildVisualPreviewCard() {
+    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final isRed = widget.isRedNightMode;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.center_focus_strong_rounded,
+                size: 16,
+                color: accentColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Visual Sky Preview & Apparent Size",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.target.majorAxisArcmin != null
+                    ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}' extent"
+                    : "Point source",
+                style: TextStyle(
+                  fontSize: 11,
+                  color: textColor.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TargetPreviewCanvas(
+            target: widget.target,
+            isRedNightMode: widget.isRedNightMode,
+            height: 240,
+            enableExpandDialog: true,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildYearlyVisibilityCard() {
