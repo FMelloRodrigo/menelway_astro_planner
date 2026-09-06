@@ -190,6 +190,8 @@ AstroTargetList* astro_filter_targets(
             item.name = intern_str(r.dso.name);
             item.messier = intern_str(r.dso.messier.value_or(""));
             item.caldwell = intern_str(r.dso.caldwell.value_or(""));
+            item.arp = intern_str(r.dso.arp.value_or(""));
+            item.herschel = intern_str(r.dso.herschel.value_or(""));
             item.catalog = intern_str(r.dso.catalog);
             item.object_type = intern_str(r.dso.object_type);
             item.constellation = intern_str(r.dso.constellation);

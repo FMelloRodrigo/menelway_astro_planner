@@ -204,12 +204,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
-                          const SizedBox(width: 6),
+                          if (widget.target.messier != null && widget.target.messier!.isNotEmpty)
+                            _buildBadge(widget.target.messier!, AstroColors.nebulaIndigo),
+                          if (widget.target.caldwell != null && widget.target.caldwell!.isNotEmpty)
+                            _buildBadge(widget.target.caldwell!, AstroColors.nebulaIndigo),
+                          if (widget.target.arp != null && widget.target.arp!.isNotEmpty)
+                            _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
+                          if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
+                            _buildBadge(widget.target.herschel!, Colors.amber.shade700),
                           _buildBadge(widget.target.objectType, AstroColors.starlightCyan),
-                          const SizedBox(width: 6),
                           _buildBadge(widget.target.constellation, AstroColors.starGold),
                         ],
                       ),

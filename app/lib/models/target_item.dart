@@ -3,6 +3,8 @@ class TargetItem {
   final String name;
   final String? messier;
   final String? caldwell;
+  final String? arp;
+  final String? herschel;
   final String catalog;
   final String objectType;
   final String constellation;
@@ -25,6 +27,8 @@ class TargetItem {
     required this.name,
     this.messier,
     this.caldwell,
+    this.arp,
+    this.herschel,
     required this.catalog,
     required this.objectType,
     required this.constellation,
@@ -49,6 +53,24 @@ class TargetItem {
         return '$messier ($commonName)';
       }
       return '$messier - $name';
+    }
+    if (caldwell != null && caldwell!.isNotEmpty) {
+      if (commonName != null && commonName!.isNotEmpty) {
+        return '$caldwell ($commonName)';
+      }
+      return '$caldwell - $name';
+    }
+    if (arp != null && arp!.isNotEmpty) {
+      if (commonName != null && commonName!.isNotEmpty) {
+        return '$arp ($commonName)';
+      }
+      return '$arp - $name';
+    }
+    if (herschel != null && herschel!.isNotEmpty) {
+      if (commonName != null && commonName!.isNotEmpty) {
+        return '$herschel ($commonName)';
+      }
+      return '$herschel - $name';
     }
     if (commonName != null && commonName!.isNotEmpty) {
       return '$name ($commonName)';

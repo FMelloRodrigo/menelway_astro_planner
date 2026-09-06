@@ -14,6 +14,8 @@ struct DsoObject {
     std::string name;
     std::optional<std::string> messier;
     std::optional<std::string> caldwell;
+    std::optional<std::string> arp;
+    std::optional<std::string> herschel;
     std::string ngc_ic;
     std::string catalog;
     std::string catalog_number;
@@ -34,6 +36,24 @@ struct DsoObject {
                 return *messier + " (" + *common_names + ")";
             }
             return *messier + " - " + name;
+        }
+        if (caldwell.has_value() && !caldwell->empty()) {
+            if (common_names.has_value() && !common_names->empty()) {
+                return *caldwell + " (" + *common_names + ")";
+            }
+            return *caldwell + " - " + name;
+        }
+        if (arp.has_value() && !arp->empty()) {
+            if (common_names.has_value() && !common_names->empty()) {
+                return *arp + " (" + *common_names + ")";
+            }
+            return *arp + " - " + name;
+        }
+        if (herschel.has_value() && !herschel->empty()) {
+            if (common_names.has_value() && !common_names->empty()) {
+                return *herschel + " (" + *common_names + ")";
+            }
+            return *herschel + " - " + name;
         }
         if (common_names.has_value() && !common_names->empty()) {
             return name + " (" + *common_names + ")";

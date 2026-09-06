@@ -340,12 +340,22 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        _buildSmallChip(target.catalog, AstroColors.nebulaIndigo),
-                        const SizedBox(width: 4),
+                        if (target.messier != null && target.messier!.isNotEmpty)
+                          _buildSmallChip(target.messier!, AstroColors.nebulaIndigo)
+                        else if (target.caldwell != null && target.caldwell!.isNotEmpty)
+                          _buildSmallChip(target.caldwell!, AstroColors.nebulaIndigo)
+                        else
+                          _buildSmallChip(target.catalog, AstroColors.nebulaIndigo),
+                        if (target.arp != null && target.arp!.isNotEmpty)
+                          _buildSmallChip(target.arp!, Colors.deepOrangeAccent),
+                        if (target.herschel != null && target.herschel!.isNotEmpty)
+                          _buildSmallChip(target.herschel!, Colors.amber.shade700),
                         _buildSmallChip(target.objectType, AstroColors.starlightCyan),
-                        const SizedBox(width: 4),
                         Text(
                           target.constellation,
                           style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),

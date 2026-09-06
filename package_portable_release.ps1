@@ -41,7 +41,7 @@ target planner inspired by Telescopius.
 
 Features:
 - Built with modern C++20 astronomy math engine (libastro_core).
-- Offline SQLite DSO catalog (~14,027 objects: Messier, Caldwell, NGC, IC, Sharpless, Barnard).
+- Offline SQLite DSO catalog (~14,148 objects: Messier, Caldwell, Arp, Herschel, NGC, IC, Sharpless, Barnard).
 - Altitude vs Time interactive curve chart with twilight bands.
 - Telescopius visibility filter: reach altitude >= X for >= Y hours.
 - Sky quadrant and degree range azimuth filtering.

@@ -29,46 +29,52 @@ catalog::DsoObject row_to_dso(sqlite3_stmt* stmt) {
     const auto* caldwell = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
     if (caldwell) obj.caldwell = caldwell;
 
-    const auto* ngc_ic = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+    const auto* arp = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+    if (arp) obj.arp = arp;
+
+    const auto* herschel = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+    if (herschel) obj.herschel = herschel;
+
+    const auto* ngc_ic = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
     if (ngc_ic) obj.ngc_ic = ngc_ic;
 
-    const auto* cat = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+    const auto* cat = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
     if (cat) obj.catalog = cat;
 
-    const auto* cat_num = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+    const auto* cat_num = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
     if (cat_num) obj.catalog_number = cat_num;
 
-    const auto* obj_type = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+    const auto* obj_type = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 9));
     if (obj_type) obj.object_type = obj_type;
 
-    const auto* constel = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 8));
+    const auto* constel = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 10));
     if (constel) obj.constellation = constel;
 
-    double ra_deg = sqlite3_column_double(stmt, 9);
-    double dec_deg = sqlite3_column_double(stmt, 10);
+    double ra_deg = sqlite3_column_double(stmt, 11);
+    double dec_deg = sqlite3_column_double(stmt, 12);
     obj.coordinates.ra = units::degrees_to_hours(units::Degrees{ra_deg});
     obj.coordinates.dec = units::Degrees{dec_deg};
 
-    if (sqlite3_column_type(stmt, 11) != SQLITE_NULL) {
-        obj.magnitude = sqlite3_column_double(stmt, 11);
-    }
-    if (sqlite3_column_type(stmt, 12) != SQLITE_NULL) {
-        obj.b_mag = sqlite3_column_double(stmt, 12);
-    }
     if (sqlite3_column_type(stmt, 13) != SQLITE_NULL) {
-        obj.major_axis_arcmin = sqlite3_column_double(stmt, 13);
+        obj.magnitude = sqlite3_column_double(stmt, 13);
     }
     if (sqlite3_column_type(stmt, 14) != SQLITE_NULL) {
-        obj.minor_axis_arcmin = sqlite3_column_double(stmt, 14);
+        obj.b_mag = sqlite3_column_double(stmt, 14);
     }
     if (sqlite3_column_type(stmt, 15) != SQLITE_NULL) {
-        obj.surface_brightness = sqlite3_column_double(stmt, 15);
+        obj.major_axis_arcmin = sqlite3_column_double(stmt, 15);
+    }
+    if (sqlite3_column_type(stmt, 16) != SQLITE_NULL) {
+        obj.minor_axis_arcmin = sqlite3_column_double(stmt, 16);
+    }
+    if (sqlite3_column_type(stmt, 17) != SQLITE_NULL) {
+        obj.surface_brightness = sqlite3_column_double(stmt, 17);
     }
 
-    const auto* common = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 16));
+    const auto* common = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 18));
     if (common) obj.common_names = common;
 
-    const auto* ident = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 17));
+    const auto* ident = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 19));
     if (ident) obj.identifiers = ident;
 
     return obj;
@@ -161,14 +167,14 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
     bool has_search = !options.search_query.empty();
 
     if (has_search) {
-        sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.ngc_ic, d.catalog, d.catalog_number, "
+        sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
             << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
             << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
             << "FROM dso_objects d "
             << "JOIN dso_fts f ON d.id = f.rowid "
             << "WHERE dso_fts MATCH ? ";
     } else {
-        sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.ngc_ic, d.catalog, d.catalog_number, "
+        sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
             << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
             << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
             << "FROM dso_objects d "
@@ -185,6 +191,10 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
                 sql << "d.messier IS NOT NULL";
             } else if (cat == "Caldwell") {
                 sql << "d.caldwell IS NOT NULL";
+            } else if (cat == "Arp") {
+                sql << "d.arp IS NOT NULL";
+            } else if (cat == "Herschel") {
+                sql << "d.herschel IS NOT NULL";
             } else {
                 sql << "d.catalog = '" << cat << "'";
             }
@@ -227,7 +237,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
     if (has_search) {
         sql << "ORDER BY bm25(dso_fts) ";
     } else {
-        sql << "ORDER BY (d.messier IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
+        sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
     }
 
     sql << "LIMIT " << options.limit << " OFFSET " << options.offset << ";";
@@ -261,7 +271,7 @@ std::optional<catalog::DsoObject> SqliteStorage::get_object_by_id(std::int64_t i
     if (!db_) return std::nullopt;
 
     const char* sql =
-        "SELECT id, name, messier, caldwell, ngc_ic, catalog, catalog_number, "
+        "SELECT id, name, messier, caldwell, arp, herschel, ngc_ic, catalog, catalog_number, "
         "object_type, constellation, ra_deg, dec_deg, magnitude, b_mag, "
         "major_axis_arcmin, minor_axis_arcmin, surface_brightness, common_names, identifiers "
         "FROM dso_objects WHERE id = ?;";

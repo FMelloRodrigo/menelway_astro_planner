@@ -29,6 +29,8 @@ class _FilterDialogState extends State<FilterDialog> {
   final List<String> allCatalogs = [
     'Messier',
     'Caldwell',
+    'Arp',
+    'Herschel',
     'NGC',
     'IC',
     'Sharpless',
@@ -673,9 +675,18 @@ class _FilterDialogState extends State<FilterDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                "Max Visual Mag: ${_state.maxMagnitude.toStringAsFixed(1)}",
-                                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+                              Row(
+                                children: [
+                                  Text(
+                                    "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
+                                    style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "(lower = brighter)",
+                                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
+                                  ),
+                                ],
                               ),
                               Slider(
                                 value: _state.maxMagnitude,

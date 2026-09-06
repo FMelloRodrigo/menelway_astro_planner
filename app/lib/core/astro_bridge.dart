@@ -383,6 +383,8 @@ class AstroBridge {
 
           final mStr = item.messier.toDartString();
           final cStr = item.caldwell.toDartString();
+          final arpStr = item.arp.toDartString();
+          final herschelStr = item.herschel.toDartString();
           final commonStr = item.commonName.toDartString();
 
           final transit = DateTime.fromMillisecondsSinceEpoch(item.transitUtc * 1000, isUtc: true).toLocal();
@@ -398,6 +400,8 @@ class AstroBridge {
             name: item.name.toDartString(),
             messier: mStr.isNotEmpty ? mStr : null,
             caldwell: cStr.isNotEmpty ? cStr : null,
+            arp: arpStr.isNotEmpty ? arpStr : null,
+            herschel: herschelStr.isNotEmpty ? herschelStr : null,
             catalog: item.catalog.toDartString(),
             objectType: item.objectType.toDartString(),
             constellation: item.constellation.toDartString(),

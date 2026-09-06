@@ -69,6 +69,8 @@ typedef struct {
     const char* name;
     const char* messier;
     const char* caldwell;
+    const char* arp;
+    const char* herschel;
     const char* catalog;
     const char* object_type;
     const char* constellation;

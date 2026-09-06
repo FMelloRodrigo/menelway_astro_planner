@@ -112,6 +112,10 @@ final class AstroTargetItem extends Struct {
 
   external Pointer<Utf8> caldwell;
 
+  external Pointer<Utf8> arp;
+
+  external Pointer<Utf8> herschel;
+
   external Pointer<Utf8> catalog;
 
   external Pointer<Utf8> objectType;

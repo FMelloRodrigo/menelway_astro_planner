@@ -21,6 +21,22 @@ void test_sqlite_catalog() {
     std::cout << "  Found Messier objects: " << messier_objs.size() << "\n";
     assert(messier_objs.size() >= 110);
 
+    // 1b. Query Arp objects
+    astro::catalog::DsoFilterOptions arp_opts;
+    arp_opts.catalogs.push_back("Arp");
+    arp_opts.limit = 500;
+    auto arp_objs = storage.query_objects(arp_opts);
+    std::cout << "  Found Arp objects: " << arp_objs.size() << "\n";
+    assert(arp_objs.size() >= 338);
+
+    // 1c. Query Herschel objects
+    astro::catalog::DsoFilterOptions herschel_opts;
+    herschel_opts.catalogs.push_back("Herschel");
+    herschel_opts.limit = 500;
+    auto herschel_objs = storage.query_objects(herschel_opts);
+    std::cout << "  Found Herschel objects: " << herschel_objs.size() << "\n";
+    assert(herschel_objs.size() >= 400);
+
     // 2. FTS search for "Andromeda"
     astro::catalog::DsoFilterOptions fts_opts;
     fts_opts.search_query = "Andromeda";
