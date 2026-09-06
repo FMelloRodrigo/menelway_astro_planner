@@ -620,6 +620,122 @@ class _MainScaffoldState extends State<MainScaffold> {
     );
   }
 
+  Widget _buildMobileStatusStrip(Color textColor, Color accentColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        border: Border(
+          bottom: BorderSide(
+            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // Observer Location Pill (tappable)
+            InkWell(
+              onTap: _editLocationDialog,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : AstroColors.spaceDarkBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 13, color: accentColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      _filters.observerLocationName,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(Icons.arrow_drop_down, size: 14, color: textColor.withValues(alpha: 0.6)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+
+            // Night summary pill
+            if (_nightSummary != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : AstroColors.spaceDarkBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.dark_mode_outlined, size: 13, color: AstroColors.nebulaIndigo),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Dark: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.brightness_2_rounded, size: 13, color: AstroColors.starGold),
+                    const SizedBox(width: 4),
+                    Text(
+                      "${(_nightSummary!.moonIllumination * 100).round()}%",
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+
+            // Database size pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionSurfaceVariant
+                    : AstroColors.spaceDarkSurfaceVariant,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionBorder
+                      : AstroColors.spaceDarkBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.storage_rounded, size: 12, color: textColor.withValues(alpha: 0.6)),
+                  const SizedBox(width: 3),
+                  Text(
+                    "${_dbSizeMb.toStringAsFixed(1)} MB",
+                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
@@ -707,98 +823,100 @@ class _MainScaffoldState extends State<MainScaffold> {
           ],
         ),
         actions: [
-          // Observer Location Pill
-          InkWell(
-            onTap: _editLocationDialog,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionSurfaceVariant
-                    : AstroColors.spaceDarkSurfaceVariant,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionBorder
-                      : AstroColors.spaceDarkBorder,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 14, color: accentColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    "${_filters.observerLocationName} • ${_filters.observerLat >= 0 ? '${_filters.observerLat.toStringAsFixed(1)}°N' : '${(-_filters.observerLat).toStringAsFixed(1)}°S'}, ${_filters.observerLon >= 0 ? '${_filters.observerLon.toStringAsFixed(1)}°E' : '${(-_filters.observerLon).toStringAsFixed(1)}°W'} (${_filters.observerElevation.round()}m)",
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Night summary pill
-          if (_nightSummary != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionSurfaceVariant
-                    : AstroColors.spaceDarkSurfaceVariant,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionBorder
-                      : AstroColors.spaceDarkBorder,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.dark_mode_outlined, size: 14, color: AstroColors.nebulaIndigo),
-                  const SizedBox(width: 4),
-                  Text(
-                    "Darkness: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
-                    style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.brightness_2_rounded, size: 14, color: AstroColors.starGold),
-                  const SizedBox(width: 4),
-                  Text(
-                    "${(_nightSummary!.moonIllumination * 100).round()}% (${_nightSummary!.moonPhaseName})",
-                    style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(width: 8),
-
-          // Database size pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: widget.isRedNightMode
-                  ? AstroColors.nightVisionSurfaceVariant
-                  : AstroColors.spaceDarkSurfaceVariant,
+          if (isWide) ...[
+            // Observer Location Pill (Desktop)
+            InkWell(
+              onTap: _editLocationDialog,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionBorder
-                    : AstroColors.spaceDarkBorder,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : AstroColors.spaceDarkBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on_outlined, size: 14, color: accentColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      "${_filters.observerLocationName} • ${_filters.observerLat >= 0 ? '${_filters.observerLat.toStringAsFixed(1)}°N' : '${(-_filters.observerLat).toStringAsFixed(1)}°S'}, ${_filters.observerLon >= 0 ? '${_filters.observerLon.toStringAsFixed(1)}°E' : '${(-_filters.observerLon).toStringAsFixed(1)}°W'} (${_filters.observerElevation.round()}m)",
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                    ),
+                  ],
+                ),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.storage_rounded, size: 13, color: textColor.withValues(alpha: 0.6)),
-                const SizedBox(width: 4),
-                Text(
-                  "${_dbSizeMb.toStringAsFixed(1)} MB",
-                  style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+            const SizedBox(width: 8),
+
+            // Night summary pill (Desktop)
+            if (_nightSummary != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : AstroColors.spaceDarkBorder,
+                  ),
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Icon(Icons.dark_mode_outlined, size: 14, color: AstroColors.nebulaIndigo),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Darkness: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.brightness_2_rounded, size: 14, color: AstroColors.starGold),
+                    const SizedBox(width: 4),
+                    Text(
+                      "${(_nightSummary!.moonIllumination * 100).round()}% (${_nightSummary!.moonPhaseName})",
+                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(width: 8),
+
+            // Database size pill (Desktop)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionSurfaceVariant
+                    : AstroColors.spaceDarkSurfaceVariant,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionBorder
+                      : AstroColors.spaceDarkBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.storage_rounded, size: 13, color: textColor.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
+                  Text(
+                    "${_dbSizeMb.toStringAsFixed(1)} MB",
+                    style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
+            const SizedBox(width: 4),
+          ],
 
           // Red Night-Vision Mode Toggle
           IconButton(
@@ -841,13 +959,44 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
             ),
             onSelected: (value) {
-              if (value == 'reset_filters') {
+              if (value == 'location') {
+                _editLocationDialog();
+              } else if (value == 'reset_filters') {
                 _resetFiltersOnly();
               } else if (value == 'clean_data') {
                 _showCleanDataDialog();
               }
             },
             itemBuilder: (ctx) => [
+              if (!isWide) ...[
+                PopupMenuItem(
+                  value: 'location',
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 18, color: accentColor),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Observer Location...",
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            _filters.observerLocationName,
+                            style: TextStyle(color: textColor.withValues(alpha: 0.75), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+              ],
               PopupMenuItem(
                 value: 'reset_filters',
                 child: Row(
@@ -910,7 +1059,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: isWide ? 10 : 8, vertical: 6),
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
@@ -933,28 +1082,31 @@ class _MainScaffoldState extends State<MainScaffold> {
                   ],
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.settings_suggest_rounded,
                       size: 15,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      "Settings & Data",
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                    if (isWide) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        "Settings & Data",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Icon(
-                      Icons.arrow_drop_down_rounded,
-                      size: 17,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-                    ),
+                      const SizedBox(width: 3),
+                      Icon(
+                        Icons.arrow_drop_down_rounded,
+                        size: 17,
+                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -963,8 +1115,12 @@ class _MainScaffoldState extends State<MainScaffold> {
           const SizedBox(width: 10),
         ],
       ),
-      body: Row(
+      body: Column(
         children: [
+          if (!isWide) _buildMobileStatusStrip(textColor, accentColor),
+          Expanded(
+            child: Row(
+              children: [
           // Navigation rail for desktop
           if (isWide)
             NavigationRail(
@@ -1033,6 +1189,9 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
         ],
       ),
+    ),
+  ],
+),
       bottomNavigationBar: !isWide
           ? BottomNavigationBar(
               backgroundColor: widget.isRedNightMode

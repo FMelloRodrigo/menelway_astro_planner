@@ -33,9 +33,43 @@ class CatalogManager {
     }
 
     // 4. Fallback for mobile / app data directory
-    final appDir = Platform.isAndroid
-        ? Directory('/data/data/com.astrotargets.app/files')
-        : Directory(p.join(Platform.environment['LOCALAPPDATA'] ?? '.', 'AstroTargetsTool'));
+    Directory appDir;
+    if (Platform.isAndroid) {
+      Directory? found;
+      try {
+        final parent = Directory.systemTemp.parent;
+        if (parent.existsSync()) {
+          final candidate = Directory(p.join(parent.path, 'files'));
+          if (!candidate.existsSync()) {
+            candidate.createSync(recursive: true);
+          }
+          if (candidate.existsSync()) {
+            found = candidate;
+          }
+        }
+      } catch (_) {}
+
+      if (found == null) {
+        final candidates = [
+          '/data/user/0/com.astrotargets.app.app/files',
+          '/data/data/com.astrotargets.app.app/files',
+          '/data/user/0/com.astrotargets.app/files',
+          '/data/data/com.astrotargets.app/files',
+        ];
+        for (final pth in candidates) {
+          final d = Directory(pth);
+          if (d.existsSync()) {
+            found = d;
+            break;
+          }
+        }
+        appDir = found ?? Directory(candidates.first);
+      } else {
+        appDir = found;
+      }
+    } else {
+      appDir = Directory(p.join(Platform.environment['LOCALAPPDATA'] ?? '.', 'AstroTargetsTool'));
+    }
 
     if (!await appDir.exists()) {
       await appDir.create(recursive: true);

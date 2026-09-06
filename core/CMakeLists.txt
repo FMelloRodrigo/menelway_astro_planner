@@ -60,13 +60,19 @@ target_include_directories(astro_core PUBLIC
 target_link_libraries(astro_core PUBLIC sqlite3)
 target_compile_definitions(astro_core PRIVATE ASTRO_CORE_EXPORTS)
 
-# Test executables
-add_executable(test_astro tests/test_astro.cpp)
-target_link_libraries(test_astro PRIVATE astro_core_static)
+if(ANDROID)
+    target_link_libraries(astro_core PUBLIC log)
+endif()
 
-add_executable(test_storage tests/test_storage.cpp)
-target_link_libraries(test_storage PRIVATE astro_core_static)
+# Test executables (desktop only)
+if(NOT ANDROID)
+    add_executable(test_astro tests/test_astro.cpp)
+    target_link_libraries(test_astro PRIVATE astro_core_static)
 
-add_executable(test_capi tests/test_capi.cpp)
-target_include_directories(test_capi PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/capi)
-target_link_libraries(test_capi PRIVATE astro_core)
+    add_executable(test_storage tests/test_storage.cpp)
+    target_link_libraries(test_storage PRIVATE astro_core_static)
+
+    add_executable(test_capi tests/test_capi.cpp)
+    target_include_directories(test_capi PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/capi)
+    target_link_libraries(test_capi PRIVATE astro_core)
+endif()

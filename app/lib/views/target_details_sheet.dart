@@ -213,8 +213,75 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final effectiveClose = widget.onClose ??
         (Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null);
 
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+
+    final badgesWrap = Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
+        if (widget.target.messier != null && widget.target.messier!.isNotEmpty)
+          _buildBadge(widget.target.messier!, AstroColors.nebulaIndigo),
+        if (widget.target.caldwell != null && widget.target.caldwell!.isNotEmpty)
+          _buildBadge(widget.target.caldwell!, AstroColors.nebulaIndigo),
+        if (widget.target.arp != null && widget.target.arp!.isNotEmpty)
+          _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
+        if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
+          _buildBadge(widget.target.herschel!, Colors.amber.shade700),
+        _buildBadge(widget.target.objectType, AstroColors.starlightCyan),
+        _buildBadge(widget.target.constellation, AstroColors.starGold),
+      ],
+    );
+
+    final addToListBtn = FilledButton.icon(
+      icon: const Icon(Icons.playlist_add_rounded, size: 18),
+      label: const Text("Add to List"),
+      style: FilledButton.styleFrom(
+        backgroundColor: accentColor,
+        foregroundColor: Colors.black,
+      ),
+      onPressed: _showAddToListDialog,
+    );
+
+    final closeBtn = effectiveClose != null
+        ? Tooltip(
+            message: "Close details (Esc)",
+            child: OutlinedButton.icon(
+              icon: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+              ),
+              label: Text(
+                "Close",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
+                    : const Color(0xFF222F42),
+                side: BorderSide(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
+                      : Colors.white.withValues(alpha: 0.4),
+                  width: 1.4,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: effectiveClose,
+            ),
+          )
+        : null;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isNarrow ? 16 : 20),
       decoration: BoxDecoration(
         color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -227,92 +294,77 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.target.displayName,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: textColor,
-                        ),
+            if (isNarrow) ...[
+              // Mobile Header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.target.displayName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
                       ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: [
-                          _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
-                          if (widget.target.messier != null && widget.target.messier!.isNotEmpty)
-                            _buildBadge(widget.target.messier!, AstroColors.nebulaIndigo),
-                          if (widget.target.caldwell != null && widget.target.caldwell!.isNotEmpty)
-                            _buildBadge(widget.target.caldwell!, AstroColors.nebulaIndigo),
-                          if (widget.target.arp != null && widget.target.arp!.isNotEmpty)
-                            _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
-                          if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
-                            _buildBadge(widget.target.herschel!, Colors.amber.shade700),
-                          _buildBadge(widget.target.objectType, AstroColors.starlightCyan),
-                          _buildBadge(widget.target.constellation, AstroColors.starGold),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                FilledButton.icon(
+                  if (effectiveClose != null)
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: textColor),
+                      tooltip: "Close",
+                      onPressed: effectiveClose,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              badgesWrap,
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
                   icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                  label: const Text("Add to List"),
+                  label: const Text("Add to Observing List"),
                   style: FilledButton.styleFrom(
                     backgroundColor: accentColor,
                     foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   onPressed: _showAddToListDialog,
                 ),
-                if (effectiveClose != null) ...[
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message: "Close details (Esc)",
-                    child: OutlinedButton.icon(
-                      icon: Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                      ),
-                      label: Text(
-                        "Close",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+              ),
+            ] else ...[
+              // Desktop Header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.target.displayName,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
                         ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: widget.isRedNightMode
-                            ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
-                            : const Color(0xFF222F42),
-                        side: BorderSide(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                              : Colors.white.withValues(alpha: 0.4),
-                          width: 1.4,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: effectiveClose,
+                        const SizedBox(height: 4),
+                        badgesWrap,
+                      ],
                     ),
                   ),
+                  addToListBtn,
+                  if (closeBtn != null) ...[
+                    const SizedBox(width: 8),
+                    closeBtn,
+                  ],
                 ],
-              ],
-            ),
+              ),
+            ],
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             // Key Metrics Grid
             Container(
@@ -328,43 +380,101 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       : AstroColors.spaceDarkBorder,
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMetric(
-                    "Peak Altitude",
-                    "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
-                    Icons.trending_up_rounded,
-                  ),
-                  _buildMetric(
-                    "Transit Time",
-                    DateFormat('HH:mm').format(widget.target.transitTime),
-                    Icons.schedule_rounded,
-                  ),
-                  _buildMetric(
-                    "Visible Duration",
-                    "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
-                    Icons.timer_outlined,
-                  ),
-                  _buildMetric(
-                    "Moon Distance",
-                    "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
-                    Icons.brightness_2_outlined,
-                  ),
-                  _buildMetric(
-                    "Magnitude",
-                    widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
-                    Icons.auto_awesome_rounded,
-                  ),
-                  _buildMetric(
-                    "Apparent Size",
-                    widget.target.majorAxisArcmin != null
-                        ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
-                        : "N/A",
-                    Icons.aspect_ratio_rounded,
-                  ),
-                ],
-              ),
+              child: isNarrow
+                  ? Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetric(
+                                "Peak Altitude",
+                                "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
+                                Icons.trending_up_rounded,
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildMetric(
+                                "Transit Time",
+                                DateFormat('HH:mm').format(widget.target.transitTime),
+                                Icons.schedule_rounded,
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildMetric(
+                                "Visible Duration",
+                                "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
+                                Icons.timer_outlined,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetric(
+                                "Moon Distance",
+                                "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
+                                Icons.brightness_2_outlined,
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildMetric(
+                                "Magnitude",
+                                widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
+                                Icons.auto_awesome_rounded,
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildMetric(
+                                "Apparent Size",
+                                widget.target.majorAxisArcmin != null
+                                    ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
+                                    : "N/A",
+                                Icons.aspect_ratio_rounded,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildMetric(
+                          "Peak Altitude",
+                          "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
+                          Icons.trending_up_rounded,
+                        ),
+                        _buildMetric(
+                          "Transit Time",
+                          DateFormat('HH:mm').format(widget.target.transitTime),
+                          Icons.schedule_rounded,
+                        ),
+                        _buildMetric(
+                          "Visible Duration",
+                          "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
+                          Icons.timer_outlined,
+                        ),
+                        _buildMetric(
+                          "Moon Distance",
+                          "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
+                          Icons.brightness_2_outlined,
+                        ),
+                        _buildMetric(
+                          "Magnitude",
+                          widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
+                          Icons.auto_awesome_rounded,
+                        ),
+                        _buildMetric(
+                          "Apparent Size",
+                          widget.target.majorAxisArcmin != null
+                              ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
+                              : "N/A",
+                          Icons.aspect_ratio_rounded,
+                        ),
+                      ],
+                    ),
             ),
 
             const SizedBox(height: 18),
@@ -395,25 +505,45 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             const SizedBox(height: 16),
 
             // Coordinates and identifiers
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}",
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      color: textColor.withValues(alpha: 0.7),
-                    ),
+            isNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}",
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: textColor.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton.icon(
+                        icon: const Icon(Icons.travel_explore_rounded, size: 16),
+                        label: const Text("Verify Online (SIMBAD)"),
+                        onPressed: _queryOnlineSimbad,
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}",
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                            color: textColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.travel_explore_rounded, size: 16),
+                        label: const Text("Verify Online (SIMBAD)"),
+                        onPressed: _queryOnlineSimbad,
+                      ),
+                    ],
                   ),
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                  label: const Text("Verify Online (SIMBAD)"),
-                  onPressed: _queryOnlineSimbad,
-                ),
-              ],
-            ),
 
             if (_onlineInfo != null) ...[
               const SizedBox(height: 4),
@@ -478,9 +608,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
             ),
             const SizedBox(width: 10),
-            Text(
-              "Simulating 12-month visibility across the year...",
-              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+            Expanded(
+              child: Text(
+                "Simulating 12-month visibility across the year...",
+                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+              ),
             ),
           ],
         ),

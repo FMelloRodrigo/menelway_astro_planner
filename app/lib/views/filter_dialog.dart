@@ -150,6 +150,7 @@ class _FilterDialogState extends State<FilterDialog> {
   Widget build(BuildContext context) {
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final isNarrow = MediaQuery.of(context).size.width < 600;
 
     return Dialog(
       backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
@@ -159,11 +160,14 @@ class _FilterDialogState extends State<FilterDialog> {
           color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
         ),
       ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isNarrow ? 12 : 20,
+        vertical: isNarrow ? 16 : 24,
+      ),
       child: Container(
         width: 650,
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+        padding: EdgeInsets.all(isNarrow ? 16 : 24),
         child: Column(
           children: [
             // Header
@@ -171,15 +175,17 @@ class _FilterDialogState extends State<FilterDialog> {
               children: [
                 Icon(Icons.tune_rounded, color: accentColor, size: 22),
                 const SizedBox(width: 8),
-                Text(
-                  "Target Filter Parameters",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
+                Expanded(
+                  child: Text(
+                    "Target Filter Parameters",
+                    style: TextStyle(
+                      fontSize: isNarrow ? 16 : 18,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 IconButton(
                   icon: Icon(Icons.close, color: textColor.withValues(alpha: 0.6)),
                   onPressed: () => Navigator.of(context).pop(),
@@ -238,12 +244,15 @@ class _FilterDialogState extends State<FilterDialog> {
                                       color: !_state.useCustomTimeWindow ? accentColor : textColor.withValues(alpha: 0.5),
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      "Astronomical Darkness",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: !_state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
-                                        color: !_state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                    Flexible(
+                                      child: Text(
+                                        isNarrow ? "Astro Darkness" : "Astronomical Darkness",
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: !_state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
+                                          color: !_state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -287,12 +296,15 @@ class _FilterDialogState extends State<FilterDialog> {
                                       color: _state.useCustomTimeWindow ? accentColor : textColor.withValues(alpha: 0.5),
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      "Custom Time Limit",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: _state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
-                                        color: _state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                    Flexible(
+                                      child: Text(
+                                        isNarrow ? "Custom Window" : "Custom Time Limit",
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: _state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
+                                          color: _state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -306,60 +318,118 @@ class _FilterDialogState extends State<FilterDialog> {
 
                     if (_state.useCustomTimeWindow) ...[
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTimeBox(
-                              label: "START TIME",
-                              hour: _state.customStartHour,
-                              minute: _state.customStartMinute,
-                              onTap: () => _pickTime(isStart: true),
-                              textColor: textColor,
-                              accentColor: accentColor,
+                      if (isNarrow) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTimeBox(
+                                label: "START TIME",
+                                hour: _state.customStartHour,
+                                minute: _state.customStartMinute,
+                                onTap: () => _pickTime(isStart: true),
+                                textColor: textColor,
+                                accentColor: accentColor,
+                              ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Icon(Icons.arrow_forward_rounded, color: accentColor, size: 20),
-                          ),
-                          Expanded(
-                            child: _buildTimeBox(
-                              label: "END TIME",
-                              hour: _state.customEndHour,
-                              minute: _state.customEndMinute,
-                              onTap: () => _pickTime(isStart: false),
-                              textColor: textColor,
-                              accentColor: accentColor,
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Icon(Icons.arrow_forward_rounded, color: accentColor, size: 18),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: accentColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+                            Expanded(
+                              child: _buildTimeBox(
+                                label: "END TIME",
+                                hour: _state.customEndHour,
+                                minute: _state.customEndMinute,
+                                onTap: () => _pickTime(isStart: false),
+                                textColor: textColor,
+                                accentColor: accentColor,
+                              ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "WINDOW",
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: accentColor),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "WINDOW: ",
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: accentColor),
+                              ),
+                              Text(
+                                "${_state.windowDurationHours.toStringAsFixed(1)} hrs",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
                                 ),
-                                Text(
-                                  "${_state.windowDurationHours.toStringAsFixed(1)} hrs",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: textColor,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTimeBox(
+                                label: "START TIME",
+                                hour: _state.customStartHour,
+                                minute: _state.customStartMinute,
+                                onTap: () => _pickTime(isStart: true),
+                                textColor: textColor,
+                                accentColor: accentColor,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Icon(Icons.arrow_forward_rounded, color: accentColor, size: 20),
+                            ),
+                            Expanded(
+                              child: _buildTimeBox(
+                                label: "END TIME",
+                                hour: _state.customEndHour,
+                                minute: _state.customEndMinute,
+                                onTap: () => _pickTime(isStart: false),
+                                textColor: textColor,
+                                accentColor: accentColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: accentColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "WINDOW",
+                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: accentColor),
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    "${_state.windowDurationHours.toStringAsFixed(1)} hrs",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 6,
@@ -430,10 +500,10 @@ class _FilterDialogState extends State<FilterDialog> {
                     // Section 2: Altitude & Duration (Telescopius core)
                     _buildSectionHeader("Visibility & Altitude (Telescopius Rule)", Icons.terrain_rounded),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
+                    if (isNarrow)
+                      Column(
+                        children: [
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
@@ -450,10 +520,8 @@ class _FilterDialogState extends State<FilterDialog> {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
+                          const SizedBox(height: 8),
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
@@ -478,9 +546,60 @@ class _FilterDialogState extends State<FilterDialog> {
                               }),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Minimum Altitude: ${_state.minAltitude.round()}°",
+                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Slider(
+                                  value: _state.minAltitude,
+                                  min: 10,
+                                  max: 70,
+                                  divisions: 12,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => setState(() => _state.minAltitude = v),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _state.useCustomTimeWindow
+                                      ? "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)}h (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs",
+                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Builder(builder: (context) {
+                                  final maxDur = _state.useCustomTimeWindow
+                                      ? math.max(0.5, _state.windowDurationHours)
+                                      : 8.0;
+                                  final clampedVal = _state.minDurationHours.clamp(0.5, maxDur);
+                                  return Slider(
+                                    value: clampedVal,
+                                    min: 0.5,
+                                    max: maxDur > 0.5 ? maxDur : 0.6,
+                                    divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
+                                    activeColor: accentColor,
+                                    onChanged: (v) => setState(() => _state.minDurationHours = v),
+                                  );
+                                }),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
 
                     const SizedBox(height: 16),
 
@@ -488,111 +607,210 @@ class _FilterDialogState extends State<FilterDialog> {
                     _buildSectionHeader("Direction & Azimuth Range", Icons.explore_rounded),
                     const SizedBox(height: 8),
 
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Interactive Visual Compass Dial
-                        AzimuthCompassDial(
-                          minAzimuth: _state.minAzimuth,
-                          maxAzimuth: _state.maxAzimuth,
-                          isRedNightMode: widget.isRedNightMode,
-                        ),
-                        const SizedBox(width: 16),
-
-                        // Preset Dropdown & Sliders
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DropdownButtonFormField<int>(
-                                key: ValueKey(_getPresetIndex()),
-                                initialValue: _getPresetIndex(),
-                                decoration: const InputDecoration(
-                                  labelText: "Direction Preset / Mode",
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    if (isNarrow)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: AzimuthCompassDial(
+                              minAzimuth: _state.minAzimuth,
+                              maxAzimuth: _state.maxAzimuth,
+                              isRedNightMode: widget.isRedNightMode,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<int>(
+                            key: ValueKey(_getPresetIndex()),
+                            initialValue: _getPresetIndex(),
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: "Direction Preset / Mode",
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            dropdownColor: widget.isRedNightMode
+                                ? AstroColors.nightVisionSurfaceVariant
+                                : AstroColors.spaceDarkSurfaceVariant,
+                            items: List.generate(quadrantOptions.length, (i) {
+                              return DropdownMenuItem(
+                                value: i,
+                                child: Text(
+                                  quadrantOptions[i],
+                                  style: TextStyle(color: textColor, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                dropdownColor: widget.isRedNightMode
-                                    ? AstroColors.nightVisionSurfaceVariant
-                                    : AstroColors.spaceDarkSurfaceVariant,
-                                items: List.generate(quadrantOptions.length, (i) {
-                                  return DropdownMenuItem(
-                                    value: i,
-                                    child: Text(
-                                      quadrantOptions[i],
-                                      style: TextStyle(color: textColor, fontSize: 13),
-                                    ),
-                                  );
-                                }),
-                                onChanged: (v) {
-                                  if (v != null) {
+                              );
+                            }),
+                            onChanged: (v) {
+                              if (v != null) {
+                                setState(() {
+                                  _applyPreset(v);
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  "Min: ${_state.minAzimuth.round()}° (${_cardinalName(_state.minAzimuth)})",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+                                ),
+                              ),
+                              Expanded(
+                                child: Slider(
+                                  value: _state.minAzimuth,
+                                  min: 0,
+                                  max: 360,
+                                  divisions: 72,
+                                  activeColor: accentColor,
+                                  onChanged: (v) {
                                     setState(() {
-                                      _applyPreset(v);
+                                      _state.minAzimuth = v;
+                                      _state.quadrant = 0;
                                     });
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Min Azimuth Slider
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 115,
-                                    child: Text(
-                                      "Min: ${_state.minAzimuth.round()}° (${_cardinalName(_state.minAzimuth)})",
-                                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Slider(
-                                      value: _state.minAzimuth,
-                                      min: 0,
-                                      max: 360,
-                                      divisions: 72,
-                                      activeColor: accentColor,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          _state.minAzimuth = v;
-                                          _state.quadrant = 0; // Switch to custom range
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              // Max Azimuth Slider
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 115,
-                                    child: Text(
-                                      "Max: ${_state.maxAzimuth.round()}° (${_cardinalName(_state.maxAzimuth)})",
-                                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Slider(
-                                      value: _state.maxAzimuth,
-                                      min: 0,
-                                      max: 360,
-                                      divisions: 72,
-                                      activeColor: accentColor,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          _state.maxAzimuth = v;
-                                          _state.quadrant = 0; // Switch to custom range
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
+                                  },
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  "Max: ${_state.maxAzimuth.round()}° (${_cardinalName(_state.maxAzimuth)})",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+                                ),
+                              ),
+                              Expanded(
+                                child: Slider(
+                                  value: _state.maxAzimuth,
+                                  min: 0,
+                                  max: 360,
+                                  divisions: 72,
+                                  activeColor: accentColor,
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _state.maxAzimuth = v;
+                                      _state.quadrant = 0;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Interactive Visual Compass Dial
+                          AzimuthCompassDial(
+                            minAzimuth: _state.minAzimuth,
+                            maxAzimuth: _state.maxAzimuth,
+                            isRedNightMode: widget.isRedNightMode,
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Preset Dropdown & Sliders
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                DropdownButtonFormField<int>(
+                                  key: ValueKey(_getPresetIndex()),
+                                  initialValue: _getPresetIndex(),
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: "Direction Preset / Mode",
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  dropdownColor: widget.isRedNightMode
+                                      ? AstroColors.nightVisionSurfaceVariant
+                                      : AstroColors.spaceDarkSurfaceVariant,
+                                  items: List.generate(quadrantOptions.length, (i) {
+                                    return DropdownMenuItem(
+                                      value: i,
+                                      child: Text(
+                                        quadrantOptions[i],
+                                        style: TextStyle(color: textColor, fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  }),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() {
+                                        _applyPreset(v);
+                                      });
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Min Azimuth Slider
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 115,
+                                      child: Text(
+                                        "Min: ${_state.minAzimuth.round()}° (${_cardinalName(_state.minAzimuth)})",
+                                        style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Slider(
+                                        value: _state.minAzimuth,
+                                        min: 0,
+                                        max: 360,
+                                        divisions: 72,
+                                        activeColor: accentColor,
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _state.minAzimuth = v;
+                                            _state.quadrant = 0; // Switch to custom range
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Max Azimuth Slider
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 115,
+                                      child: Text(
+                                        "Max: ${_state.maxAzimuth.round()}° (${_cardinalName(_state.maxAzimuth)})",
+                                        style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Slider(
+                                        value: _state.maxAzimuth,
+                                        min: 0,
+                                        max: 360,
+                                        divisions: 72,
+                                        activeColor: accentColor,
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _state.maxAzimuth = v;
+                                            _state.quadrant = 0; // Switch to custom range
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
 
                     const SizedBox(height: 16),
 
@@ -669,58 +887,100 @@ class _FilterDialogState extends State<FilterDialog> {
                     // Section 6: Magnitude & Size
                     _buildSectionHeader("Magnitude & Apparent Size", Icons.straighten_rounded),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
-                                    style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "(lower = brighter)",
-                                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
-                                  ),
-                                ],
-                              ),
-                              Slider(
-                                value: _state.maxMagnitude,
-                                min: 5.0,
-                                max: 18.0,
-                                divisions: 26,
-                                activeColor: accentColor,
-                                onChanged: (v) => setState(() => _state.maxMagnitude = v),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    if (isNarrow)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                "Min Size: ${_state.minSizeArcmin.round()}'",
+                                "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
                                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
                               ),
-                              Slider(
-                                value: _state.minSizeArcmin,
-                                min: 0,
-                                max: 60,
-                                divisions: 12,
-                                activeColor: accentColor,
-                                onChanged: (v) => setState(() => _state.minSizeArcmin = v),
+                              const SizedBox(width: 4),
+                              Text(
+                                "(lower = brighter)",
+                                style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
+                          Slider(
+                            value: _state.maxMagnitude,
+                            min: 5.0,
+                            max: 18.0,
+                            divisions: 26,
+                            activeColor: accentColor,
+                            onChanged: (v) => setState(() => _state.maxMagnitude = v),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Min Size: ${_state.minSizeArcmin.round()}'",
+                            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+                          ),
+                          Slider(
+                            value: _state.minSizeArcmin,
+                            min: 0,
+                            max: 60,
+                            divisions: 12,
+                            activeColor: accentColor,
+                            onChanged: (v) => setState(() => _state.minSizeArcmin = v),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
+                                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "(lower = brighter)",
+                                      style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
+                                    ),
+                                  ],
+                                ),
+                                Slider(
+                                  value: _state.maxMagnitude,
+                                  min: 5.0,
+                                  max: 18.0,
+                                  divisions: 26,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => setState(() => _state.maxMagnitude = v),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Min Size: ${_state.minSizeArcmin.round()}'",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+                                ),
+                                Slider(
+                                  value: _state.minSizeArcmin,
+                                  min: 0,
+                                  max: 60,
+                                  divisions: 12,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => setState(() => _state.minSizeArcmin = v),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -729,44 +989,90 @@ class _FilterDialogState extends State<FilterDialog> {
             const Divider(height: 20),
 
             // Footer Actions
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text("Reset Filters"),
-                  style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
-                  onPressed: () {
-                    setState(() {
-                      _state = FilterState(
-                        observerLat: _state.observerLat,
-                        observerLon: _state.observerLon,
-                        observerElevation: _state.observerElevation,
-                        date: _state.date,
-                      );
-                    });
-                  },
-                ),
-                Row(
-                  children: [
-                    OutlinedButton(
-                      child: const Text("Cancel"),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      icon: const Icon(Icons.check_rounded, size: 16),
-                      label: const Text("Apply Filters"),
-                      style: FilledButton.styleFrom(backgroundColor: accentColor),
-                      onPressed: () {
-                        widget.onApply(_state);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            isNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              child: const Text("Cancel"),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton.icon(
+                              icon: const Icon(Icons.check_rounded, size: 16),
+                              label: const Text("Apply Filters"),
+                              style: FilledButton.styleFrom(backgroundColor: accentColor),
+                              onPressed: () {
+                                widget.onApply(_state);
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Center(
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text("Reset Filters"),
+                          style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
+                          onPressed: () {
+                            setState(() {
+                              _state = FilterState(
+                                observerLat: _state.observerLat,
+                                observerLon: _state.observerLon,
+                                observerElevation: _state.observerElevation,
+                                date: _state.date,
+                              );
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        label: const Text("Reset Filters"),
+                        style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
+                        onPressed: () {
+                          setState(() {
+                            _state = FilterState(
+                              observerLat: _state.observerLat,
+                              observerLon: _state.observerLon,
+                              observerElevation: _state.observerElevation,
+                              date: _state.date,
+                            );
+                          });
+                        },
+                      ),
+                      Row(
+                        children: [
+                          OutlinedButton(
+                            child: const Text("Cancel"),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          const SizedBox(width: 12),
+                          FilledButton.icon(
+                            icon: const Icon(Icons.check_rounded, size: 16),
+                            label: const Text("Apply Filters"),
+                            style: FilledButton.styleFrom(backgroundColor: accentColor),
+                            onPressed: () {
+                              widget.onApply(_state);
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
           ],
         ),
       ),
@@ -779,13 +1085,15 @@ class _FilterDialogState extends State<FilterDialog> {
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 6),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-            color: color,
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+              color: color,
+            ),
           ),
         ),
       ],

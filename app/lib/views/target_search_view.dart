@@ -170,91 +170,159 @@ class _TargetSearchViewState extends State<TargetSearchView> {
           ),
           child: Column(
             children: [
-              Row(
-                children: [
-                  // Search Input
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)...",
-                        prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
-                                    tooltip: "Clear search",
-                                    onPressed: () {
-                                      _debounceTimer?.cancel();
-                                      _searchController.clear();
-                                      setState(() {});
-                                      widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
-                                    tooltip: "Search target",
-                                    onPressed: () {
-                                      _debounceTimer?.cancel();
-                                      widget.onFilterChanged(
-                                        widget.filters.copyWith(searchQuery: _searchController.text.trim()),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              )
-                            : null,
-                      ),
-                      onChanged: (text) {
-                        setState(() {});
-                        _onSearchChanged(text);
-                      },
-                      onSubmitted: (query) {
-                        _debounceTimer?.cancel();
-                        widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
-                      },
+              LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 650;
+
+              final searchField = TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: isNarrow
+                      ? "Search DSO (e.g. M42, NGC 7000, Arp 220)..."
+                      : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)...",
+                  prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              tooltip: "Clear search",
+                              onPressed: () {
+                                _debounceTimer?.cancel();
+                                _searchController.clear();
+                                setState(() {});
+                                widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
+                              tooltip: "Search target",
+                              onPressed: () {
+                                _debounceTimer?.cancel();
+                                widget.onFilterChanged(
+                                  widget.filters.copyWith(searchQuery: _searchController.text.trim()),
+                                );
+                              },
+                            ),
+                          ],
+                        )
+                      : null,
+                ),
+                onChanged: (text) {
+                  setState(() {});
+                  _onSearchChanged(text);
+                },
+                onSubmitted: (query) {
+                  _debounceTimer?.cancel();
+                  widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
+                },
+              );
+
+              final filterButton = FilledButton.tonalIcon(
+                icon: const Icon(Icons.tune_rounded, size: 18),
+                label: const Text("Filters"),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  backgroundColor: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  foregroundColor: accentColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionBorder
+                          : AstroColors.spaceDarkBorder,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                ),
+                onPressed: _openFilterDialog,
+              );
 
-                  // Filter Button with count badge
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.tune_rounded, size: 18),
-                    label: const Text("Filters"),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                      backgroundColor: widget.isRedNightMode
-                          ? AstroColors.nightVisionSurfaceVariant
-                          : AstroColors.spaceDarkSurfaceVariant,
-                      foregroundColor: accentColor,
-                    ),
-                    onPressed: _openFilterDialog,
+              final sortDropdown = Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : AstroColors.spaceDarkBorder,
                   ),
-                  const SizedBox(width: 10),
-
-                  // Sort dropdown
-                  DropdownButton<SortMode>(
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<SortMode>(
                     value: _sortMode,
+                    isExpanded: isNarrow,
                     dropdownColor: widget.isRedNightMode
                         ? AstroColors.nightVisionSurfaceVariant
                         : AstroColors.spaceDarkSurfaceVariant,
-                    icon: Icon(Icons.sort_rounded, color: accentColor),
-                    underline: const SizedBox(),
+                    icon: Icon(Icons.sort_rounded, color: accentColor, size: 18),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     items: const [
-                      DropdownMenuItem(value: SortMode.peakAltitude, child: Text("Peak Altitude")),
-                      DropdownMenuItem(value: SortMode.visibleDuration, child: Text("Visible Duration")),
-                      DropdownMenuItem(value: SortMode.brightness, child: Text("Brightness (Mag)")),
-                      DropdownMenuItem(value: SortMode.transitTime, child: Text("Transit Time")),
+                      DropdownMenuItem(
+                        value: SortMode.peakAltitude,
+                        child: Text("Peak Altitude", overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: SortMode.visibleDuration,
+                        child: Text("Visible Duration", overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: SortMode.brightness,
+                        child: Text("Brightness (Mag)", overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: SortMode.transitTime,
+                        child: Text("Transit Time", overflow: TextOverflow.ellipsis),
+                      ),
                     ],
                     onChanged: (v) {
                       if (v != null) setState(() => _sortMode = v);
                     },
                   ),
+                ),
+              );
+
+              return Column(
+                children: [
+                  if (isNarrow) ...[
+                    // Mobile: Full-width search bar
+                    searchField,
+                    const SizedBox(height: 8),
+                    // Mobile: Second row for Filters & Sort side-by-side
+                    Row(
+                      children: [
+                        Expanded(child: filterButton),
+                        const SizedBox(width: 8),
+                        Expanded(child: sortDropdown),
+                      ],
+                    ),
+                  ] else ...[
+                    // Desktop: Unified single-row toolbar
+                    Row(
+                      children: [
+                        Expanded(child: searchField),
+                        const SizedBox(width: 10),
+                        filterButton,
+                        const SizedBox(width: 10),
+                        sortDropdown,
+                      ],
+                    ),
+                  ],
                 ],
-              ),
-              const SizedBox(height: 8),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
 
               // Filter summary chips
               SingleChildScrollView(
@@ -452,146 +520,220 @@ class _TargetSearchViewState extends State<TargetSearchView> {
             }
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              // Target Info
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      target.displayName,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 2,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        if (target.messier != null && target.messier!.isNotEmpty)
-                          _buildSmallChip(target.messier!, AstroColors.nebulaIndigo)
-                        else if (target.caldwell != null && target.caldwell!.isNotEmpty)
-                          _buildSmallChip(target.caldwell!, AstroColors.nebulaIndigo)
-                        else
-                          _buildSmallChip(target.catalog, AstroColors.nebulaIndigo),
-                        if (target.arp != null && target.arp!.isNotEmpty)
-                          _buildSmallChip(target.arp!, Colors.deepOrangeAccent),
-                        if (target.herschel != null && target.herschel!.isNotEmpty)
-                          _buildSmallChip(target.herschel!, Colors.amber.shade700),
-                        _buildSmallChip(target.objectType, AstroColors.starlightCyan),
-                        Text(
-                          target.constellation,
-                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+        child: LayoutBuilder(
+          builder: (context, cardConstraints) {
+            final isNarrow = cardConstraints.maxWidth < 520;
 
-              // Visibility Statistics
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.trending_up_rounded, size: 14, color: AstroColors.starGold),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°",
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.schedule_rounded, size: 14, color: textColor.withValues(alpha: 0.5)),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('HH:mm').format(target.transitTime),
-                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
-                        ),
-                      ],
-                    ),
-                  ],
+            final targetHeader = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  target.displayName,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-
-              // Continuous Duration & Moon
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (target.meetsCriteria)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AstroColors.visibleGreen.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°",
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AstroColors.visibleGreen,
-                          ),
-                        ),
-                      )
+                    if (target.messier != null && target.messier!.isNotEmpty)
+                      _buildSmallChip(target.messier!, AstroColors.nebulaIndigo)
+                    else if (target.caldwell != null && target.caldwell!.isNotEmpty)
+                      _buildSmallChip(target.caldwell!, AstroColors.nebulaIndigo)
                     else
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
-                        ),
-                        child: const Text(
-                          "Off-Season Tonight",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.amber,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 4),
+                      _buildSmallChip(target.catalog, AstroColors.nebulaIndigo),
+                    if (target.arp != null && target.arp!.isNotEmpty)
+                      _buildSmallChip(target.arp!, Colors.deepOrangeAccent),
+                    if (target.herschel != null && target.herschel!.isNotEmpty)
+                      _buildSmallChip(target.herschel!, Colors.amber.shade700),
+                    _buildSmallChip(target.objectType, AstroColors.starlightCyan),
                     Text(
-                      "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
+                      target.constellation,
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 6),
-              if (isSelected)
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: accentColor.withValues(alpha: 0.6), width: 1.2),
+              ],
+            );
+
+            final selectionIndicator = isSelected
+                ? Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: accentColor.withValues(alpha: 0.6), width: 1.2),
+                    ),
+                    child: Icon(Icons.close_rounded, size: 14, color: accentColor),
+                  )
+                : Icon(Icons.chevron_right_rounded, size: 18, color: textColor.withValues(alpha: 0.3));
+
+            final durationPill = target.meetsCriteria
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AstroColors.visibleGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      isNarrow
+                          ? "${target.visibleDurationHours.toStringAsFixed(1)}h visible"
+                          : "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°",
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AstroColors.visibleGreen,
+                      ),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      isNarrow ? "Off-Season" : "Off-Season Tonight",
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  );
+
+            if (isNarrow) {
+              // Mobile 2-row layout: Spacious and never cramped
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: targetHeader),
+                        const SizedBox(width: 8),
+                        selectionIndicator,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Peak
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.trending_up_rounded, size: 13, color: AstroColors.starGold),
+                            const SizedBox(width: 3),
+                            Text(
+                              "${target.peakAltitudeDeg.toStringAsFixed(0)}°",
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                            ),
+                          ],
+                        ),
+                        // Transit
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule_rounded, size: 13, color: textColor.withValues(alpha: 0.5)),
+                            const SizedBox(width: 3),
+                            Text(
+                              DateFormat('HH:mm').format(target.transitTime),
+                              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                            ),
+                          ],
+                        ),
+                        // Moon
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.brightness_2_rounded, size: 11, color: textColor.withValues(alpha: 0.5)),
+                            const SizedBox(width: 3),
+                            Text(
+                              "${target.minMoonSepDeg.toStringAsFixed(0)}°",
+                              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                            ),
+                          ],
+                        ),
+                        durationPill,
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Desktop 3-column layout
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  // Target Info
+                  Expanded(flex: 4, child: targetHeader),
+
+                  // Visibility Statistics
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.trending_up_rounded, size: 14, color: AstroColors.starGold),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°",
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule_rounded, size: 14, color: textColor.withValues(alpha: 0.5)),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('HH:mm').format(target.transitTime),
+                              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Icon(Icons.close_rounded, size: 14, color: accentColor),
-                )
-              else
-                Icon(Icons.chevron_right_rounded, size: 18, color: textColor.withValues(alpha: 0.3)),
-            ],
-          ),
+
+                  // Continuous Duration & Moon
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        durationPill,
+                        const SizedBox(height: 4),
+                        Text(
+                          "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
+                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  selectionIndicator,
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

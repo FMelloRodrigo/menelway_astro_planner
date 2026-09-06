@@ -27,6 +27,21 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++20")
+            }
+        }
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("../../../core/CMakeLists.txt")
+        }
     }
 
     buildTypes {
