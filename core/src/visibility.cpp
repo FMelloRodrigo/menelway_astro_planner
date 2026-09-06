@@ -393,4 +393,96 @@ YearlyVisibilityResult calculate_yearly_visibility(
     return result;
 }
 
+PeriodVisibilityResult evaluate_period_visibility(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes
+) {
+    PeriodVisibilityResult result;
+
+    double max_alt = 90.0 - std::abs(obs.latitude.value - target.dec.value);
+    if (max_alt < criteria.min_altitude.value) {
+        return result;
+    }
+
+    // Determine total days in the period
+    int total_days = static_cast<int>(std::round(end_jd.value - start_jd.value)) + 1;
+    if (total_days < 1) total_days = 1;
+    result.total_period_days = total_days;
+
+    int step = step_minutes > 0 ? step_minutes : 10;
+    bool found_first = false;
+
+    for (int i = 0; i < total_days; ++i) {
+        double cur_jd_val = start_jd.value + static_cast<double>(i);
+        auto dt = time::julian_date_to_datetime(time::JulianDate{cur_jd_val});
+        time::JulianDate jd_midnight_utc = time::datetime_to_julian_date({dt.year, dt.month, dt.day, 0, 0, 0.0});
+        auto night = ephemeris::calculate_night_window(jd_midnight_utc, obs);
+
+        time::JulianDate win_start{0.0};
+        time::JulianDate win_end{0.0};
+
+        if (criteria.use_custom_time_window) {
+            double local_fraction = (criteria.custom_start_hour + criteria.custom_start_minute / 60.0) / 24.0;
+            if (criteria.custom_start_hour < 12) {
+                local_fraction += 1.0;
+            }
+            double utc_start_jd = jd_midnight_utc.value + local_fraction - (static_cast<double>(criteria.utc_offset_minutes) / 1440.0);
+
+            int start_mins = criteria.custom_start_hour * 60 + criteria.custom_start_minute;
+            int end_mins = criteria.custom_end_hour * 60 + criteria.custom_end_minute;
+            int diff_mins = end_mins - start_mins;
+            if (diff_mins <= 0) diff_mins += 1440;
+
+            double utc_end_jd = utc_start_jd + (static_cast<double>(diff_mins) / 1440.0);
+            win_start = time::JulianDate{utc_start_jd};
+            win_end = time::JulianDate{utc_end_jd};
+        } else {
+            if (!night.sun_never_sets) {
+                win_start = night.astronomical_dusk;
+                win_end = night.astronomical_dawn;
+                if (!night.has_astronomical_night) {
+                    win_start = night.nautical_dusk;
+                    win_end = night.nautical_dawn;
+                }
+            }
+        }
+
+        if (win_start.value < win_end.value) {
+            VisibilityCriteria day_crit = criteria;
+            day_crit.window_start = win_start;
+            day_crit.window_end = win_end;
+            day_crit.min_moon_separation = units::Degrees{0.0};
+
+            auto vis = evaluate_visibility(target, obs, day_crit, step, false);
+            if (vis.meets_criteria) {
+                result.total_observable_days++;
+                if (!found_first) {
+                    result.start_month = dt.month;
+                    result.start_day = dt.day;
+                    found_first = true;
+                }
+                result.end_month = dt.month;
+                result.end_day = dt.day;
+
+                if (vis.max_continuous_hours > result.max_hours_observable ||
+                    (vis.max_continuous_hours == result.max_hours_observable && vis.peak_altitude.value > result.peak_altitude_deg)) {
+                    result.max_hours_observable = vis.max_continuous_hours;
+                    result.peak_altitude_deg = vis.peak_altitude.value;
+                    result.peak_date = jd_midnight_utc;
+                }
+            }
+        }
+    }
+
+    if (result.total_observable_days > 0) {
+        result.is_observable = true;
+    }
+
+    return result;
+}
+
 } // namespace astro::visibility

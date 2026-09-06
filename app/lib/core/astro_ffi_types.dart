@@ -209,3 +209,71 @@ final class AstroCurveData extends Struct {
   @Size()
   external int count;
 }
+
+final class AstroPeriodTargetItem extends Struct {
+  @Int64()
+  external int id;
+
+  external Pointer<Utf8> name;
+  external Pointer<Utf8> messier;
+  external Pointer<Utf8> caldwell;
+  external Pointer<Utf8> arp;
+  external Pointer<Utf8> herschel;
+  external Pointer<Utf8> catalog;
+  external Pointer<Utf8> objectType;
+  external Pointer<Utf8> constellation;
+
+  @Double()
+  external double raHours;
+
+  @Double()
+  external double decDegrees;
+
+  @Double()
+  external double magnitude;
+
+  @Double()
+  external double majorAxisArcmin;
+
+  @Double()
+  external double surfaceBrightness;
+
+  external Pointer<Utf8> commonName;
+
+  @Double()
+  external double peakAltitudeDeg;
+
+  @Double()
+  external double maxHoursObservable;
+
+  @Int64()
+  external int peakDateUtc;
+
+  @Int32()
+  external int observableDaysCount;
+
+  @Int32()
+  external int totalPeriodDays;
+
+  @Int32()
+  external int startMonth;
+
+  @Int32()
+  external int startDay;
+
+  @Int32()
+  external int endMonth;
+
+  @Int32()
+  external int endDay;
+
+  @Int32()
+  external int isObservable;
+}
+
+final class AstroPeriodTargetList extends Struct {
+  external Pointer<AstroPeriodTargetItem> items;
+
+  @Size()
+  external int count;
+}

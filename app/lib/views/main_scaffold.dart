@@ -11,6 +11,7 @@ import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
 import 'observing_lists_view.dart';
+import 'planner_view.dart';
 import 'target_search_view.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -1137,6 +1138,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                   label: const Text("Targets"),
                 ),
                 NavigationRailDestination(
+                  icon: const Icon(Icons.calendar_month_rounded),
+                  selectedIcon: Icon(Icons.calendar_month_rounded, color: accentColor),
+                  label: const Text("Planner"),
+                ),
+                NavigationRailDestination(
                   icon: const Icon(Icons.playlist_play_rounded),
                   selectedIcon: Icon(Icons.playlist_play_rounded, color: accentColor),
                   label: const Text("Observing Lists"),
@@ -1167,25 +1173,44 @@ class _MainScaffoldState extends State<MainScaffold> {
                       _saveSettings();
                     },
                   )
-                : ObservingListsView(
-                    lists: _observingLists,
-                    isRedNightMode: widget.isRedNightMode,
-                    onCreateList: (name, desc, date) {
-                      AstroBridge.instance.createObservingList(name, desc, date);
-                      _refreshObservingLists();
-                      _saveSettings();
-                    },
-                    onDeleteList: (listId) {
-                      AstroBridge.instance.deleteObservingList(listId);
-                      _refreshObservingLists();
-                      _saveSettings();
-                    },
-                    onRemoveItem: (listId, dsoId) {
-                      AstroBridge.instance.removeTargetFromList(listId, dsoId);
-                      _refreshObservingLists();
-                      _saveSettings();
-                    },
-                  ),
+                : _selectedTabIndex == 1
+                    ? PlannerView(
+                        filters: _filters,
+                        night: _nightSummary!,
+                        isRedNightMode: widget.isRedNightMode,
+                        availableLists: _observingLists,
+                        onAddToList: (listId, dsoId, notes) {
+                          AstroBridge.instance.addTargetToList(listId, dsoId, notes ?? '');
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                        onFilterChanged: (updated) {
+                          setState(() {
+                            _filters = updated;
+                          });
+                          _saveSettings();
+                          _runFiltering();
+                        },
+                      )
+                    : ObservingListsView(
+                        lists: _observingLists,
+                        isRedNightMode: widget.isRedNightMode,
+                        onCreateList: (name, desc, date) {
+                          AstroBridge.instance.createObservingList(name, desc, date);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                        onDeleteList: (listId) {
+                          AstroBridge.instance.deleteObservingList(listId);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                        onRemoveItem: (listId, dsoId) {
+                          AstroBridge.instance.removeTargetFromList(listId, dsoId);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                      ),
           ),
         ],
       ),
@@ -1205,6 +1230,10 @@ class _MainScaffoldState extends State<MainScaffold> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.radar_rounded),
                   label: "Targets",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.calendar_month_rounded),
+                  label: "Planner",
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.playlist_play_rounded),

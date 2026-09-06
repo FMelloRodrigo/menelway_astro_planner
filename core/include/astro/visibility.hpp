@@ -116,5 +116,30 @@ YearlyVisibilityResult calculate_yearly_visibility(
     int year = 2026
 );
 
+struct PeriodVisibilityResult {
+    bool is_observable{false};
+    int total_observable_days{0};
+    int total_period_days{0};
+    time::JulianDate peak_date{0.0};
+    double peak_altitude_deg{-90.0};
+    double max_hours_observable{0.0};
+    int start_month{0};
+    int start_day{0};
+    int end_month{0};
+    int end_day{0};
+};
+
+/**
+ * @brief Computes visibility metrics for a target across a specific Julian Date range [start_jd, end_jd].
+ */
+PeriodVisibilityResult evaluate_period_visibility(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes = 10
+);
+
 } // namespace astro::visibility
 

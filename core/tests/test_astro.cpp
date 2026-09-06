@@ -262,6 +262,51 @@ void test_yearly_visibility() {
     assert(yearly_rosette_brazil.total_observable_days > 0);
 }
 
+void test_period_visibility() {
+    std::cout << "[TEST] Period Visibility Solver (Future Planning)...\n";
+    using namespace astro::units;
+    using namespace astro::coordinates;
+    using namespace astro::visibility;
+    using namespace astro::time;
+
+    ObserverLocation brazil{Degrees{-23.55}, Degrees{-46.63}, 760.0};
+    EquatorialCoordinates rosette{Hours{6.53}, Degrees{5.0}};
+
+    VisibilityCriteria criteria;
+    criteria.min_altitude = Degrees{30.0};
+    criteria.min_duration_hours = 2.0;
+    criteria.azimuth_range = astro::horizon::AzimuthRange{Degrees{270.0}, Degrees{360.0}};
+    criteria.quadrant = astro::horizon::Quadrant::NorthWest;
+    criteria.use_custom_time_window = true;
+    criteria.custom_start_hour = 21;
+    criteria.custom_start_minute = 0;
+    criteria.custom_end_hour = 23;
+    criteria.custom_end_minute = 0;
+    criteria.utc_offset_minutes = -180; // UTC-3
+
+    // Period 1: September 1 to September 30, 2026 (off-season for Rosette with these filters)
+    auto sep_start = astro::time::datetime_to_julian_date({2026, 9, 1, 0, 0, 0.0});
+    auto sep_end = astro::time::datetime_to_julian_date({2026, 9, 30, 0, 0, 0.0});
+    auto sep_res = astro::visibility::evaluate_period_visibility(rosette, brazil, criteria, sep_start, sep_end);
+    assert(sep_res.is_observable == false);
+    assert(sep_res.total_observable_days == 0);
+    assert(sep_res.total_period_days == 30);
+
+    // Period 2: February 1 to February 28, 2026 (active season for Rosette in NW 21-23h)
+    auto feb_start = astro::time::datetime_to_julian_date({2026, 2, 1, 0, 0, 0.0});
+    auto feb_end = astro::time::datetime_to_julian_date({2026, 2, 28, 0, 0, 0.0});
+    auto feb_res = astro::visibility::evaluate_period_visibility(rosette, brazil, criteria, feb_start, feb_end);
+    assert(feb_res.is_observable == true);
+    assert(feb_res.total_observable_days == 19);
+    assert(feb_res.start_day == 10);
+    assert(feb_res.end_day == 28);
+    assert(feb_res.peak_altitude_deg > 60.0);
+    std::cout << "  ✓ Period Visibility Rosette in Feb: " << feb_res.total_observable_days
+              << " of " << feb_res.total_period_days << " days (from Feb "
+              << feb_res.start_day << " to " << feb_res.end_day << ", peak at "
+              << feb_res.peak_altitude_deg << "°)\n";
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  RUNNING ASTRO CORE C++20 TESTS        \n";
@@ -273,6 +318,7 @@ int main() {
     test_ephemeris();
     test_horizon_and_visibility();
     test_yearly_visibility();
+    test_period_visibility();
 
     std::cout << "\n>>> ALL C++20 CORE TESTS PASSED SUCCESSFULLY! <<<\n";
     return 0;

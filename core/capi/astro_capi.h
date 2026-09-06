@@ -101,6 +101,39 @@ typedef struct {
 } AstroTargetList;
 
 typedef struct {
+    int64_t id;
+    const char* name;
+    const char* messier;
+    const char* caldwell;
+    const char* arp;
+    const char* herschel;
+    const char* catalog;
+    const char* object_type;
+    const char* constellation;
+    double ra_hours;
+    double dec_degrees;
+    double magnitude;
+    double major_axis_arcmin;
+    double surface_brightness;
+    const char* common_name;
+    double peak_altitude_deg;
+    double max_hours_observable;
+    int64_t peak_date_utc;
+    int32_t observable_days_count;
+    int32_t total_period_days;
+    int32_t start_month;
+    int32_t start_day;
+    int32_t end_month;
+    int32_t end_day;
+    int32_t is_observable;
+} AstroPeriodTargetItem;
+
+typedef struct {
+    AstroPeriodTargetItem* items;
+    size_t count;
+} AstroPeriodTargetList;
+
+typedef struct {
     int64_t timestamp_utc;
     double altitude_deg;
     double azimuth_deg;
@@ -134,6 +167,17 @@ ASTRO_API AstroTargetList* astro_filter_targets(
     int32_t step_minutes
 );
 ASTRO_API void astro_free_target_list(AstroTargetList* list);
+
+// Period Target Filtering (Future Planning)
+ASTRO_API AstroPeriodTargetList* astro_filter_targets_period(
+    AstroEngine* engine,
+    const AstroObserver* observer,
+    const AstroFilterCriteria* criteria,
+    int64_t period_start_utc,
+    int64_t period_end_utc,
+    int32_t step_minutes
+);
+ASTRO_API void astro_free_period_target_list(AstroPeriodTargetList* list);
 
 // Target Altitude Curve (for high-resolution plotting)
 ASTRO_API AstroCurveData* astro_generate_curve(

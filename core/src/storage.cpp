@@ -463,6 +463,55 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
     return results;
 }
 
+std::vector<catalog::TargetWithPeriodVisibility> SqliteStorage::filter_targets_period(
+    const coordinates::ObserverLocation& obs,
+    const catalog::DsoFilterOptions& filter_options,
+    const visibility::VisibilityCriteria& visibility_criteria,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes
+) {
+    std::vector<catalog::TargetWithPeriodVisibility> results;
+    if (!db_) return results;
+
+    // Fetch matching objects from catalog (up to e.g. 2000 candidates)
+    catalog::DsoFilterOptions candidate_opts = filter_options;
+    if (candidate_opts.limit <= 0 || candidate_opts.limit > 2000) {
+        candidate_opts.limit = 2000;
+    }
+
+    std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
+    bool has_search_query = !filter_options.search_query.empty();
+
+    for (const auto& dso : candidates) {
+        auto vis = visibility::evaluate_period_visibility(
+            dso.coordinates,
+            obs,
+            visibility_criteria,
+            start_jd,
+            end_jd,
+            step_minutes
+        );
+
+        if (vis.is_observable || has_search_query) {
+            results.push_back({dso, vis});
+        }
+    }
+
+    // Sort: objects meeting criteria first, then by total observable days descending, then peak altitude descending
+    std::sort(results.begin(), results.end(), [](const auto& a, const auto& b) {
+        if (a.visibility.is_observable != b.visibility.is_observable) {
+            return a.visibility.is_observable > b.visibility.is_observable;
+        }
+        if (a.visibility.total_observable_days != b.visibility.total_observable_days) {
+            return a.visibility.total_observable_days > b.visibility.total_observable_days;
+        }
+        return a.visibility.peak_altitude_deg > b.visibility.peak_altitude_deg;
+    });
+
+    return results;
+}
+
 std::int64_t SqliteStorage::create_list(
     const std::string& name,
     const std::string& description,

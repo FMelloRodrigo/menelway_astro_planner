@@ -11,6 +11,7 @@ import '../models/altitude_point.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
 import '../models/yearly_visibility.dart';
+import '../models/period_target_item.dart';
 
 // Typedefs for Native and Dart functions
 typedef _AstroEngineCreateC = Pointer<AstroEngineContext> Function(Pointer<Utf8> dbPath);
@@ -50,6 +51,26 @@ typedef _AstroFilterTargetsDart = Pointer<AstroTargetList> Function(
 
 typedef _AstroFreeTargetListC = Void Function(Pointer<AstroTargetList> list);
 typedef _AstroFreeTargetListDart = void Function(Pointer<AstroTargetList> list);
+
+typedef _AstroFilterTargetsPeriodC = Pointer<AstroPeriodTargetList> Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<AstroObserver> observer,
+  Pointer<AstroFilterCriteria> criteria,
+  Int64 periodStartUtc,
+  Int64 periodEndUtc,
+  Int32 stepMinutes,
+);
+typedef _AstroFilterTargetsPeriodDart = Pointer<AstroPeriodTargetList> Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<AstroObserver> observer,
+  Pointer<AstroFilterCriteria> criteria,
+  int periodStartUtc,
+  int periodEndUtc,
+  int stepMinutes,
+);
+
+typedef _AstroFreePeriodTargetListC = Void Function(Pointer<AstroPeriodTargetList> list);
+typedef _AstroFreePeriodTargetListDart = void Function(Pointer<AstroPeriodTargetList> list);
 
 typedef _AstroGenerateCurveC = Pointer<AstroCurveData> Function(
   Pointer<AstroEngineContext> engine,
@@ -152,6 +173,8 @@ class AstroBridge {
   late final _AstroGetNightSummaryDart _getNightSummary;
   late final _AstroFilterTargetsDart _filterTargets;
   late final _AstroFreeTargetListDart _freeTargetList;
+  late final _AstroFilterTargetsPeriodDart _filterTargetsPeriod;
+  late final _AstroFreePeriodTargetListDart _freePeriodTargetList;
   late final _AstroGenerateCurveDart _generateCurve;
   late final _AstroFreeCurveDataDart _freeCurveData;
   late final _AstroCreateObservingListDart _createList;
@@ -225,6 +248,12 @@ class AstroBridge {
     _freeTargetList = _lib
         .lookup<NativeFunction<_AstroFreeTargetListC>>('astro_free_target_list')
         .asFunction<_AstroFreeTargetListDart>();
+    _filterTargetsPeriod = _lib
+        .lookup<NativeFunction<_AstroFilterTargetsPeriodC>>('astro_filter_targets_period')
+        .asFunction<_AstroFilterTargetsPeriodDart>();
+    _freePeriodTargetList = _lib
+        .lookup<NativeFunction<_AstroFreePeriodTargetListC>>('astro_free_period_target_list')
+        .asFunction<_AstroFreePeriodTargetListDart>();
     _generateCurve = _lib
         .lookup<NativeFunction<_AstroGenerateCurveC>>('astro_generate_curve')
         .asFunction<_AstroGenerateCurveDart>();
@@ -457,6 +486,135 @@ class AstroBridge {
         return results;
       } finally {
         _freeTargetList(listPtr);
+      }
+    } finally {
+      if (catUtf8 != null) calloc.free(catUtf8);
+      if (typeUtf8 != null) calloc.free(typeUtf8);
+      if (searchUtf8 != null) calloc.free(searchUtf8);
+      calloc.free(obsPtr);
+      calloc.free(critPtr);
+    }
+  }
+
+  List<PeriodTargetItem> filterTargetsPeriod({
+    required FilterState filters,
+    required DateTime periodStart,
+    required DateTime periodEnd,
+    int stepMinutes = 10,
+  }) {
+    if (_engine == null) return [];
+
+    final obsPtr = calloc<AstroObserver>();
+    final critPtr = calloc<AstroFilterCriteria>();
+
+    Pointer<Utf8>? catUtf8;
+    Pointer<Utf8>? typeUtf8;
+    Pointer<Utf8>? searchUtf8;
+
+    try {
+      obsPtr.ref.latitudeDeg = filters.observerLat;
+      obsPtr.ref.longitudeDeg = filters.observerLon;
+      obsPtr.ref.elevationM = filters.observerElevation;
+
+      critPtr.ref.minAltitudeDeg = filters.minAltitude;
+      critPtr.ref.minDurationHours = filters.minDurationHours;
+      critPtr.ref.minMoonSeparationDeg = filters.minMoonSeparation;
+      critPtr.ref.minAzimuthDeg = filters.minAzimuth;
+      critPtr.ref.maxAzimuthDeg = filters.maxAzimuth;
+      critPtr.ref.quadrant = filters.quadrant;
+      critPtr.ref.maxMagnitude = filters.maxMagnitude;
+      critPtr.ref.minMagnitude = filters.minMagnitude;
+      critPtr.ref.minSizeArcmin = filters.minSizeArcmin;
+      critPtr.ref.maxSizeArcmin = filters.maxSizeArcmin;
+
+      final catStr = filters.selectedCatalogs.join(',');
+      catUtf8 = catStr.toNativeUtf8();
+      critPtr.ref.catalogsCsv = catUtf8;
+
+      final typeStr = filters.selectedObjectTypes.join(',');
+      typeUtf8 = typeStr.toNativeUtf8();
+      critPtr.ref.objectTypesCsv = typeUtf8;
+
+      searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
+      critPtr.ref.searchQuery = searchUtf8;
+
+      critPtr.ref.limit = 300;
+      critPtr.ref.offset = 0;
+      critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
+      critPtr.ref.customStartHour = filters.customStartHour;
+      critPtr.ref.customStartMinute = filters.customStartMinute;
+      critPtr.ref.customEndHour = filters.customEndHour;
+      critPtr.ref.customEndMinute = filters.customEndMinute;
+      critPtr.ref.utcOffsetMinutes = DateTime.now().timeZoneOffset.inMinutes;
+
+      final startUtc = periodStart.toUtc().millisecondsSinceEpoch ~/ 1000;
+      final endUtc = periodEnd.toUtc().millisecondsSinceEpoch ~/ 1000;
+
+      final listPtr = _filterTargetsPeriod(
+        _engine!,
+        obsPtr,
+        critPtr,
+        startUtc,
+        endUtc,
+        stepMinutes,
+      );
+
+      if (listPtr == nullptr) return [];
+
+      try {
+        final count = listPtr.ref.count;
+        final itemsPtr = listPtr.ref.items;
+        final results = <PeriodTargetItem>[];
+
+        for (int i = 0; i < count; i++) {
+          final cItem = itemsPtr[i];
+          final peakUnix = cItem.peakDateUtc;
+          final peakDt = peakUnix > 0
+              ? DateTime.fromMillisecondsSinceEpoch(peakUnix * 1000, isUtc: true).toLocal()
+              : null;
+
+          results.add(PeriodTargetItem(
+            id: cItem.id,
+            name: cItem.name.toDartString(),
+            messier: cItem.messier.address != 0 && cItem.messier.toDartString().isNotEmpty
+                ? cItem.messier.toDartString()
+                : null,
+            caldwell: cItem.caldwell.address != 0 && cItem.caldwell.toDartString().isNotEmpty
+                ? cItem.caldwell.toDartString()
+                : null,
+            arp: cItem.arp.address != 0 && cItem.arp.toDartString().isNotEmpty
+                ? cItem.arp.toDartString()
+                : null,
+            herschel: cItem.herschel.address != 0 && cItem.herschel.toDartString().isNotEmpty
+                ? cItem.herschel.toDartString()
+                : null,
+            catalog: cItem.catalog.toDartString(),
+            objectType: cItem.objectType.toDartString(),
+            constellation: cItem.constellation.toDartString(),
+            raHours: cItem.raHours,
+            decDegrees: cItem.decDegrees,
+            magnitude: cItem.magnitude < 900.0 ? cItem.magnitude : null,
+            majorAxisArcmin: cItem.majorAxisArcmin >= 0 ? cItem.majorAxisArcmin : null,
+            surfaceBrightness: cItem.surfaceBrightness >= 0 ? cItem.surfaceBrightness : null,
+            commonName: cItem.commonName.address != 0 && cItem.commonName.toDartString().isNotEmpty
+                ? cItem.commonName.toDartString()
+                : null,
+            peakAltitudeDeg: cItem.peakAltitudeDeg,
+            maxHoursObservable: cItem.maxHoursObservable,
+            peakDate: peakDt,
+            observableDaysCount: cItem.observableDaysCount,
+            totalPeriodDays: cItem.totalPeriodDays,
+            startMonth: cItem.startMonth,
+            startDay: cItem.startDay,
+            endMonth: cItem.endMonth,
+            endDay: cItem.endDay,
+            isObservable: cItem.isObservable != 0,
+          ));
+        }
+
+        return results;
+      } finally {
+        _freePeriodTargetList(listPtr);
       }
     } finally {
       if (catUtf8 != null) calloc.free(catUtf8);

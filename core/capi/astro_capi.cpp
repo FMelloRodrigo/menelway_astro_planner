@@ -25,6 +25,12 @@ struct AstroTargetListImpl {
     std::vector<std::string> string_pool;
 };
 
+struct AstroPeriodTargetListImpl {
+    AstroPeriodTargetList public_list;
+    std::vector<AstroPeriodTargetItem> items;
+    std::vector<std::string> string_pool;
+};
+
 struct AstroCurveDataImpl {
     AstroCurveData public_curve;
     std::vector<AstroAltitudePoint> points;
@@ -225,6 +231,124 @@ AstroTargetList* astro_filter_targets(
 void astro_free_target_list(AstroTargetList* list) {
     if (list) {
         delete reinterpret_cast<AstroTargetListImpl*>(list);
+    }
+}
+
+AstroPeriodTargetList* astro_filter_targets_period(
+    AstroEngine* engine,
+    const AstroObserver* observer,
+    const AstroFilterCriteria* criteria,
+    int64_t period_start_utc,
+    int64_t period_end_utc,
+    int32_t step_minutes
+) {
+    if (!engine || !observer || !criteria) return nullptr;
+    auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
+
+    try {
+        astro::coordinates::ObserverLocation obs{
+            astro::units::Degrees{observer->latitude_deg},
+            astro::units::Degrees{observer->longitude_deg},
+            observer->elevation_m
+        };
+
+        astro::catalog::DsoFilterOptions filter_opts;
+        filter_opts.catalogs = split_csv(criteria->catalogs_csv);
+        filter_opts.object_types = split_csv(criteria->object_types_csv);
+        if (criteria->search_query && criteria->search_query[0] != '\0') {
+            filter_opts.search_query = criteria->search_query;
+        }
+        if (criteria->max_magnitude < 900.0) {
+            filter_opts.max_magnitude = criteria->max_magnitude;
+        }
+        if (criteria->min_magnitude > -900.0) {
+            filter_opts.min_magnitude = criteria->min_magnitude;
+        }
+        if (criteria->min_size_arcmin > 0.0) {
+            filter_opts.min_size_arcmin = criteria->min_size_arcmin;
+        }
+        if (criteria->max_size_arcmin < 90000.0) {
+            filter_opts.max_size_arcmin = criteria->max_size_arcmin;
+        }
+        filter_opts.limit = criteria->limit > 0 ? criteria->limit : 500;
+        filter_opts.offset = criteria->offset;
+
+        astro::visibility::VisibilityCriteria vis_crit;
+        vis_crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
+        vis_crit.min_duration_hours = criteria->min_duration_hours;
+        vis_crit.min_moon_separation = astro::units::Degrees{criteria->min_moon_separation_deg};
+        vis_crit.azimuth_range = astro::horizon::AzimuthRange{
+            astro::units::Degrees{criteria->min_azimuth_deg},
+            astro::units::Degrees{criteria->max_azimuth_deg}
+        };
+        vis_crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
+        vis_crit.use_custom_time_window = criteria->use_custom_time_window != 0;
+        vis_crit.custom_start_hour = criteria->custom_start_hour;
+        vis_crit.custom_start_minute = criteria->custom_start_minute;
+        vis_crit.custom_end_hour = criteria->custom_end_hour;
+        vis_crit.custom_end_minute = criteria->custom_end_minute;
+        vis_crit.utc_offset_minutes = criteria->utc_offset_minutes;
+
+        astro::time::JulianDate start_jd = astro::time::unix_to_julian_date(period_start_utc);
+        astro::time::JulianDate end_jd = astro::time::unix_to_julian_date(period_end_utc);
+
+        int step = step_minutes > 0 ? step_minutes : 10;
+        auto results = ctx->storage->filter_targets_period(obs, filter_opts, vis_crit, start_jd, end_jd, step);
+
+        auto impl = std::make_unique<AstroPeriodTargetListImpl>();
+        impl->items.reserve(results.size());
+        impl->string_pool.reserve(results.size() * 8);
+
+        auto intern_str = [&](const std::string& s) -> const char* {
+            if (s.empty()) return "";
+            impl->string_pool.push_back(s);
+            return impl->string_pool.back().c_str();
+        };
+
+        for (const auto& r : results) {
+            AstroPeriodTargetItem item{};
+            item.id = r.dso.id;
+            item.name = intern_str(r.dso.name);
+            item.messier = intern_str(r.dso.messier.value_or(""));
+            item.caldwell = intern_str(r.dso.caldwell.value_or(""));
+            item.arp = intern_str(r.dso.arp.value_or(""));
+            item.herschel = intern_str(r.dso.herschel.value_or(""));
+            item.catalog = intern_str(r.dso.catalog);
+            item.object_type = intern_str(r.dso.object_type);
+            item.constellation = intern_str(r.dso.constellation);
+            item.ra_hours = r.dso.coordinates.ra.value;
+            item.dec_degrees = r.dso.coordinates.dec.value;
+            item.magnitude = r.dso.magnitude.value_or(999.0);
+            item.major_axis_arcmin = r.dso.major_axis_arcmin.value_or(-1.0);
+            item.surface_brightness = r.dso.surface_brightness.value_or(-1.0);
+            item.common_name = intern_str(r.dso.common_names.value_or(""));
+            item.peak_altitude_deg = r.visibility.peak_altitude_deg;
+            item.max_hours_observable = r.visibility.max_hours_observable;
+            item.peak_date_utc = astro::time::julian_date_to_unix(r.visibility.peak_date);
+            item.observable_days_count = r.visibility.total_observable_days;
+            item.total_period_days = r.visibility.total_period_days;
+            item.start_month = r.visibility.start_month;
+            item.start_day = r.visibility.start_day;
+            item.end_month = r.visibility.end_month;
+            item.end_day = r.visibility.end_day;
+            item.is_observable = r.visibility.is_observable ? 1 : 0;
+
+            impl->items.push_back(item);
+        }
+
+        impl->public_list.items = impl->items.data();
+        impl->public_list.count = impl->items.size();
+
+        return reinterpret_cast<AstroPeriodTargetList*>(impl.release());
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return nullptr;
+    }
+}
+
+void astro_free_period_target_list(AstroPeriodTargetList* list) {
+    if (list) {
+        delete reinterpret_cast<AstroPeriodTargetListImpl*>(list);
     }
 }
 

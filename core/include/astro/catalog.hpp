@@ -80,4 +80,9 @@ struct TargetWithVisibility {
     visibility::TargetVisibilityResult visibility;
 };
 
+struct TargetWithPeriodVisibility {
+    DsoObject dso;
+    visibility::PeriodVisibilityResult visibility;
+};
+
 } // namespace astro::catalog

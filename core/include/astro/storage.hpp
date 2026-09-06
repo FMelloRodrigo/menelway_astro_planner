@@ -46,6 +46,15 @@ public:
         const visibility::VisibilityCriteria& visibility_criteria,
         int step_minutes = 10
     ) = 0;
+
+    virtual std::vector<catalog::TargetWithPeriodVisibility> filter_targets_period(
+        const coordinates::ObserverLocation& obs,
+        const catalog::DsoFilterOptions& filter_options,
+        const visibility::VisibilityCriteria& visibility_criteria,
+        time::JulianDate start_jd,
+        time::JulianDate end_jd,
+        int step_minutes = 10
+    ) = 0;
 };
 
 class IObservingListRepository {
@@ -102,6 +111,15 @@ public:
         const coordinates::ObserverLocation& obs,
         const catalog::DsoFilterOptions& filter_options,
         const visibility::VisibilityCriteria& visibility_criteria,
+        int step_minutes = 10
+    ) override;
+
+    std::vector<catalog::TargetWithPeriodVisibility> filter_targets_period(
+        const coordinates::ObserverLocation& obs,
+        const catalog::DsoFilterOptions& filter_options,
+        const visibility::VisibilityCriteria& visibility_criteria,
+        time::JulianDate start_jd,
+        time::JulianDate end_jd,
         int step_minutes = 10
     ) override;
 
