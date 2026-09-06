@@ -79,22 +79,39 @@ def map_type(t):
     if not t:
         return "Other"
     t = t.strip()
-    if t in ("G", "GCl", "GTrGr", "SCG"):
+
+    # Globular Clusters: GCl (OpenNGC Globular Cluster), GC
+    if t in ("GCl", "GC"):
+        return "Globular Cluster"
+
+    # Open Clusters: OCl (OpenNGC Open Cluster), OC, *Ass (Stellar Association)
+    if t in ("OCl", "OC", "*Ass"):
+        return "Open Cluster"
+
+    # Galaxies: G (Galaxy), GPair (Galaxy Pair), GTrpl (Galaxy Triplet), GGroup (Galaxy Group), GTrGr, SCG
+    if t in ("G", "GPair", "GTrpl", "GGroup", "GTrGr", "SCG"):
         return "Galaxy"
+
+    # Planetary Nebulae: PN, pA
     if t in ("PN", "pA"):
         return "Planetary Nebula"
-    if t in ("EmN", "RefN", "HII", "Cl+N", "Neb"):
+
+    # Bright Nebulae: HII (HII Region), Neb (Nebula), EmN (Emission Nebula), RfN (Reflection Nebula), RefN, Cl+N (Cluster + Nebulosity)
+    if t in ("EmN", "RfN", "RefN", "HII", "Cl+N", "Neb"):
         return "Bright Nebula"
-    if t in ("DrkN",):
+
+    # Dark Nebulae: DrkN, DN
+    if t in ("DrkN", "DN"):
         return "Dark Nebula"
-    if t in ("OC", "OCl"):
-        return "Open Cluster"
-    if t in ("GC", "GCl"):
-        return "Globular Cluster"
+
+    # Supernova Remnants: SNR
     if t in ("SNR",):
         return "Supernova Remnant"
-    if t in ("Ast", "*", "**", "***"):
+
+    # Stars and Asterisms: *, **, ***, Ast, Nova
+    if t in ("*", "**", "***", "Ast", "Nova"):
         return "Star / Asterism"
+
     return "Other"
 
 def format_primary_name(name):
