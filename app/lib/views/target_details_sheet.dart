@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/astro_bridge.dart';
 import '../core/catalog_manager.dart';
 import '../models/altitude_point.dart';
+import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
@@ -19,6 +20,7 @@ class TargetDetailsSheet extends StatefulWidget {
   final bool isRedNightMode;
   final List<ObservingListModel> availableLists;
   final void Function(int listId, int dsoId, String notes) onAddToList;
+  final FilterState? filters;
 
   const TargetDetailsSheet({
     super.key,
@@ -30,6 +32,7 @@ class TargetDetailsSheet extends StatefulWidget {
     this.isRedNightMode = false,
     required this.availableLists,
     required this.onAddToList,
+    this.filters,
   });
 
   @override
@@ -290,6 +293,13 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 targetPoints: _curvePoints,
                 night: widget.night,
                 targetName: widget.target.displayName,
+                minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
+                customWindowStart: (widget.filters?.useCustomTimeWindow == true)
+                    ? widget.filters!.getWindowStart(widget.filters!.date)
+                    : null,
+                customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
+                    ? widget.filters!.getWindowEnd(widget.filters!.date)
+                    : null,
                 isRedNightMode: widget.isRedNightMode,
               ),
 

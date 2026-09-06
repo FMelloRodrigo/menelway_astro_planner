@@ -14,6 +14,13 @@ class FilterState {
   Set<String> selectedObjectTypes;
   String searchQuery;
 
+  // Observing Time Window (Telescopius rule)
+  bool useCustomTimeWindow;
+  int customStartHour;
+  int customStartMinute;
+  int customEndHour;
+  int customEndMinute;
+
   // Observer
   double observerLat;
   double observerLon;
@@ -35,6 +42,11 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     this.searchQuery = '',
+    this.useCustomTimeWindow = false,
+    this.customStartHour = 21,
+    this.customStartMinute = 0,
+    this.customEndHour = 23,
+    this.customEndMinute = 0,
     this.observerLat = 40.7128,
     this.observerLon = -74.0060,
     this.observerElevation = 10.0,
@@ -51,6 +63,52 @@ class FilterState {
           'Supernova Remnant',
         };
 
+  /// Returns the start DateTime for the observing session (handling evening vs morning).
+  DateTime getWindowStart([DateTime? refDate]) {
+    final base = refDate ?? date;
+    if (customStartHour >= 12) {
+      return DateTime(base.year, base.month, base.day, customStartHour, customStartMinute);
+    } else {
+      final nextDay = base.add(const Duration(days: 1));
+      return DateTime(nextDay.year, nextDay.month, nextDay.day, customStartHour, customStartMinute);
+    }
+  }
+
+  /// Returns the end DateTime for the observing session (handling cross-midnight).
+  DateTime getWindowEnd([DateTime? refDate]) {
+    final startDt = getWindowStart(refDate);
+    int startMins = customStartHour * 60 + customStartMinute;
+    int endMins = customEndHour * 60 + customEndMinute;
+    int diffMins = endMins - startMins;
+    if (diffMins <= 0) {
+      diffMins += 24 * 60; // crossed into next morning
+    }
+    return startDt.add(Duration(minutes: diffMins));
+  }
+
+  /// Total duration of the custom window in hours.
+  double get windowDurationHours {
+    int startMins = customStartHour * 60 + customStartMinute;
+    int endMins = customEndHour * 60 + customEndMinute;
+    int diffMins = endMins - startMins;
+    if (diffMins <= 0) {
+      diffMins += 24 * 60;
+    }
+    return diffMins / 60.0;
+  }
+
+  /// Formatted string like "21:00h - 23:00h" or "Astronomical Darkness".
+  String get formattedWindow {
+    if (!useCustomTimeWindow) {
+      return "Astronomical Darkness";
+    }
+    final sH = customStartHour.toString().padLeft(2, '0');
+    final sM = customStartMinute.toString().padLeft(2, '0');
+    final eH = customEndHour.toString().padLeft(2, '0');
+    final eM = customEndMinute.toString().padLeft(2, '0');
+    return "$sH:${sM}h - $eH:${eM}h";
+  }
+
   FilterState copyWith({
     double? minAltitude,
     double? minDurationHours,
@@ -66,6 +124,11 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     String? searchQuery,
+    bool? useCustomTimeWindow,
+    int? customStartHour,
+    int? customStartMinute,
+    int? customEndHour,
+    int? customEndMinute,
     double? observerLat,
     double? observerLon,
     double? observerElevation,
@@ -86,6 +149,11 @@ class FilterState {
       selectedCatalogs: selectedCatalogs ?? Set.from(this.selectedCatalogs),
       selectedObjectTypes: selectedObjectTypes ?? Set.from(this.selectedObjectTypes),
       searchQuery: searchQuery ?? this.searchQuery,
+      useCustomTimeWindow: useCustomTimeWindow ?? this.useCustomTimeWindow,
+      customStartHour: customStartHour ?? this.customStartHour,
+      customStartMinute: customStartMinute ?? this.customStartMinute,
+      customEndHour: customEndHour ?? this.customEndHour,
+      customEndMinute: customEndMinute ?? this.customEndMinute,
       observerLat: observerLat ?? this.observerLat,
       observerLon: observerLon ?? this.observerLon,
       observerElevation: observerElevation ?? this.observerElevation,

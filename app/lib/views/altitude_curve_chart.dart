@@ -12,6 +12,8 @@ class AltitudeCurveChart extends StatefulWidget {
   final String targetName;
   final double minAltitudeThreshold;
   final bool isRedNightMode;
+  final DateTime? customWindowStart;
+  final DateTime? customWindowEnd;
 
   const AltitudeCurveChart({
     super.key,
@@ -20,6 +22,8 @@ class AltitudeCurveChart extends StatefulWidget {
     required this.targetName,
     this.minAltitudeThreshold = 30.0,
     this.isRedNightMode = false,
+    this.customWindowStart,
+    this.customWindowEnd,
   });
 
   @override
@@ -155,6 +159,8 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         isRedNightMode: widget.isRedNightMode,
                         startTime: startTime,
                         endTime: endTime,
+                        customWindowStart: widget.customWindowStart,
+                        customWindowEnd: widget.customWindowEnd,
                       ),
                     ),
                   ),
@@ -176,6 +182,8 @@ class _AltitudeChartPainter extends CustomPainter {
   final bool isRedNightMode;
   final DateTime startTime;
   final DateTime endTime;
+  final DateTime? customWindowStart;
+  final DateTime? customWindowEnd;
 
   _AltitudeChartPainter({
     required this.points,
@@ -185,6 +193,8 @@ class _AltitudeChartPainter extends CustomPainter {
     required this.isRedNightMode,
     required this.startTime,
     required this.endTime,
+    this.customWindowStart,
+    this.customWindowEnd,
   });
 
   @override
@@ -206,6 +216,9 @@ class _AltitudeChartPainter extends CustomPainter {
 
     // 1. Draw Twilight bands
     _drawTwilightBands(canvas, chartRect, timeToX);
+
+    // 1b. Draw Custom Observing Window Band (if set)
+    _drawCustomWindowBand(canvas, chartRect, timeToX);
 
     // 2. Draw Horizontal Grid lines (0°, 30°, 60°, 90°)
     final gridPaint = Paint()
@@ -354,6 +367,55 @@ class _AltitudeChartPainter extends CustomPainter {
     }
   }
 
+  void _drawCustomWindowBand(Canvas canvas, Rect rect, double Function(DateTime) timeToX) {
+    if (customWindowStart == null || customWindowEnd == null) return;
+    final winStartX = timeToX(customWindowStart!).clamp(0.0, rect.width);
+    final winEndX = timeToX(customWindowEnd!).clamp(0.0, rect.width);
+
+    if (winStartX < winEndX) {
+      final winRect = Rect.fromLTRB(winStartX, 0, winEndX, rect.bottom);
+      final winPaint = Paint()
+        ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.12)
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(winRect, winPaint);
+
+      // Boundary vertical dashed lines
+      final borderPaint = Paint()
+        ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.7)
+        ..strokeWidth = 1.2;
+
+      _drawDashedVerticalLine(canvas, winStartX, 0, rect.bottom, borderPaint);
+      _drawDashedVerticalLine(canvas, winEndX, 0, rect.bottom, borderPaint);
+
+      // Window badge
+      final labelStyle = TextStyle(
+        color: isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+        fontSize: 8,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      );
+      final tp = TextPainter(
+        text: TextSpan(text: "OBSERVING WINDOW", style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(winStartX + 4, rect.bottom - tp.height - 4));
+    }
+  }
+
+  void _drawDashedVerticalLine(Canvas canvas, double x, double startY, double endY, Paint paint) {
+    const dashHeight = 4.0;
+    const dashSpace = 3.0;
+    double currentY = startY;
+    while (currentY < endY) {
+      canvas.drawLine(
+        Offset(x, currentY),
+        Offset(x, math.min(currentY + dashHeight, endY)),
+        paint,
+      );
+      currentY += dashHeight + dashSpace;
+    }
+  }
+
   void _drawTimeLabels(Canvas canvas, Size size, Rect chartRect, int totalDurationSec) {
     const labelCount = 6;
     final textStyle = TextStyle(
@@ -395,6 +457,8 @@ class _AltitudeChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _AltitudeChartPainter old) {
     return old.points != points ||
         old.hoverFraction != hoverFraction ||
+        old.customWindowStart != customWindowStart ||
+        old.customWindowEnd != customWindowEnd ||
         old.isRedNightMode != isRedNightMode ||
         old.minAltitudeThreshold != minAltitudeThreshold;
   }

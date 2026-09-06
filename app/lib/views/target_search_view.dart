@@ -77,6 +77,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
       context: context,
       builder: (ctx) => FilterDialog(
         initialFilters: widget.filters,
+        night: widget.night,
         isRedNightMode: widget.isRedNightMode,
         onApply: (updated) {
           widget.onFilterChanged(updated);
@@ -180,6 +181,16 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     const SizedBox(width: 6),
                     _buildSummaryChip("Duration ≥ ${widget.filters.minDurationHours.toStringAsFixed(1)}h", Icons.timer_rounded),
                     const SizedBox(width: 6),
+                    if (widget.filters.useCustomTimeWindow) ...[
+                      _buildSummaryChip(
+                        "Window: ${widget.filters.formattedWindow} (${widget.filters.windowDurationHours.toStringAsFixed(1)}h)",
+                        Icons.schedule_rounded,
+                      ),
+                      const SizedBox(width: 6),
+                    ] else ...[
+                      _buildSummaryChip("Window: Darkness (Full Night)", Icons.nights_stay_rounded),
+                      const SizedBox(width: 6),
+                    ],
                     _buildSummaryChip("Moon ≥ ${widget.filters.minMoonSeparation.round()}°", Icons.brightness_2_rounded),
                     const SizedBox(width: 6),
                     _buildSummaryChip("Catalogs: ${widget.filters.selectedCatalogs.join(', ')}", Icons.auto_stories_rounded),
@@ -238,6 +249,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                 isRedNightMode: widget.isRedNightMode,
                                 availableLists: widget.availableLists,
                                 onAddToList: widget.onAddToList,
+                                filters: widget.filters,
                               ),
                             ),
                           ],
@@ -301,6 +313,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   isRedNightMode: widget.isRedNightMode,
                   availableLists: widget.availableLists,
                   onAddToList: widget.onAddToList,
+                  filters: widget.filters,
                 ),
               ),
             );

@@ -322,8 +322,27 @@ class AstroBridge {
 
       critPtr.ref.minAltitudeDeg = filters.minAltitude;
       critPtr.ref.minDurationHours = filters.minDurationHours;
-      critPtr.ref.windowStartUtc = night.astronomicalDusk.toUtc().millisecondsSinceEpoch ~/ 1000;
-      critPtr.ref.windowEndUtc = night.astronomicalDawn.toUtc().millisecondsSinceEpoch ~/ 1000;
+
+      int windowStartUtc;
+      int windowEndUtc;
+      if (filters.useCustomTimeWindow) {
+        final startDt = filters.getWindowStart(filters.date);
+        final endDt = filters.getWindowEnd(filters.date);
+        windowStartUtc = startDt.toUtc().millisecondsSinceEpoch ~/ 1000;
+        windowEndUtc = endDt.toUtc().millisecondsSinceEpoch ~/ 1000;
+      } else {
+        if (!night.hasAstronomicalNight || night.astronomicalDawn.isBefore(night.astronomicalDusk)) {
+          final start = night.nauticalDusk.isBefore(night.nauticalDawn) ? night.nauticalDusk : night.sunset;
+          final end = night.nauticalDawn.isAfter(night.nauticalDusk) ? night.nauticalDawn : night.sunrise;
+          windowStartUtc = start.toUtc().millisecondsSinceEpoch ~/ 1000;
+          windowEndUtc = end.toUtc().millisecondsSinceEpoch ~/ 1000;
+        } else {
+          windowStartUtc = night.astronomicalDusk.toUtc().millisecondsSinceEpoch ~/ 1000;
+          windowEndUtc = night.astronomicalDawn.toUtc().millisecondsSinceEpoch ~/ 1000;
+        }
+      }
+      critPtr.ref.windowStartUtc = windowStartUtc;
+      critPtr.ref.windowEndUtc = windowEndUtc;
       critPtr.ref.minMoonSeparationDeg = filters.minMoonSeparation;
       critPtr.ref.minAzimuthDeg = filters.minAzimuth;
       critPtr.ref.maxAzimuthDeg = filters.maxAzimuth;

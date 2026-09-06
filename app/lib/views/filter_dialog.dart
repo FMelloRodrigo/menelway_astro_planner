@@ -2,16 +2,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../models/filter_state.dart';
+import '../models/night_summary.dart';
 import '../theme/astro_theme.dart';
 
 class FilterDialog extends StatefulWidget {
   final FilterState initialFilters;
+  final NightSummary? night;
   final bool isRedNightMode;
   final void Function(FilterState updated) onApply;
 
   const FilterDialog({
     super.key,
     required this.initialFilters,
+    this.night,
     this.isRedNightMode = false,
     required this.onApply,
   });
@@ -189,7 +192,240 @@ class _FilterDialogState extends State<FilterDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Section 1: Altitude & Duration (Telescopius core)
+                    // Section 1: Observing Time Window (Telescopius Rule)
+                    _buildSectionHeader("Observing Time Window", Icons.schedule_rounded),
+                    const SizedBox(height: 8),
+
+                    // Toggle: Astronomical Darkness vs Custom Time Limit
+                    Container(
+                      decoration: BoxDecoration(
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionSurfaceVariant
+                            : AstroColors.spaceDarkSurfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionBorder
+                              : AstroColors.spaceDarkBorder,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                              onTap: () {
+                                setState(() => _state.useCustomTimeWindow = false);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: !_state.useCustomTimeWindow
+                                      ? (widget.isRedNightMode
+                                          ? AstroColors.nightVisionBorder
+                                          : accentColor.withValues(alpha: 0.2))
+                                      : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.nights_stay_rounded,
+                                      size: 16,
+                                      color: !_state.useCustomTimeWindow ? accentColor : textColor.withValues(alpha: 0.5),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Astronomical Darkness",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: !_state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
+                                        color: !_state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 32,
+                            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                              onTap: () {
+                                setState(() {
+                                  _state.useCustomTimeWindow = true;
+                                  final maxDur = _state.windowDurationHours;
+                                  if (_state.minDurationHours > maxDur) {
+                                    _state.minDurationHours = math.max(0.5, maxDur);
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: _state.useCustomTimeWindow
+                                      ? (widget.isRedNightMode
+                                          ? AstroColors.nightVisionBorder
+                                          : accentColor.withValues(alpha: 0.2))
+                                      : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 16,
+                                      color: _state.useCustomTimeWindow ? accentColor : textColor.withValues(alpha: 0.5),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Custom Time Limit",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: _state.useCustomTimeWindow ? FontWeight.w700 : FontWeight.normal,
+                                        color: _state.useCustomTimeWindow ? textColor : textColor.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (_state.useCustomTimeWindow) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTimeBox(
+                              label: "START TIME",
+                              hour: _state.customStartHour,
+                              minute: _state.customStartMinute,
+                              onTap: () => _pickTime(isStart: true),
+                              textColor: textColor,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Icon(Icons.arrow_forward_rounded, color: accentColor, size: 20),
+                          ),
+                          Expanded(
+                            child: _buildTimeBox(
+                              label: "END TIME",
+                              hour: _state.customEndHour,
+                              minute: _state.customEndMinute,
+                              onTap: () => _pickTime(isStart: false),
+                              textColor: textColor,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: accentColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "WINDOW",
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: accentColor),
+                                ),
+                                Text(
+                                  "${_state.windowDurationHours.toStringAsFixed(1)} hrs",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _buildPresetChip(
+                            "21:00 - 23:00",
+                            () => _setCustomWindow(21, 0, 23, 0),
+                            textColor,
+                            accentColor,
+                            isActive: _state.customStartHour == 21 &&
+                                _state.customStartMinute == 0 &&
+                                _state.customEndHour == 23 &&
+                                _state.customEndMinute == 0,
+                          ),
+                          _buildPresetChip(
+                            "21:00 - 00:00",
+                            () => _setCustomWindow(21, 0, 0, 0),
+                            textColor,
+                            accentColor,
+                            isActive: _state.customStartHour == 21 &&
+                                _state.customStartMinute == 0 &&
+                                _state.customEndHour == 0 &&
+                                _state.customEndMinute == 0,
+                          ),
+                          _buildPresetChip(
+                            "22:00 - 02:00",
+                            () => _setCustomWindow(22, 0, 2, 0),
+                            textColor,
+                            accentColor,
+                            isActive: _state.customStartHour == 22 &&
+                                _state.customStartMinute == 0 &&
+                                _state.customEndHour == 2 &&
+                                _state.customEndMinute == 0,
+                          ),
+                          _buildPresetChip(
+                            "00:00 - 04:00",
+                            () => _setCustomWindow(0, 0, 4, 0),
+                            textColor,
+                            accentColor,
+                            isActive: _state.customStartHour == 0 &&
+                                _state.customStartMinute == 0 &&
+                                _state.customEndHour == 4 &&
+                                _state.customEndMinute == 0,
+                          ),
+                          if (widget.night != null) ...[
+                            _buildPresetChip(
+                              "Dusk - Midnight",
+                              () => _setCustomWindow(
+                                  widget.night!.astronomicalDusk.hour, widget.night!.astronomicalDusk.minute, 0, 0),
+                              textColor,
+                              accentColor,
+                            ),
+                            _buildPresetChip(
+                              "Midnight - Dawn",
+                              () => _setCustomWindow(
+                                  0, 0, widget.night!.astronomicalDawn.hour, widget.night!.astronomicalDawn.minute),
+                              textColor,
+                              accentColor,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Section 2: Altitude & Duration (Telescopius core)
                     _buildSectionHeader("Visibility & Altitude (Telescopius Rule)", Icons.terrain_rounded),
                     const SizedBox(height: 8),
                     Row(
@@ -219,17 +455,25 @@ class _FilterDialogState extends State<FilterDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs",
+                                _state.useCustomTimeWindow
+                                    ? "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)}h (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                    : "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs",
                                 style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
                               ),
-                              Slider(
-                                value: _state.minDurationHours,
-                                min: 0.5,
-                                max: 8.0,
-                                divisions: 15,
-                                activeColor: accentColor,
-                                onChanged: (v) => setState(() => _state.minDurationHours = v),
-                              ),
+                              Builder(builder: (context) {
+                                final maxDur = _state.useCustomTimeWindow
+                                    ? math.max(0.5, _state.windowDurationHours)
+                                    : 8.0;
+                                final clampedVal = _state.minDurationHours.clamp(0.5, maxDur);
+                                return Slider(
+                                  value: clampedVal,
+                                  min: 0.5,
+                                  max: maxDur > 0.5 ? maxDur : 0.6,
+                                  divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => setState(() => _state.minDurationHours = v),
+                                );
+                              }),
                             ],
                           ),
                         ),
@@ -534,6 +778,147 @@ class _FilterDialogState extends State<FilterDialog> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final initialHour = isStart ? _state.customStartHour : _state.customEndHour;
+    final initialMinute = isStart ? _state.customStartMinute : _state.customEndMinute;
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initialHour, minute: initialMinute),
+      builder: (context, child) {
+        final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: accentColor,
+              surface: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+              onSurface: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+            ),
+          ),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+            child: child!,
+          ),
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _state.customStartHour = picked.hour;
+          _state.customStartMinute = picked.minute;
+        } else {
+          _state.customEndHour = picked.hour;
+          _state.customEndMinute = picked.minute;
+        }
+        final maxDur = _state.windowDurationHours;
+        if (_state.minDurationHours > maxDur) {
+          _state.minDurationHours = math.max(0.5, maxDur);
+        }
+      });
+    }
+  }
+
+  void _setCustomWindow(int startH, int startM, int endH, int endM) {
+    setState(() {
+      _state.useCustomTimeWindow = true;
+      _state.customStartHour = startH;
+      _state.customStartMinute = startM;
+      _state.customEndHour = endH;
+      _state.customEndMinute = endM;
+
+      final maxDur = _state.windowDurationHours;
+      if (_state.minDurationHours > maxDur) {
+        _state.minDurationHours = math.max(0.5, maxDur);
+      }
+    });
+  }
+
+  Widget _buildTimeBox({
+    required String label,
+    required int hour,
+    required int minute,
+    required VoidCallback onTap,
+    required Color textColor,
+    required Color accentColor,
+  }) {
+    final formatted = "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}h";
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: widget.isRedNightMode
+              ? AstroColors.nightVisionSurfaceVariant
+              : AstroColors.spaceDarkSurfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: widget.isRedNightMode
+                ? AstroColors.nightVisionBorder
+                : AstroColors.spaceDarkBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.access_time_rounded, size: 16, color: accentColor),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 9, color: textColor.withValues(alpha: 0.6)),
+                ),
+                Text(
+                  formatted,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down_rounded, size: 18, color: textColor.withValues(alpha: 0.6)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresetChip(
+    String label,
+    VoidCallback onSelected,
+    Color textColor,
+    Color accentColor, {
+    bool isActive = false,
+  }) {
+    return ActionChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+          color: isActive ? accentColor : textColor.withValues(alpha: 0.8),
+        ),
+      ),
+      backgroundColor: isActive
+          ? (widget.isRedNightMode ? AstroColors.nightVisionBorder : accentColor.withValues(alpha: 0.15))
+          : (widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant),
+      side: BorderSide(
+        color: isActive
+            ? accentColor
+            : (widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      onPressed: onSelected,
     );
   }
 }
