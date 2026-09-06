@@ -21,6 +21,7 @@ class TargetDetailsSheet extends StatefulWidget {
   final List<ObservingListModel> availableLists;
   final void Function(int listId, int dsoId, String notes) onAddToList;
   final FilterState? filters;
+  final VoidCallback? onClose;
 
   const TargetDetailsSheet({
     super.key,
@@ -33,6 +34,7 @@ class TargetDetailsSheet extends StatefulWidget {
     required this.availableLists,
     required this.onAddToList,
     this.filters,
+    this.onClose,
   });
 
   @override
@@ -173,6 +175,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   Widget build(BuildContext context) {
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final effectiveClose = widget.onClose ??
+        (Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -233,6 +237,28 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   ),
                   onPressed: _showAddToListDialog,
                 ),
+                if (effectiveClose != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: "Close details (Esc)",
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: widget.isRedNightMode
+                          ? AstroColors.nightVisionSurfaceVariant
+                          : AstroColors.spaceDarkSurfaceVariant,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionBorder
+                              : AstroColors.spaceDarkBorder,
+                          width: 1.2,
+                        ),
+                      ),
+                    ),
+                    onPressed: effectiveClose,
+                  ),
+                ],
               ],
             ),
 
@@ -340,6 +366,31 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 _onlineInfo!,
                 style: TextStyle(fontSize: 12, color: accentColor),
               ),
+            ],
+
+            if (effectiveClose != null) ...[
+              const SizedBox(height: 24),
+              Center(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textColor.withValues(alpha: 0.9),
+                    side: BorderSide(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionBorder
+                          : AstroColors.spaceDarkBorder,
+                      width: 1.2,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text("Close Target Window", style: TextStyle(fontWeight: FontWeight.w600)),
+                  onPressed: effectiveClose,
+                ),
+              ),
+              const SizedBox(height: 8),
             ],
           ],
         ),

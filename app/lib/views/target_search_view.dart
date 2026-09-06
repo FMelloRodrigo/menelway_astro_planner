@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../models/filter_state.dart';
@@ -228,31 +229,42 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     )
                   : isWideScreen && _selectedTarget != null
                       // Desktop Split View (Master / Detail)
-                      ? Row(
-                          children: [
-                            Expanded(
-                              flex: 5,
-                              child: _buildTargetList(displayTargets),
+                      ? CallbackShortcuts(
+                          bindings: {
+                            const SingleActivator(LogicalKeyboardKey.escape): () {
+                              setState(() => _selectedTarget = null);
+                            },
+                          },
+                          child: Focus(
+                            autofocus: true,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: _buildTargetList(displayTargets),
+                                ),
+                                Container(
+                                  width: 1,
+                                  color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                                ),
+                                Expanded(
+                                  flex: 6,
+                                  child: TargetDetailsSheet(
+                                    target: _selectedTarget!,
+                                    night: widget.night,
+                                    latitude: widget.filters.observerLat,
+                                    longitude: widget.filters.observerLon,
+                                    elevation: widget.filters.observerElevation,
+                                    isRedNightMode: widget.isRedNightMode,
+                                    availableLists: widget.availableLists,
+                                    onAddToList: widget.onAddToList,
+                                    filters: widget.filters,
+                                    onClose: () => setState(() => _selectedTarget = null),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Container(
-                              width: 1,
-                              color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
-                            ),
-                            Expanded(
-                              flex: 6,
-                              child: TargetDetailsSheet(
-                                target: _selectedTarget!,
-                                night: widget.night,
-                                latitude: widget.filters.observerLat,
-                                longitude: widget.filters.observerLon,
-                                elevation: widget.filters.observerElevation,
-                                isRedNightMode: widget.isRedNightMode,
-                                availableLists: widget.availableLists,
-                                onAddToList: widget.onAddToList,
-                                filters: widget.filters,
-                              ),
-                            ),
-                          ],
+                          ),
                         )
                       : _buildTargetList(displayTargets),
         ),
@@ -294,11 +306,15 @@ class _TargetSearchViewState extends State<TargetSearchView> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () {
+        onTap: () async {
+          if (_selectedTarget?.id == target.id) {
+            setState(() => _selectedTarget = null);
+            return;
+          }
           setState(() => _selectedTarget = target);
           if (MediaQuery.of(context).size.width < 900) {
             // Show bottom sheet on mobile screens
-            showModalBottomSheet(
+            await showModalBottomSheet(
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
@@ -314,9 +330,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   availableLists: widget.availableLists,
                   onAddToList: widget.onAddToList,
                   filters: widget.filters,
+                  onClose: () => Navigator.of(ctx).pop(),
                 ),
               ),
             );
+            if (mounted) {
+              setState(() => _selectedTarget = null);
+            }
           }
         },
         child: Padding(
@@ -427,7 +447,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded, size: 18, color: textColor.withValues(alpha: 0.3)),
+              Icon(
+                isSelected ? Icons.close_rounded : Icons.chevron_right_rounded,
+                size: 18,
+                color: isSelected ? accentColor : textColor.withValues(alpha: 0.3),
+              ),
             ],
           ),
         ),
