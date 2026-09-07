@@ -190,9 +190,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     final rig = EquipmentManager.instance.activeProfile;
     final angle = EquipmentManager.instance.cameraAngleDeg;
     final showRuleOfThirds = EquipmentManager.instance.showRuleOfThirds;
-
-    return Container(
-      height: widget.height,
+    final imageViewport = Container(
+      height: widget.height.isFinite ? widget.height : null,
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(12),
@@ -228,32 +227,33 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
             ),
           ),
 
-          // 3. Loading Indicator Overlay
+          // 3. Subtle HiPS Loading indicator (top-right of image)
           if (_isLoading)
             Positioned(
               top: 8,
               right: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.black.withValues(alpha: 0.75),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
-                      width: 12,
-                      height: 12,
+                      width: 13,
+                      height: 13,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: accentColor,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Text(
                       "Streaming HiPS...",
-                      style: TextStyle(fontSize: 10, color: textColor),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                     ),
                   ],
                 ),
@@ -263,153 +263,281 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           // 4. Offline / Error Status Banner
           if (_hasError && _imageBytes == null)
             Positioned(
-              bottom: 8,
-              right: 8,
+              top: 8,
+              left: 8,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(6),
+                  color: Colors.black.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.amber.shade700.withValues(alpha: 0.6),
+                    color: Colors.amber.shade700.withValues(alpha: 0.7),
                     width: 1,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.wifi_off_rounded, size: 12, color: Colors.amber.shade400),
-                    const SizedBox(width: 4),
+                    Icon(Icons.wifi_off_rounded, size: 14, color: Colors.amber.shade400),
+                    const SizedBox(width: 6),
                     Text(
                       "Offline • Vector Chart",
-                      style: TextStyle(fontSize: 10, color: Colors.amber.shade200, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 11, color: Colors.amber.shade200, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(width: 6),
                     InkWell(
                       onTap: _loadImage,
-                      child: Icon(Icons.refresh_rounded, size: 13, color: accentColor),
+                      child: Icon(Icons.refresh_rounded, size: 15, color: accentColor),
                     ),
                   ],
                 ),
               ),
             ),
+        ],
+      ),
+    );
 
-          // 5. Header Control Bar (Survey selector, Mode switcher, FOV Badge, Framing Toggle)
-          Positioned(
-            top: 6,
-            left: 6,
-            right: widget.enableExpandDialog ? 44 : 6,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Survey Selector Chip
-                  PopupMenuButton<String>(
-                    tooltip: "Select Sky Survey",
-                    color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      side: BorderSide(color: borderColor),
+    final controlsPanel = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 10),
+
+        // Row 1: Primary Controls & Settings (Survey, FOV, Mode, Framing, Simulator)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Survey Selector Chip
+              PopupMenuButton<String>(
+                tooltip: "Select Sky Survey",
+                color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: borderColor),
+                ),
+                initialValue: _selectedSurveyId,
+                onSelected: (surveyId) {
+                  setState(() {
+                    _selectedSurveyId = surveyId;
+                    _displayMode = PreviewDisplayMode.photoWithReticle;
+                  });
+                  _loadImage();
+                },
+                itemBuilder: (ctx) => SkyImageService.availableSurveys.map((s) {
+                  return PopupMenuItem<String>(
+                    value: s.id,
+                    height: 40,
+                    child: Text(
+                      s.label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: s.id == _selectedSurveyId ? accentColor : textColor,
+                        fontWeight: s.id == _selectedSurveyId ? FontWeight.bold : FontWeight.normal,
+                      ),
                     ),
-                    initialValue: _selectedSurveyId,
-                    onSelected: (surveyId) {
-                      setState(() {
-                        _selectedSurveyId = surveyId;
-                        _displayMode = PreviewDisplayMode.photoWithReticle;
-                      });
-                      _loadImage();
+                  );
+                }).toList(),
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionSurfaceVariant
+                        : AstroColors.spaceDarkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.layers_rounded, size: 16, color: accentColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        SkyImageService.availableSurveys
+                            .firstWhere((s) => s.id == _selectedSurveyId,
+                                orElse: () => SkyImageService.availableSurveys.first)
+                            .label,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: textColor.withValues(alpha: 0.7)),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // FOV Badge
+              Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.aspect_ratio_rounded, size: 16, color: accentColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      "FOV: $fovString",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Mode Toggle: Photo+Reticle / Photo / Vector
+              Container(
+                height: 38,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildModeBtn(
+                      icon: Icons.filter_center_focus_rounded,
+                      tooltip: "Photo + Reticle",
+                      isSelected: _displayMode == PreviewDisplayMode.photoWithReticle,
+                      accentColor: accentColor,
+                      onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoWithReticle),
+                    ),
+                    const SizedBox(width: 2),
+                    _buildModeBtn(
+                      icon: Icons.image_rounded,
+                      tooltip: "Photo Only",
+                      isSelected: _displayMode == PreviewDisplayMode.photoOnly,
+                      accentColor: accentColor,
+                      onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoOnly),
+                    ),
+                    const SizedBox(width: 2),
+                    _buildModeBtn(
+                      icon: Icons.draw_rounded,
+                      tooltip: "Vector Apparent Size",
+                      isSelected: _displayMode == PreviewDisplayMode.vectorOnly,
+                      accentColor: accentColor,
+                      onTap: () => setState(() => _displayMode = PreviewDisplayMode.vectorOnly),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Framing Simulator Mode Toggle
+              Tooltip(
+                message: "Toggle Sensor Framing Box",
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() => _isFramingEnabled = !_isFramingEnabled);
+                      if (_isFramingEnabled) {
+                        _fitToSensor();
+                      }
                     },
-                    itemBuilder: (ctx) => SkyImageService.availableSurveys.map((s) {
-                      return PopupMenuItem<String>(
-                        value: s.id,
-                        height: 36,
-                        child: Text(
-                          s.label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: s.id == _selectedSurveyId ? accentColor : textColor,
-                            fontWeight: s.id == _selectedSurveyId ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        color: _isFramingEnabled
+                            ? (widget.isRedNightMode
+                                ? AstroColors.nightVisionRed.withValues(alpha: 0.22)
+                                : AstroColors.starGold.withValues(alpha: 0.22))
+                            : (widget.isRedNightMode
+                                ? AstroColors.nightVisionSurfaceVariant
+                                : AstroColors.spaceDarkSurfaceVariant),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isFramingEnabled
+                              ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                              : borderColor,
+                          width: _isFramingEnabled ? 1.4 : 1.0,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.layers_rounded, size: 12, color: accentColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            SkyImageService.availableSurveys
-                                .firstWhere((s) => s.id == _selectedSurveyId,
-                                    orElse: () => SkyImageService.availableSurveys.first)
-                                .label,
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: textColor),
+                          Icon(
+                            Icons.crop_rotate_rounded,
+                            size: 16,
+                            color: _isFramingEnabled
+                                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                : textColor,
                           ),
-                          const SizedBox(width: 2),
-                          Icon(Icons.arrow_drop_down_rounded, size: 14, color: textColor.withValues(alpha: 0.7)),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Framing",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _isFramingEnabled
+                                  ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                  : textColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
+                ),
+              ),
 
-                  const SizedBox(width: 6),
-
-                  // FOV Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                    ),
-                    child: Text(
-                      "FOV: $fovString",
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textColor),
-                    ),
-                  ),
-
-                  const SizedBox(width: 6),
-
-                  // Framing Simulator Mode Toggle
-                  Tooltip(
-                    message: "Toggle Sensor Framing Box",
+              // Full Framing Simulator Button
+              if (widget.enableExpandDialog) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: "Open Full Framing Simulator",
+                  child: Material(
+                    color: Colors.transparent,
                     child: InkWell(
-                      onTap: () {
-                        setState(() => _isFramingEnabled = !_isFramingEnabled);
-                        if (_isFramingEnabled) {
-                          _fitToSensor();
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(6),
+                      onTap: _openFramingSimulatorDialog,
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
-                          color: _isFramingEnabled ? AstroColors.starGold.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(6),
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionSurfaceVariant
+                              : AstroColors.spaceDarkSurfaceVariant,
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isFramingEnabled ? AstroColors.starGold : Colors.white.withValues(alpha: 0.15),
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            width: 1.2,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.crop_rotate_rounded, size: 12, color: _isFramingEnabled ? AstroColors.starGold : textColor),
-                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.open_in_full_rounded,
+                              size: 15,
+                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
-                              "Framing",
+                              "Simulator",
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: _isFramingEnabled ? AstroColors.starGold : textColor,
+                                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                               ),
                             ),
                           ],
@@ -417,183 +545,202 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 6),
-
-                  // Mode Toggle: Photo+Reticle / Photo / Vector
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildMiniModeBtn(
-                          icon: Icons.filter_center_focus_rounded,
-                          tooltip: "Photo + Reticle",
-                          isSelected: _displayMode == PreviewDisplayMode.photoWithReticle,
-                          accentColor: accentColor,
-                          onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoWithReticle),
-                        ),
-                        _buildMiniModeBtn(
-                          icon: Icons.image_rounded,
-                          tooltip: "Photo Only",
-                          isSelected: _displayMode == PreviewDisplayMode.photoOnly,
-                          accentColor: accentColor,
-                          onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoOnly),
-                        ),
-                        _buildMiniModeBtn(
-                          icon: Icons.draw_rounded,
-                          tooltip: "Vector Apparent Size",
-                          isSelected: _displayMode == PreviewDisplayMode.vectorOnly,
-                          accentColor: accentColor,
-                          onTap: () => setState(() => _displayMode = PreviewDisplayMode.vectorOnly),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // 5b. Pinned Full Framing Simulator Button (Always visible on mobile & desktop, never cropped)
-          if (widget.enableExpandDialog)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Tooltip(
-                message: "Full Framing Simulator",
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _openFramingSimulatorDialog,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      width: 32,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionRed
-                              : AstroColors.starGold,
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.open_in_full_rounded,
-                        size: 15,
-                        color: widget.isRedNightMode
-                            ? AstroColors.nightVisionRed
-                            : AstroColors.starGold,
-                      ),
-                    ),
-                  ),
                 ),
-              ),
-            ),
+              ],
+            ],
+          ),
+        ),
 
-          // 6. Active Rig Indicator Badge (When framing is on)
-          if (_isFramingEnabled)
-            Positioned(
-              top: 36,
-              left: 6,
-              child: InkWell(
-                onTap: _openEquipmentManagerDialog,
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        const SizedBox(height: 8),
+
+        // Row 2: Action & Composition Toolbar (Zoom & Rotation & Auto-Align & Fit)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildLargeActionButton(
+                icon: Icons.remove_rounded,
+                tooltip: "Zoom Out (Wider FOV)",
+                onTap: _zoomOut,
+                color: textColor,
+                borderColor: borderColor,
+              ),
+              const SizedBox(width: 6),
+              _buildLargeActionButton(
+                icon: Icons.add_rounded,
+                tooltip: "Zoom In (Closer FOV)",
+                onTap: _zoomIn,
+                color: textColor,
+                borderColor: borderColor,
+              ),
+              const SizedBox(width: 6),
+              _buildLargeActionButton(
+                icon: Icons.restart_alt_rounded,
+                tooltip: "Reset Framing FOV",
+                onTap: _resetFov,
+                color: textColor,
+                borderColor: borderColor,
+              ),
+
+              if (_isFramingEnabled) ...[
+                const SizedBox(width: 10),
+                Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AstroColors.starGold.withValues(alpha: 0.5)),
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionSurfaceVariant
+                        : AstroColors.spaceDarkSurfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionRed.withValues(alpha: 0.5)
+                          : AstroColors.starGold.withValues(alpha: 0.5),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.tune_rounded, size: 11, color: AstroColors.starGold),
-                      const SizedBox(width: 4),
-                      Text(
-                        "${rig.telescope.name.split('(').first.trim()} • ${rig.camera.name.split('(').first.trim()}",
-                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AstroColors.starGold),
+                      _buildRotatorButton(
+                        icon: Icons.rotate_left_rounded,
+                        tooltip: "Rotate -15°",
+                        onTap: () => EquipmentManager.instance.rotateBy(-15),
+                        color: textColor,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        "(${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px)",
-                        style: TextStyle(fontSize: 8, color: Colors.white.withValues(alpha: 0.7)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          "${angle.toStringAsFixed(0)}°",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      _buildRotatorButton(
+                        icon: Icons.rotate_right_rounded,
+                        tooltip: "Rotate +15°",
+                        onTap: () => EquipmentManager.instance.rotateBy(15),
+                        color: textColor,
+                      ),
+                      const SizedBox(width: 6),
+                      _buildTextActionButton(
+                        icon: Icons.auto_awesome_rounded,
+                        label: "Align",
+                        tooltip: "Auto-Align with Target Position Angle",
+                        onTap: _autoAlignWithTarget,
+                        accentColor: accentColor,
+                      ),
+                      const SizedBox(width: 6),
+                      _buildTextActionButton(
+                        icon: Icons.fit_screen_rounded,
+                        label: "Fit",
+                        tooltip: "Fit FOV to Sensor Size",
+                        onTap: _fitToSensor,
+                        accentColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
+              ],
+            ],
+          ),
+        ),
 
-          // 7. Bottom Controls Bar (Zoom, Framing Rotate, Auto-Align, Fit)
-          Positioned(
-            bottom: 6,
-            left: 6,
-            right: 6,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildActionButton(Icons.remove_rounded, "Zoom Out", _zoomOut, textColor),
-                  const SizedBox(width: 4),
-                  _buildActionButton(Icons.add_rounded, "Zoom In", _zoomIn, textColor),
-                  const SizedBox(width: 4),
-                  _buildActionButton(Icons.restart_alt_rounded, "Reset Framing", _resetFov, textColor),
-
-                  if (_isFramingEnabled) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AstroColors.starGold.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildActionButton(Icons.rotate_left_rounded, "Rotate -15°", () => EquipmentManager.instance.rotateBy(-15), textColor),
-                          const SizedBox(width: 2),
-                          Text(
-                            "${angle.toStringAsFixed(0)}°",
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AstroColors.starGold),
-                          ),
-                          const SizedBox(width: 2),
-                          _buildActionButton(Icons.rotate_right_rounded, "Rotate +15°", () => EquipmentManager.instance.rotateBy(15), textColor),
-                          const SizedBox(width: 4),
-                          _buildActionButton(Icons.auto_awesome_rounded, "Auto-Align with Target", _autoAlignWithTarget, AstroColors.starlightCyan),
-                          const SizedBox(width: 4),
-                          _buildActionButton(Icons.fit_screen_rounded, "Fit to Sensor", _fitToSensor, AstroColors.starGold),
-                        ],
+        // Row 3: Active Rig Strip (When framing is on)
+        if (_isFramingEnabled) ...[
+          const SizedBox(height: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _openEquipmentManagerDialog,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                        .withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 14,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "${rig.telescope.name.split('(').first.trim()} • ${rig.camera.name.split('(').first.trim()}",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Text(
+                      "${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: textColor.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: textColor.withValues(alpha: 0.5),
+                    ),
                   ],
-                ],
+                ),
               ),
             ),
           ),
         ],
-      ),
+      ],
     );
+
+    if (widget.height.isFinite) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          imageViewport,
+          controlsPanel,
+        ],
+      );
+    } else {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: imageViewport),
+          controlsPanel,
+        ],
+      );
+    }
   }
 
-  Widget _buildMiniModeBtn({
+  Widget _buildModeBtn({
     required IconData icon,
     required String tooltip,
     required bool isSelected,
@@ -602,44 +749,123 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   }) {
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(
-            color: isSelected ? accentColor.withValues(alpha: 0.25) : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            icon,
-            size: 13,
-            color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.6),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isSelected ? accentColor.withValues(alpha: 0.22) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: isSelected ? Border.all(color: accentColor.withValues(alpha: 0.6)) : null,
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.65),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildActionButton(
-    IconData icon,
-    String tooltip,
-    VoidCallback onTap,
-    Color textColor,
-  ) {
+  Widget _buildLargeActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Color color,
+    required Color borderColor,
+  }) {
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: widget.isRedNightMode
+                  ? AstroColors.nightVisionSurfaceVariant
+                  : AstroColors.spaceDarkSurfaceVariant,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderColor),
+            ),
+            child: Icon(icon, size: 18, color: color),
           ),
-          child: Icon(icon, size: 13, color: textColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRotatorButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextActionButton({
+    required IconData icon,
+    required String label,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Color accentColor,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 15, color: accentColor),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

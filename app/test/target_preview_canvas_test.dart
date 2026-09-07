@@ -78,5 +78,44 @@ void main() {
       expect(find.byType(TargetPreviewCanvas), findsOneWidget);
       expect(find.byType(CustomPaint), findsWidgets);
     });
+
+    testWidgets('Controls are located below image and framing controls toggle properly', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TargetPreviewCanvas(
+                target: testTarget,
+                isRedNightMode: false,
+                height: 250,
+                enableExpandDialog: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify that controls (e.g. FOV badge) are positioned below the 250px image canvas
+      final vectorPainterFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is TargetVectorPainter);
+      final fovFinder = find.textContaining('FOV:');
+      expect(tester.getTopLeft(fovFinder).dy, greaterThanOrEqualTo(tester.getBottomLeft(vectorPainterFinder).dy));
+
+      // Verify Simulator button is present
+      expect(find.text('Simulator'), findsOneWidget);
+
+      // Tap Framing toggle
+      final framingToggleFinder = find.text('Framing');
+      expect(framingToggleFinder, findsOneWidget);
+      await tester.tap(framingToggleFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Check that rotation buttons and active rig strip appear
+      expect(find.byIcon(Icons.rotate_left_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.rotate_right_rounded), findsOneWidget);
+      expect(find.text('Align'), findsOneWidget);
+      expect(find.text('Fit'), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+    });
   });
 }
