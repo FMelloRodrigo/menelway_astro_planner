@@ -950,40 +950,88 @@ class _MainScaffoldState extends State<MainScaffold> {
           const SizedBox(width: 8),
 
           // Equipment Rigs Manager Button
-          IconButton(
-            tooltip: "Equipment Rigs & Optics",
-            style: IconButton.styleFrom(
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                  : AstroColors.starGold.withValues(alpha: 0.08),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (isWide)
+            Tooltip(
+              message: "Equipment Rigs & Optics",
+              child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                    : AstroColors.starGold.withValues(alpha: 0.12),
+                foregroundColor: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed
+                    : AstroColors.starGold,
                 side: BorderSide(
                   color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                      : AstroColors.starGold.withValues(alpha: 0.35),
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
+                      : AstroColors.starGold.withValues(alpha: 0.6),
                   width: 1.2,
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-            ),
-            icon: Icon(
-              Icons.camera_alt_rounded,
-              size: 16,
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-            ),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (_) => EquipmentDialog(
-                  isRedNightMode: widget.isRedNightMode,
-                  onSaved: () {
-                    _saveSettings();
-                    setState(() {});
-                  },
+              icon: Icon(
+                Icons.camera_alt_rounded,
+                size: 18,
+                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+              ),
+              label: Text(
+                "Equipment Rigs",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                 ),
-              );
-            },
-          ),
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => EquipmentDialog(
+                    isRedNightMode: widget.isRedNightMode,
+                    onSaved: () {
+                      _saveSettings();
+                      setState(() {});
+                    },
+                  ),
+                );
+              },
+            ),
+          )
+          else
+            IconButton(
+              tooltip: "Equipment Rigs & Optics",
+              style: IconButton.styleFrom(
+                backgroundColor: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
+                    : AstroColors.starGold.withValues(alpha: 0.15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
+                        : AstroColors.starGold.withValues(alpha: 0.6),
+                    width: 1.2,
+                  ),
+                ),
+              ),
+              icon: Icon(
+                Icons.camera_alt_rounded,
+                size: 18,
+                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => EquipmentDialog(
+                    isRedNightMode: widget.isRedNightMode,
+                    onSaved: () {
+                      _saveSettings();
+                      setState(() {});
+                    },
+                  ),
+                );
+              },
+            ),
           const SizedBox(width: 8),
 
           // Settings & Clean Data Menu Pill
@@ -1172,19 +1220,54 @@ class _MainScaffoldState extends State<MainScaffold> {
               selectedIndex: _selectedTabIndex,
               onDestinationSelected: (idx) => setState(() => _selectedTabIndex = idx),
               labelType: NavigationRailLabelType.all,
+              useIndicator: true,
+              indicatorColor: accentColor.withValues(alpha: 0.18),
+              selectedIconTheme: IconThemeData(color: accentColor, size: 24),
+              unselectedIconTheme: IconThemeData(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionRedDim.withValues(alpha: 0.9)
+                    : Colors.white.withValues(alpha: 0.7),
+                size: 24,
+              ),
+              selectedLabelTextStyle: TextStyle(
+                color: accentColor,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelTextStyle: TextStyle(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionRedDim.withValues(alpha: 0.9)
+                    : Colors.white.withValues(alpha: 0.7),
+                fontSize: 12,
+              ),
               destinations: [
                 NavigationRailDestination(
-                  icon: const Icon(Icons.radar_rounded),
+                  icon: Icon(
+                    Icons.radar_rounded,
+                    color: _selectedTabIndex == 0
+                        ? accentColor
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
                   selectedIcon: Icon(Icons.radar_rounded, color: accentColor),
                   label: const Text("Targets"),
                 ),
                 NavigationRailDestination(
-                  icon: const Icon(Icons.calendar_month_rounded),
+                  icon: Icon(
+                    Icons.calendar_month_rounded,
+                    color: _selectedTabIndex == 1
+                        ? accentColor
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
                   selectedIcon: Icon(Icons.calendar_month_rounded, color: accentColor),
                   label: const Text("Planner"),
                 ),
                 NavigationRailDestination(
-                  icon: const Icon(Icons.playlist_play_rounded),
+                  icon: Icon(
+                    Icons.playlist_play_rounded,
+                    color: _selectedTabIndex == 2
+                        ? accentColor
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
                   selectedIcon: Icon(Icons.playlist_play_rounded, color: accentColor),
                   label: const Text("Observing Lists"),
                 ),

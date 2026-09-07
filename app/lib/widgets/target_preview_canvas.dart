@@ -298,7 +298,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           Positioned(
             top: 6,
             left: 6,
-            right: 6,
+            right: widget.enableExpandDialog ? 44 : 6,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
@@ -455,27 +455,54 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       ],
                     ),
                   ),
-
-                  if (widget.enableExpandDialog) ...[
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: _openFramingSimulatorDialog,
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                        ),
-                        child: Icon(Icons.fullscreen_rounded, size: 14, color: textColor),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
+
+          // 5b. Pinned Full Framing Simulator Button (Always visible on mobile & desktop, never cropped)
+          if (widget.enableExpandDialog)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Tooltip(
+                message: "Full Framing Simulator",
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _openFramingSimulatorDialog,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      width: 32,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionRed
+                              : AstroColors.starGold,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.open_in_full_rounded,
+                        size: 15,
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionRed
+                            : AstroColors.starGold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // 6. Active Rig Indicator Badge (When framing is on)
           if (_isFramingEnabled)

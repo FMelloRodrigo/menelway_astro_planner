@@ -13,7 +13,7 @@ Whenever changes are made to the codebase (C++ engine, Dart models, or Flutter U
 2. Build the Flutter Windows release application:
    ```powershell
    # In app directory
-   flutter build windows --release
+   flutter build windows --release --no-tree-shake-icons
    ```
 3. Run the portable release packager from workspace root:
    ```powershell

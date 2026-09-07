@@ -13,6 +13,7 @@ import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 import 'equipment_dialog.dart';
+import 'equipment_framing_dialog.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -645,7 +646,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Visual Sky Preview & Framing",
+                  "Visual Sky Preview",
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -654,17 +655,54 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                widget.target.majorAxisArcmin != null
-                    ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}' extent"
-                    : "Point source",
-                style: TextStyle(
-                  fontSize: 11,
-                  color: textColor.withValues(alpha: 0.6),
+              const SizedBox(width: 6),
+              // Full Framing Simulator Button
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => EquipmentFramingDialog(
+                      target: widget.target,
+                      isRedNightMode: widget.isRedNightMode,
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isRed
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                        : AstroColors.starGold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: isRed
+                          ? AstroColors.nightVisionRed.withValues(alpha: 0.7)
+                          : AstroColors.starGold.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.open_in_full_rounded,
+                        size: 11,
+                        color: isRed ? AstroColors.nightVisionRed : AstroColors.starGold,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        "Framing",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isRed ? AstroColors.nightVisionRed : AstroColors.starGold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               InkWell(
                 onTap: () {
                   showDialog(
@@ -677,7 +715,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 },
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(4),

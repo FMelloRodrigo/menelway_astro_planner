@@ -324,14 +324,30 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_rounded, size: 18),
-                            tooltip: "Edit Rig",
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: accentColor,
+                              side: BorderSide(color: accentColor.withValues(alpha: 0.6)),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            icon: Icon(Icons.edit_rounded, size: 14, color: accentColor),
+                            label: Text(
+                              "Edit",
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accentColor),
+                            ),
                             onPressed: () => _startEdit(p),
                           ),
-                          if (profiles.length > 1)
+                          if (profiles.length > 1) ...[
+                            const SizedBox(width: 6),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                              icon: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: textColor.withValues(alpha: 0.6),
+                              ),
                               tooltip: "Delete Rig",
                               onPressed: () {
                                 EquipmentManager.instance.deleteProfile(p.id);
@@ -339,6 +355,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                                 setState(() {});
                               },
                             ),
+                          ],
                         ],
                       ),
                       const Divider(height: 12),

@@ -80,6 +80,23 @@ class AstroTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
+      iconTheme: const IconThemeData(
+        color: Colors.white,
+        size: 20,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: Colors.white.withValues(alpha: 0.9),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: AstroColors.spaceDarkSurface,
+        selectedIconTheme: const IconThemeData(color: AstroColors.starlightCyan, size: 24),
+        unselectedIconTheme: IconThemeData(color: Colors.white.withValues(alpha: 0.65), size: 24),
+        selectedLabelTextStyle: const TextStyle(color: AstroColors.starlightCyan, fontSize: 12, fontWeight: FontWeight.bold),
+        unselectedLabelTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+        indicatorColor: AstroColors.starlightCyan.withValues(alpha: 0.18),
+      ),
     );
   }
 
@@ -144,6 +161,23 @@ class AstroTheme {
         bodyMedium: TextStyle(color: AstroColors.nightVisionRed),
         titleMedium: TextStyle(color: AstroColors.nightVisionRed),
         titleLarge: TextStyle(color: AstroColors.nightVisionRed),
+      ),
+      iconTheme: const IconThemeData(
+        color: AstroColors.nightVisionRed,
+        size: 20,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: AstroColors.nightVisionRed,
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: AstroColors.nightVisionSurface,
+        selectedIconTheme: const IconThemeData(color: AstroColors.nightVisionRed, size: 24),
+        unselectedIconTheme: IconThemeData(color: AstroColors.nightVisionRedDim.withValues(alpha: 0.8), size: 24),
+        selectedLabelTextStyle: const TextStyle(color: AstroColors.nightVisionRed, fontSize: 12, fontWeight: FontWeight.bold),
+        unselectedLabelTextStyle: TextStyle(color: AstroColors.nightVisionRedDim.withValues(alpha: 0.8), fontSize: 12),
+        indicatorColor: AstroColors.nightVisionRed.withValues(alpha: 0.2),
       ),
     );
   }
