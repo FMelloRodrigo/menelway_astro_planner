@@ -44,6 +44,7 @@ class SkyImageService {
 
   static const String defaultSurveyId = 'CDS/P/DSS2/color';
   static const int maxMemCacheEntries = 30;
+  static const int maxDiskCacheEntries = 100;
 
   final Map<String, Uint8List> _memCache = {};
   Directory? _diskCacheDir;
@@ -109,6 +110,8 @@ class SkyImageService {
       }
       _diskCacheDir = cacheDir;
       _diskCacheInitialized = true;
+      // Auto-prune existing disk cache on startup to enforce the cap
+      Future.microtask(() => pruneDiskCache());
       return _diskCacheDir;
     } catch (_) {
       _diskCacheInitialized = true;
@@ -136,6 +139,10 @@ class SkyImageService {
           final bytes = await cacheFile.readAsBytes();
           if (bytes.isNotEmpty) {
             _addToMemCache(url, bytes);
+            // Touch file to update LRU timestamp
+            try {
+              await cacheFile.setLastModified(DateTime.now());
+            } catch (_) {}
             return bytes;
           }
         }
@@ -157,11 +164,12 @@ class SkyImageService {
         final bytes = response.bodyBytes;
         _addToMemCache(url, bytes);
 
-        // Asynchronously persist to disk cache
+        // Asynchronously persist to disk cache and enforce count cap
         if (cacheFile != null) {
           Future.microtask(() async {
             try {
               await cacheFile!.writeAsBytes(bytes);
+              await pruneDiskCache();
             } catch (_) {}
           });
         }
@@ -183,7 +191,82 @@ class SkyImageService {
     _memCache[url] = bytes;
   }
 
-  /// Clears in-memory and disk cache.
+  /// Prunes disk cache to ensure it does not exceed [maxEntries] (default: 100).
+  /// Deletes the oldest files based on LRU last-modified timestamps.
+  Future<void> pruneDiskCache({int maxEntries = maxDiskCacheEntries}) async {
+    final dir = await _getCacheDirectory();
+    if (dir == null || !await dir.exists()) return;
+
+    try {
+      final files = <File>[];
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.jpg')) {
+          files.add(entity);
+        }
+      }
+
+      if (files.length <= maxEntries) return;
+
+      final timestamps = <File, DateTime>{};
+      for (final f in files) {
+        try {
+          timestamps[f] = await f.lastModified();
+        } catch (_) {
+          timestamps[f] = DateTime.fromMillisecondsSinceEpoch(0);
+        }
+      }
+
+      // Sort oldest first (LRU eviction)
+      files.sort((a, b) {
+        final timeA = timestamps[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final timeB = timestamps[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return timeA.compareTo(timeB);
+      });
+
+      final excessCount = files.length - maxEntries;
+      for (var i = 0; i < excessCount; i++) {
+        try {
+          await files[i].delete();
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  /// Returns the number of cached sky image files currently stored on disk.
+  Future<int> getDiskCacheCount() async {
+    final dir = await _getCacheDirectory();
+    if (dir == null || !await dir.exists()) return 0;
+
+    var count = 0;
+    try {
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.jpg')) {
+          count++;
+        }
+      }
+    } catch (_) {}
+    return count;
+  }
+
+  /// Returns the total size in bytes of all cached sky image files on disk.
+  Future<int> getDiskCacheSizeBytes() async {
+    final dir = await _getCacheDirectory();
+    if (dir == null || !await dir.exists()) return 0;
+
+    var totalBytes = 0;
+    try {
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.jpg')) {
+          try {
+            totalBytes += await entity.length();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return totalBytes;
+  }
+
+  /// Clears both in-memory and on-disk sky image cache.
   Future<void> clearCache() async {
     _memCache.clear();
     final diskDir = await _getCacheDirectory();

@@ -48,5 +48,17 @@ void main() {
       expect(surveys.any((s) => s.id.contains('DECaLS')), isTrue);
       expect(surveys.any((s) => s.id.contains('2MASS')), isTrue);
     });
+
+    test('maxDiskCacheEntries defaults to 100', () {
+      expect(SkyImageService.maxDiskCacheEntries, equals(100));
+    });
+
+    test('pruneDiskCache respects entry limit', () async {
+      final service = SkyImageService.instance;
+      // pruneDiskCache should execute without throwing error
+      await service.pruneDiskCache(maxEntries: 100);
+      final count = await service.getDiskCacheCount();
+      expect(count, lessThanOrEqualTo(100));
+    });
   });
 }
