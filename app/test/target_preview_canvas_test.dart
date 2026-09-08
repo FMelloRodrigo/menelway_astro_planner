@@ -151,7 +151,7 @@ void main() {
       // Pan Up (North) by default 5 arcmin
       await tester.tap(find.byTooltip('Pan Up (North)'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(EquipmentManager.instance.panOffsetArcminY, -5.0);
       expect(EquipmentManager.instance.totalPanOffsetArcmin, 5.0);
@@ -161,7 +161,7 @@ void main() {
       // Change step size to 1'
       await tester.tap(find.text("1'"));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(const Duration(milliseconds: 400));
 
       // Pan Right (West) by 1 arcmin
       await tester.tap(find.byTooltip('Pan Right (West)'));

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -46,32 +47,66 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   bool _isLoading = false;
   bool _hasError = false;
 
+  Timer? _panDebounceTimer;
+  double _imageBasePanX = 0.0;
+  double _imageBasePanY = 0.0;
+  double _lastObservedPanX = 0.0;
+  double _lastObservedPanY = 0.0;
+  int _imageLoadRequestId = 0;
+
   @override
   void initState() {
     super.initState();
     _isFramingEnabled = widget.initialFramingEnabled;
     _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
+    _imageBasePanX = EquipmentManager.instance.panOffsetArcminX;
+    _imageBasePanY = EquipmentManager.instance.panOffsetArcminY;
+    _lastObservedPanX = _imageBasePanX;
+    _lastObservedPanY = _imageBasePanY;
     EquipmentManager.instance.addListener(_onEquipmentStateChanged);
     _loadImage();
   }
 
   @override
   void dispose() {
+    _panDebounceTimer?.cancel();
     EquipmentManager.instance.removeListener(_onEquipmentStateChanged);
     super.dispose();
   }
 
   void _onEquipmentStateChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+
+    final currentPanX = EquipmentManager.instance.panOffsetArcminX;
+    final currentPanY = EquipmentManager.instance.panOffsetArcminY;
+
+    if (currentPanX != _lastObservedPanX || currentPanY != _lastObservedPanY) {
+      _lastObservedPanX = currentPanX;
+      _lastObservedPanY = currentPanY;
+
+      _panDebounceTimer?.cancel();
+      _panDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+        if (mounted) {
+          _loadImage();
+        }
+      });
+    }
+
+    setState(() {});
   }
 
   @override
   void didUpdateWidget(covariant TargetPreviewCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.target.id != widget.target.id) {
+      _panDebounceTimer?.cancel();
       _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
       _imageBytes = null;
       _hasError = false;
+      _imageBasePanX = EquipmentManager.instance.panOffsetArcminX;
+      _imageBasePanY = EquipmentManager.instance.panOffsetArcminY;
+      _lastObservedPanX = _imageBasePanX;
+      _lastObservedPanY = _imageBasePanY;
       _loadImage();
     }
   }
@@ -83,15 +118,45 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     _loadImage();
   }
 
+  double get _currentCenterRaHours {
+    final panX = EquipmentManager.instance.panOffsetArcminX;
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+    if (panX == 0.0 && panY == 0.0) {
+      return widget.target.raHours;
+    }
+    final dRaArcminOnSky = -panX;
+    final decRad = widget.target.decDegrees * math.pi / 180.0;
+    final cosDec = math.cos(decRad).abs().clamp(0.01, 1.0);
+    final dRaHours = (dRaArcminOnSky / cosDec) / 900.0;
+    var ra = (widget.target.raHours + dRaHours) % 24.0;
+    if (ra < 0) ra += 24.0;
+    return ra;
+  }
+
+  double get _currentCenterDecDegrees {
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+    if (panY == 0.0) {
+      return widget.target.decDegrees;
+    }
+    final dDecDeg = -panY / 60.0;
+    return (widget.target.decDegrees + dDecDeg).clamp(-90.0, 90.0);
+  }
+
   void _loadImage() async {
+    final reqId = ++_imageLoadRequestId;
     setState(() {
       _isLoading = true;
       _hasError = false;
     });
 
+    final centerRa = _currentCenterRaHours;
+    final centerDec = _currentCenterDecDegrees;
+    final reqPanX = EquipmentManager.instance.panOffsetArcminX;
+    final reqPanY = EquipmentManager.instance.panOffsetArcminY;
+
     final url = SkyImageService.buildHiPSUrl(
-      raHours: widget.target.raHours,
-      decDegrees: widget.target.decDegrees,
+      raHours: centerRa,
+      decDegrees: centerDec,
       fovDeg: _fovDeg,
       surveyId: _selectedSurveyId,
       width: 512,
@@ -100,11 +165,13 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
     final bytes = await SkyImageService.instance.fetchSkyImage(url);
 
-    if (mounted) {
+    if (mounted && reqId == _imageLoadRequestId) {
       setState(() {
         _isLoading = false;
         if (bytes != null && bytes.isNotEmpty) {
           _imageBytes = bytes;
+          _imageBasePanX = reqPanX;
+          _imageBasePanY = reqPanY;
           _hasError = false;
         } else {
           _hasError = true;
@@ -147,10 +214,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   void _fitToSensor() {
     final rig = EquipmentManager.instance.activeProfile;
     final diag = rig.sensorFovDiagonalDeg;
-    final panX = EquipmentManager.instance.panOffsetArcminX;
-    final panY = EquipmentManager.instance.panOffsetArcminY;
-    final panDeg = math.sqrt(panX * panX + panY * panY) / 60.0;
-    setCustomFov((diag + panDeg * 2.2) * 1.35);
+    setCustomFov(diag * 1.35);
   }
 
   void fitToSensor() => _fitToSensor();
@@ -206,104 +270,110 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         border: Border.all(color: borderColor),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. Photographic Sky Image Layer
-          if (showPhoto)
-            Image.memory(
-              _imageBytes!,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              filterQuality: FilterQuality.medium,
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : null,
-              colorBlendMode: widget.isRedNightMode ? BlendMode.modulate : null,
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final effectiveWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
+          final effectiveHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : (widget.height.isFinite ? widget.height : 400.0);
+          final minDim = math.min(effectiveWidth, effectiveHeight);
+          final pixelsPerArcmin = minDim / fovArcmin;
+          final shiftX = -(panX - _imageBasePanX) * pixelsPerArcmin;
+          final shiftY = -(panY - _imageBasePanY) * pixelsPerArcmin;
 
-          // 2. Vector Sky Canvas Layer (Apparent size ellipse, reticle, scale, and sensor box)
-          CustomPaint(
-            painter: TargetVectorPainter(
-              target: widget.target,
-              fovDeg: _fovDeg,
-              isRedNightMode: widget.isRedNightMode,
-              isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || !showPhoto,
-              showReticle: showReticle,
-              showFraming: _isFramingEnabled,
-              equipment: rig,
-              cameraAngleDeg: angle,
-              showRuleOfThirds: showRuleOfThirds,
-              panOffsetArcminX: panX,
-              panOffsetArcminY: panY,
-            ),
-          ),
-
-          // 3. Subtle HiPS Loading indicator (top-right of image)
-          if (_isLoading)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 13,
-                      height: 13,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: accentColor,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      "Streaming HiPS...",
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // 4. Offline / Error Status Banner
-          if (_hasError && _imageBytes == null)
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.amber.shade700.withValues(alpha: 0.7),
-                    width: 1,
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. Photographic Sky Image Layer (dynamically shifted during real-time panning before debounced tile loads)
+              if (showPhoto)
+                Transform.translate(
+                  offset: Offset(shiftX, shiftY),
+                  child: Image.memory(
+                    _imageBytes!,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    filterQuality: FilterQuality.medium,
+                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : null,
+                    colorBlendMode: widget.isRedNightMode ? BlendMode.modulate : null,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.wifi_off_rounded, size: 14, color: Colors.amber.shade400),
-                    const SizedBox(width: 6),
-                    Text(
-                      "Offline • Vector Chart",
-                      style: TextStyle(fontSize: 11, color: Colors.amber.shade200, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: _loadImage,
-                      child: Icon(Icons.refresh_rounded, size: 15, color: accentColor),
-                    ),
-                  ],
+
+              // 2. Vector Sky Canvas Layer (Apparent size ellipse, reticle, scale, and sensor box)
+              CustomPaint(
+                painter: TargetVectorPainter(
+                  target: widget.target,
+                  fovDeg: _fovDeg,
+                  isRedNightMode: widget.isRedNightMode,
+                  isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || !showPhoto,
+                  showReticle: showReticle,
+                  showFraming: _isFramingEnabled,
+                  equipment: rig,
+                  cameraAngleDeg: angle,
+                  showRuleOfThirds: showRuleOfThirds,
+                  panOffsetArcminX: panX,
+                  panOffsetArcminY: panY,
                 ),
               ),
-            ),
-        ],
+
+              // 3. Subtle HiPS Loading indicator (top-right of image)
+              if (_isLoading)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 13,
+                          height: 13,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: accentColor,
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          "Streaming HiPS...",
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // 4. Offline / Error Status Banner
+              if (_hasError && _imageBytes == null)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
+                        const SizedBox(width: 6),
+                        Text(
+                          "Offline Sky Fallback",
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
 
@@ -918,6 +988,11 @@ class TargetVectorPainter extends CustomPainter {
     final minDim = math.min(size.width, size.height);
     final pixelsPerArcmin = minDim / fovArcmin;
 
+    final targetCenter = Offset(
+      center.dx - (panOffsetArcminX * pixelsPerArcmin),
+      center.dy - (panOffsetArcminY * pixelsPerArcmin),
+    );
+
     final primaryColor = isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final secondaryColor = isRedNightMode ? AstroColors.nightVisionRedDim : AstroColors.nebulaIndigo;
     final goldColor = isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold;
@@ -964,7 +1039,7 @@ class TargetVectorPainter extends CustomPainter {
       final radY = ((minorArcmin ?? majorArcmin) / 2.0) * pixelsPerArcmin;
 
       canvas.save();
-      canvas.translate(center.dx, center.dy);
+      canvas.translate(targetCenter.dx, targetCenter.dy);
       canvas.rotate(math.pi / 5.0);
 
       final lowerType = target.objectType.toLowerCase();
@@ -1067,7 +1142,7 @@ class TargetVectorPainter extends CustomPainter {
         ..color = goldColor.withValues(alpha: 0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.2;
-      canvas.drawCircle(center, 6.0, pointPaint);
+      canvas.drawCircle(targetCenter, 6.0, pointPaint);
     }
 
     // 3. Equipment Framing Simulator Sensor Frame Overlay
@@ -1078,31 +1153,51 @@ class TargetVectorPainter extends CustomPainter {
       final rectW = fovW * pixelsPerArcmin;
       final rectH = fovH * pixelsPerArcmin;
 
-      final sensorCenter = Offset(
-        center.dx + (panOffsetArcminX * pixelsPerArcmin),
-        center.dy + (panOffsetArcminY * pixelsPerArcmin),
-      );
-
-      // If offset is non-zero, draw guide line and optical center reticle
+      // If offset is non-zero, draw guide line and target catalog reticle
       if (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0) {
         final linePaint = Paint()
           ..color = goldColor.withValues(alpha: 0.35)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0;
-        canvas.drawLine(center, sensorCenter, linePaint);
+        canvas.drawLine(center, targetCenter, linePaint);
 
-        // Center optical crosshair at sensor center
+        // Catalog target center crosshair & marker
         final crossPaint = Paint()
-          ..color = goldColor.withValues(alpha: 0.8)
+          ..color = goldColor.withValues(alpha: 0.75)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2;
-        const cLen = 6.0;
-        canvas.drawLine(Offset(sensorCenter.dx - cLen, sensorCenter.dy), Offset(sensorCenter.dx + cLen, sensorCenter.dy), crossPaint);
-        canvas.drawLine(Offset(sensorCenter.dx, sensorCenter.dy - cLen), Offset(sensorCenter.dx, sensorCenter.dy + cLen), crossPaint);
+          ..strokeWidth = 1.0;
+        const cLen = 5.0;
+        canvas.drawLine(Offset(targetCenter.dx - cLen, targetCenter.dy), Offset(targetCenter.dx + cLen, targetCenter.dy), crossPaint);
+        canvas.drawLine(Offset(targetCenter.dx, targetCenter.dy - cLen), Offset(targetCenter.dx, targetCenter.dy + cLen), crossPaint);
+        canvas.drawCircle(targetCenter, 3.0, crossPaint);
+
+        // Label target name next to target catalog center
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: target.displayName,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: goldColor.withValues(alpha: 0.85),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(targetCenter.dx + 6, targetCenter.dy - 14));
       }
 
+      // Optical center crosshair at sensor center (viewport center)
+      final opticalCrossPaint = Paint()
+        ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2;
+      const optLen = 7.0;
+      canvas.drawLine(Offset(center.dx - optLen, center.dy), Offset(center.dx + optLen, center.dy), opticalCrossPaint);
+      canvas.drawLine(Offset(center.dx, center.dy - optLen), Offset(center.dx, center.dy + optLen), opticalCrossPaint);
+
       canvas.save();
-      canvas.translate(sensorCenter.dx, sensorCenter.dy);
+      canvas.translate(center.dx, center.dy);
       canvas.rotate(cameraAngleDeg * math.pi / 180.0);
 
       final sensorRect = Rect.fromCenter(center: Offset.zero, width: rectW, height: rectH);
@@ -1167,7 +1262,9 @@ class TargetVectorPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 0.8;
 
-      canvas.drawCircle(center, minDim * 0.35, reticlePaint);
+      final reticleCenter = (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0) ? targetCenter : center;
+
+      canvas.drawCircle(reticleCenter, minDim * 0.35, reticlePaint);
 
       final crosshairPaint = Paint()
         ..color = primaryColor.withValues(alpha: 0.5)
@@ -1176,10 +1273,10 @@ class TargetVectorPainter extends CustomPainter {
 
       const gap = 12.0;
       const crossLen = 28.0;
-      canvas.drawLine(Offset(center.dx - gap - crossLen, center.dy), Offset(center.dx - gap, center.dy), crosshairPaint);
-      canvas.drawLine(Offset(center.dx + gap, center.dy), Offset(center.dx + gap + crossLen, center.dy), crosshairPaint);
-      canvas.drawLine(Offset(center.dx, center.dy - gap - crossLen), Offset(center.dx, center.dy - gap), crosshairPaint);
-      canvas.drawLine(Offset(center.dx, center.dy + gap), Offset(center.dx, center.dy + gap + crossLen), crosshairPaint);
+      canvas.drawLine(Offset(reticleCenter.dx - gap - crossLen, reticleCenter.dy), Offset(reticleCenter.dx - gap, reticleCenter.dy), crosshairPaint);
+      canvas.drawLine(Offset(reticleCenter.dx + gap, reticleCenter.dy), Offset(reticleCenter.dx + gap + crossLen, reticleCenter.dy), crosshairPaint);
+      canvas.drawLine(Offset(reticleCenter.dx, reticleCenter.dy - gap - crossLen), Offset(reticleCenter.dx, reticleCenter.dy - gap), crosshairPaint);
+      canvas.drawLine(Offset(reticleCenter.dx, reticleCenter.dy + gap), Offset(reticleCenter.dx, reticleCenter.dy + gap + crossLen), crosshairPaint);
     }
 
     // 5. Orientation Indicator (North at top, East at left)
