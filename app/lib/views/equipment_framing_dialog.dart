@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,10 +25,12 @@ class EquipmentFramingDialog extends StatefulWidget {
 
 class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
   final GlobalKey<TargetPreviewCanvasState> _canvasKey = GlobalKey<TargetPreviewCanvasState>();
+  double _panStepArcmin = 5.0;
 
   @override
   void initState() {
     super.initState();
+    EquipmentManager.instance.resetPan();
     EquipmentManager.instance.addListener(_onEquipmentChanged);
   }
 
@@ -41,14 +44,58 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
     if (mounted) setState(() {});
   }
 
+  String _formatRa(double hours) {
+    var h = (hours % 24.0);
+    if (h < 0) h += 24.0;
+    final intHours = h.floor();
+    final remMinutes = (h - intHours) * 60.0;
+    final intMinutes = remMinutes.floor();
+    final seconds = (remMinutes - intMinutes) * 60.0;
+    return "${intHours.toString().padLeft(2, '0')}h ${intMinutes.toString().padLeft(2, '0')}m ${seconds.toStringAsFixed(1).padLeft(4, '0')}s";
+  }
+
+  String _formatDec(double degrees) {
+    final sign = degrees < 0 ? '-' : '+';
+    final absD = degrees.abs();
+    final intDeg = absD.floor();
+    final remMinutes = (absD - intDeg) * 60.0;
+    final intMinutes = remMinutes.floor();
+    final seconds = (remMinutes - intMinutes) * 60.0;
+    return "$sign${intDeg.toString().padLeft(2, '0')}° ${intMinutes.toString().padLeft(2, '0')}' ${seconds.toStringAsFixed(1).padLeft(4, '0')}\"";
+  }
+
+  void _pan(double factorX, double factorY) {
+    EquipmentManager.instance.panBy(
+      deltaXArcmin: factorX * _panStepArcmin,
+      deltaYArcmin: factorY * _panStepArcmin,
+    );
+  }
+
   void _copyFramingInfo() {
     final rig = EquipmentManager.instance.activeProfile;
     final angle = EquipmentManager.instance.cameraAngleDeg;
+    final panX = EquipmentManager.instance.panOffsetArcminX;
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+    final totalOffset = EquipmentManager.instance.totalPanOffsetArcmin;
+
+    final dDecArcmin = -panY;
+    final dRaArcminOnSky = -panX;
+    final decRad = widget.target.decDegrees * math.pi / 180.0;
+    final cosDec = math.cos(decRad).abs().clamp(0.01, 1.0);
+    final dRaHours = (dRaArcminOnSky / cosDec) / 900.0;
+    final dDecDeg = dDecArcmin / 60.0;
+
+    var centerRa = (widget.target.raHours + dRaHours) % 24.0;
+    if (centerRa < 0) centerRa += 24.0;
+    final centerDec = (widget.target.decDegrees + dDecDeg).clamp(-90.0, 90.0);
+
+    final hasOffset = totalOffset > 0.05;
 
     final text = '''
 --- ASTRO TARGET FRAMING PLAN ---
 Target: ${widget.target.displayName}
-RA: ${widget.target.formattedRa} | Dec: ${widget.target.formattedDec}
+Target Catalog Coordinates: RA: ${widget.target.formattedRa} | Dec: ${widget.target.formattedDec}
+${hasOffset ? 'Framing Center Coordinates: RA: ${_formatRa(centerRa)} | Dec: ${_formatDec(centerDec)}\nFraming Offset: ΔRA: ${(-panX >= 0 ? '+' : '')}${(-panX).toStringAsFixed(1)}\' | ΔDec: ${(dDecArcmin >= 0 ? '+' : '')}${dDecArcmin.toStringAsFixed(1)}\' (Total: ${totalOffset.toStringAsFixed(1)}\')' : 'Framing Center: Centered on target'}
 Equipment Rig: ${rig.name}
 Telescope: ${rig.telescope.name} (${rig.telescope.effectiveFocalLength.round()}mm ${rig.telescope.focalRatioString})
 Camera: ${rig.camera.name} (${rig.camera.sensorWidthMm}x${rig.camera.sensorHeightMm}mm, ${rig.camera.pixelSizeMicrons}µm)
@@ -83,9 +130,7 @@ Sampling: ${rig.samplingCategory}
   }
 
   void _fitToSensor() {
-    final rig = EquipmentManager.instance.activeProfile;
-    final diag = rig.sensorFovDiagonalDeg;
-    _canvasKey.currentState?.setCustomFov(diag * 1.35);
+    _canvasKey.currentState?.fitToSensor();
   }
 
   @override
@@ -268,8 +313,14 @@ Sampling: ${rig.samplingCategory}
                 children: [
                   Icon(Icons.rotate_right_rounded, size: 16, color: accentColor),
                   const SizedBox(width: 6),
-                  Text("Camera Rotator Angle", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                      "Camera Rotator Angle",
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -306,6 +357,11 @@ Sampling: ${rig.samplingCategory}
             ],
           ),
         ),
+
+        const SizedBox(height: 12),
+
+        // Framing Pan Offset Controller
+        _buildPanCard(rig, textColor, accentColor, borderColor),
 
         const SizedBox(height: 12),
 
@@ -421,6 +477,216 @@ Sampling: ${rig.samplingCategory}
     );
   }
 
+  Widget _buildPanCard(EquipmentProfile rig, Color textColor, Color accentColor, Color borderColor) {
+    final panX = EquipmentManager.instance.panOffsetArcminX;
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+    final totalOffset = EquipmentManager.instance.totalPanOffsetArcmin;
+    final hasOffset = totalOffset > 0.05;
+
+    // Calculate Framing Center coordinates
+    final dDecArcmin = -panY;
+    final dRaArcminOnSky = -panX;
+    final decRad = widget.target.decDegrees * math.pi / 180.0;
+    final cosDec = math.cos(decRad).abs().clamp(0.01, 1.0);
+    final dRaHours = (dRaArcminOnSky / cosDec) / 900.0;
+    final dDecDeg = dDecArcmin / 60.0;
+
+    var centerRa = (widget.target.raHours + dRaHours) % 24.0;
+    if (centerRa < 0) centerRa += 24.0;
+    final centerDec = (widget.target.decDegrees + dDecDeg).clamp(-90.0, 90.0);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.open_with_rounded, size: 16, color: accentColor),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  "Framing Pan Offset",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: hasOffset ? accentColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: hasOffset ? accentColor.withValues(alpha: 0.4) : borderColor),
+                ),
+                child: Text(
+                  hasOffset ? "${totalOffset.toStringAsFixed(1)}' offset" : "Centered",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: hasOffset ? accentColor : textColor.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Direction Pad + Step Size
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 3x3 Keypad
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderColor.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildPanBtn(Icons.north_west_rounded, "Pan Up-Left (NW)", () => _pan(-1.0, -1.0), textColor),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(Icons.north_rounded, "Pan Up (North)", () => _pan(0.0, -1.0), textColor),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(Icons.north_east_rounded, "Pan Up-Right (NE)", () => _pan(1.0, -1.0), textColor),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildPanBtn(Icons.west_rounded, "Pan Left (East)", () => _pan(-1.0, 0.0), textColor),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(
+                          Icons.filter_center_focus_rounded,
+                          "Reset to Target Center",
+                          () => EquipmentManager.instance.resetPan(),
+                          hasOffset ? accentColor : textColor.withValues(alpha: 0.4),
+                          isCenter: true,
+                        ),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(Icons.east_rounded, "Pan Right (West)", () => _pan(1.0, 0.0), textColor),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildPanBtn(Icons.south_west_rounded, "Pan Down-Left (SW)", () => _pan(-1.0, 1.0), textColor),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(Icons.south_rounded, "Pan Down (South)", () => _pan(0.0, 1.0), textColor),
+                        const SizedBox(width: 4),
+                        _buildPanBtn(Icons.south_east_rounded, "Pan Down-Right (SE)", () => _pan(1.0, 1.0), textColor),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Step Size Selection & Live Shift
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Step Size", style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [1.0, 5.0, 15.0].map((step) {
+                        final isSelected = (_panStepArcmin - step).abs() < 0.1;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6.0),
+                          child: InkWell(
+                            onTap: () => setState(() => _panStepArcmin = step),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSelected ? accentColor.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isSelected ? accentColor : borderColor,
+                                ),
+                              ),
+                              child: Text(
+                                "${step.toInt()}'",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? accentColor : textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    if (hasOffset) ...[
+                      Text(
+                        "ΔX: ${panX >= 0 ? '+' : ''}${panX.toStringAsFixed(1)}' | ΔY: ${panY >= 0 ? '+' : ''}${panY.toStringAsFixed(1)}'",
+                        style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8), fontFamily: 'monospace'),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "Center: ${_formatRa(centerRa)}",
+                        style: TextStyle(fontSize: 10, color: accentColor, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        "Dec: ${_formatDec(centerDec)}",
+                        style: TextStyle(fontSize: 10, color: accentColor, fontWeight: FontWeight.w600, fontFamily: 'monospace'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ] else ...[
+                      Text(
+                        "Use arrows to frame off-center composition",
+                        style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPanBtn(IconData icon, String tooltip, VoidCallback onTap, Color iconColor, {bool isCenter = false}) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isCenter ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: isCenter ? 18 : 16, color: iconColor),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickAngleBtn(String label, VoidCallback onTap, Color textColor) {
     return InkWell(
       onTap: onTap,
@@ -442,8 +708,22 @@ Sampling: ${rig.samplingCategory}
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
-          Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: valueColor)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.7)),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: valueColor),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

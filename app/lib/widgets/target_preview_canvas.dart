@@ -147,8 +147,13 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   void _fitToSensor() {
     final rig = EquipmentManager.instance.activeProfile;
     final diag = rig.sensorFovDiagonalDeg;
-    setCustomFov(diag * 1.35);
+    final panX = EquipmentManager.instance.panOffsetArcminX;
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+    final panDeg = math.sqrt(panX * panX + panY * panY) / 60.0;
+    setCustomFov((diag + panDeg * 2.2) * 1.35);
   }
+
+  void fitToSensor() => _fitToSensor();
 
   void _openFramingSimulatorDialog() {
     if (!widget.enableExpandDialog) return;
@@ -190,6 +195,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     final rig = EquipmentManager.instance.activeProfile;
     final angle = EquipmentManager.instance.cameraAngleDeg;
     final showRuleOfThirds = EquipmentManager.instance.showRuleOfThirds;
+    final panX = EquipmentManager.instance.panOffsetArcminX;
+    final panY = EquipmentManager.instance.panOffsetArcminY;
+
     final imageViewport = Container(
       height: widget.height.isFinite ? widget.height : null,
       decoration: BoxDecoration(
@@ -224,6 +232,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               equipment: rig,
               cameraAngleDeg: angle,
               showRuleOfThirds: showRuleOfThirds,
+              panOffsetArcminX: panX,
+              panOffsetArcminY: panY,
             ),
           ),
 
@@ -884,6 +894,8 @@ class TargetVectorPainter extends CustomPainter {
   final EquipmentProfile? equipment;
   final double cameraAngleDeg;
   final bool showRuleOfThirds;
+  final double panOffsetArcminX;
+  final double panOffsetArcminY;
 
   TargetVectorPainter({
     required this.target,
@@ -895,6 +907,8 @@ class TargetVectorPainter extends CustomPainter {
     this.equipment,
     this.cameraAngleDeg = 0.0,
     this.showRuleOfThirds = false,
+    this.panOffsetArcminX = 0.0,
+    this.panOffsetArcminY = 0.0,
   });
 
   @override
@@ -1064,8 +1078,31 @@ class TargetVectorPainter extends CustomPainter {
       final rectW = fovW * pixelsPerArcmin;
       final rectH = fovH * pixelsPerArcmin;
 
+      final sensorCenter = Offset(
+        center.dx + (panOffsetArcminX * pixelsPerArcmin),
+        center.dy + (panOffsetArcminY * pixelsPerArcmin),
+      );
+
+      // If offset is non-zero, draw guide line and optical center reticle
+      if (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0) {
+        final linePaint = Paint()
+          ..color = goldColor.withValues(alpha: 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        canvas.drawLine(center, sensorCenter, linePaint);
+
+        // Center optical crosshair at sensor center
+        final crossPaint = Paint()
+          ..color = goldColor.withValues(alpha: 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+        const cLen = 6.0;
+        canvas.drawLine(Offset(sensorCenter.dx - cLen, sensorCenter.dy), Offset(sensorCenter.dx + cLen, sensorCenter.dy), crossPaint);
+        canvas.drawLine(Offset(sensorCenter.dx, sensorCenter.dy - cLen), Offset(sensorCenter.dx, sensorCenter.dy + cLen), crossPaint);
+      }
+
       canvas.save();
-      canvas.translate(center.dx, center.dy);
+      canvas.translate(sensorCenter.dx, sensorCenter.dy);
       canvas.rotate(cameraAngleDeg * math.pi / 180.0);
 
       final sensorRect = Rect.fromCenter(center: Offset.zero, width: rectW, height: rectH);
@@ -1260,6 +1297,8 @@ class TargetVectorPainter extends CustomPainter {
         oldDelegate.showFraming != showFraming ||
         oldDelegate.equipment?.id != equipment?.id ||
         oldDelegate.cameraAngleDeg != cameraAngleDeg ||
-        oldDelegate.showRuleOfThirds != showRuleOfThirds;
+        oldDelegate.showRuleOfThirds != showRuleOfThirds ||
+        oldDelegate.panOffsetArcminX != panOffsetArcminX ||
+        oldDelegate.panOffsetArcminY != panOffsetArcminY;
   }
 }

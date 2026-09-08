@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import '../models/equipment_profile.dart';
 import 'equipment_database.dart';
@@ -11,12 +12,18 @@ class EquipmentManager extends ChangeNotifier {
   double _cameraAngleDeg = 0.0;
   bool _showRuleOfThirds = false;
   bool _isFramingEnabled = false;
+  double _panOffsetArcminX = 0.0;
+  double _panOffsetArcminY = 0.0;
 
   List<EquipmentProfile> get profiles => List.unmodifiable(_profiles);
   String get activeProfileId => _activeProfileId;
   double get cameraAngleDeg => _cameraAngleDeg;
   bool get showRuleOfThirds => _showRuleOfThirds;
   bool get isFramingEnabled => _isFramingEnabled;
+  double get panOffsetArcminX => _panOffsetArcminX;
+  double get panOffsetArcminY => _panOffsetArcminY;
+  double get totalPanOffsetArcmin =>
+      math.sqrt(_panOffsetArcminX * _panOffsetArcminX + _panOffsetArcminY * _panOffsetArcminY);
 
   EquipmentProfile get activeProfile {
     if (_profiles.isEmpty) {
@@ -102,5 +109,26 @@ class EquipmentManager extends ChangeNotifier {
   /// Automatically aligns the camera sensor's long axis with the target's major axis orientation
   void autoAlignWithTarget(double targetAngleDeg) {
     setCameraAngle(targetAngleDeg);
+  }
+
+  /// Pans the sensor framing frame by delta arcminutes (relative to target center)
+  void panBy({required double deltaXArcmin, required double deltaYArcmin}) {
+    _panOffsetArcminX = (_panOffsetArcminX + deltaXArcmin).clamp(-600.0, 600.0);
+    _panOffsetArcminY = (_panOffsetArcminY + deltaYArcmin).clamp(-600.0, 600.0);
+    notifyListeners();
+  }
+
+  /// Sets absolute pan offset in arcminutes
+  void setPanOffset(double xArcmin, double yArcmin) {
+    _panOffsetArcminX = xArcmin.clamp(-600.0, 600.0);
+    _panOffsetArcminY = yArcmin.clamp(-600.0, 600.0);
+    notifyListeners();
+  }
+
+  /// Resets framing offset back to target center (0, 0)
+  void resetPan() {
+    _panOffsetArcminX = 0.0;
+    _panOffsetArcminY = 0.0;
+    notifyListeners();
   }
 }

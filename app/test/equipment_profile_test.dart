@@ -164,5 +164,31 @@ void main() {
       manager.toggleRuleOfThirds(true);
       expect(manager.showRuleOfThirds, isTrue);
     });
+
+    test('Pan offset updates, accumulates, and resets correctly', () {
+      final manager = EquipmentManager.instance;
+      manager.resetPan();
+      expect(manager.panOffsetArcminX, 0.0);
+      expect(manager.panOffsetArcminY, 0.0);
+      expect(manager.totalPanOffsetArcmin, 0.0);
+
+      manager.panBy(deltaXArcmin: 3.0, deltaYArcmin: 4.0);
+      expect(manager.panOffsetArcminX, 3.0);
+      expect(manager.panOffsetArcminY, 4.0);
+      expect(manager.totalPanOffsetArcmin, closeTo(5.0, 0.001));
+
+      manager.panBy(deltaXArcmin: -1.0, deltaYArcmin: 2.0);
+      expect(manager.panOffsetArcminX, 2.0);
+      expect(manager.panOffsetArcminY, 6.0);
+
+      manager.setPanOffset(-10.0, 15.0);
+      expect(manager.panOffsetArcminX, -10.0);
+      expect(manager.panOffsetArcminY, 15.0);
+
+      manager.resetPan();
+      expect(manager.panOffsetArcminX, 0.0);
+      expect(manager.panOffsetArcminY, 0.0);
+      expect(manager.totalPanOffsetArcmin, 0.0);
+    });
   });
 }

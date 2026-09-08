@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/core/equipment_manager.dart';
 import 'package:app/models/target_item.dart';
+import 'package:app/views/equipment_framing_dialog.dart';
 import 'package:app/widgets/target_preview_canvas.dart';
 
 void main() {
@@ -116,6 +118,71 @@ void main() {
       expect(find.text('Align'), findsOneWidget);
       expect(find.text('Fit'), findsOneWidget);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
+    });
+
+    testWidgets('EquipmentFramingDialog renders pan keypad, step size selector and handles pan events', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      EquipmentManager.instance.resetPan();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EquipmentFramingDialog(
+              target: testTarget,
+              isRedNightMode: false,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify framing pan offset card elements
+      expect(find.text('Framing Pan Offset'), findsOneWidget);
+      expect(find.text('Centered'), findsOneWidget);
+      expect(find.text("1'"), findsOneWidget);
+      expect(find.text("5'"), findsOneWidget);
+      expect(find.text("15'"), findsOneWidget);
+      expect(find.text('Copy Info'), findsOneWidget);
+
+      // Pan Up (North) by default 5 arcmin
+      await tester.tap(find.byTooltip('Pan Up (North)'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(EquipmentManager.instance.panOffsetArcminY, -5.0);
+      expect(EquipmentManager.instance.totalPanOffsetArcmin, 5.0);
+      expect(find.text("5.0' offset"), findsOneWidget);
+      expect(find.textContaining('Center:'), findsOneWidget);
+
+      // Change step size to 1'
+      await tester.tap(find.text("1'"));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Pan Right (West) by 1 arcmin
+      await tester.tap(find.byTooltip('Pan Right (West)'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(EquipmentManager.instance.panOffsetArcminX, 1.0);
+      expect(EquipmentManager.instance.panOffsetArcminY, -5.0);
+
+      // Reset to target center
+      await tester.tap(find.byTooltip('Reset to Target Center'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(EquipmentManager.instance.panOffsetArcminX, 0.0);
+      expect(EquipmentManager.instance.panOffsetArcminY, 0.0);
+      expect(find.text('Centered'), findsOneWidget);
+
+      // Tap Copy Info
+      await tester.tap(find.text('Copy Info'));
+      await tester.pump();
     });
   });
 }
