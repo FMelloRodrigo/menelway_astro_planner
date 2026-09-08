@@ -656,53 +656,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 ),
               ),
               const SizedBox(width: 6),
-              // Full Framing Simulator Button
-              InkWell(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => EquipmentFramingDialog(
-                      target: widget.target,
-                      isRedNightMode: widget.isRedNightMode,
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isRed
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                        : AstroColors.starGold.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: isRed
-                          ? AstroColors.nightVisionRed.withValues(alpha: 0.7)
-                          : AstroColors.starGold.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.open_in_full_rounded,
-                        size: 11,
-                        color: isRed ? AstroColors.nightVisionRed : AstroColors.starGold,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        "Framing",
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isRed ? AstroColors.nightVisionRed : AstroColors.starGold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
+              // Equipment Gear Dialog Button
               InkWell(
                 onTap: () {
                   showDialog(
@@ -715,7 +669,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 },
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(4),

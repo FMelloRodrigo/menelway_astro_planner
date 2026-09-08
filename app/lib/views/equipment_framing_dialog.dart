@@ -378,20 +378,43 @@ Sampling: ${rig.samplingCategory}
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
-        // Copy Specs Button
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            icon: const Icon(Icons.copy_all_rounded, size: 18),
-            label: const Text("Copy Framing Specs for N.I.N.A. / ASIAIR"),
-            style: FilledButton.styleFrom(
-              backgroundColor: accentColor,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+        // Copy Info Button (as small as possible)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Tooltip(
+            message: "Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)",
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _copyFramingInfo,
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.copy_rounded, size: 12, color: accentColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Copy Info",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            onPressed: _copyFramingInfo,
           ),
         ),
       ],
