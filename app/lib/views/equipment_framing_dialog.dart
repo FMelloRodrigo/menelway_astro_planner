@@ -30,7 +30,11 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
   @override
   void initState() {
     super.initState();
-    EquipmentManager.instance.resetPan();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        EquipmentManager.instance.resetPan();
+      }
+    });
     EquipmentManager.instance.addListener(_onEquipmentChanged);
   }
 
@@ -344,8 +348,10 @@ Sampling: ${rig.samplingCategory}
                 inactiveColor: Colors.white.withValues(alpha: 0.15),
                 onChanged: (val) => EquipmentManager.instance.setCameraAngle(val),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
                 children: [
                   _buildQuickAngleBtn("-90°", () => EquipmentManager.instance.rotateBy(-90), textColor),
                   _buildQuickAngleBtn("-15°", () => EquipmentManager.instance.rotateBy(-15), textColor),
@@ -602,30 +608,29 @@ Sampling: ${rig.samplingCategory}
                   children: [
                     Text("Step Size", style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [1.0, 5.0, 15.0].map((step) {
                         final isSelected = (_panStepArcmin - step).abs() < 0.1;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6.0),
-                          child: InkWell(
-                            onTap: () => setState(() => _panStepArcmin = step),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isSelected ? accentColor.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: isSelected ? accentColor : borderColor,
-                                ),
+                        return InkWell(
+                          onTap: () => setState(() => _panStepArcmin = step),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? accentColor.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isSelected ? accentColor : borderColor,
                               ),
-                              child: Text(
-                                "${step.toInt()}'",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? accentColor : textColor,
-                                ),
+                            ),
+                            child: Text(
+                              "${step.toInt()}'",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? accentColor : textColor,
                               ),
                             ),
                           ),

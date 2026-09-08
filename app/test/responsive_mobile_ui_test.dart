@@ -6,6 +6,7 @@ import 'package:app/models/target_item.dart';
 import 'package:app/views/filter_dialog.dart';
 import 'package:app/views/target_search_view.dart';
 import 'package:app/views/target_details_sheet.dart';
+import 'package:app/views/equipment_framing_dialog.dart';
 
 void main() {
   final testNight = NightSummary(
@@ -178,5 +179,54 @@ void main() {
       expect(find.text('Visible Duration'), findsOneWidget);
       expect(find.text('4.5 hrs'), findsOneWidget);
     });
+
+    testWidgets('Simulator button is visible and accessible on mobile viewport in Visual Sky Preview', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TargetDetailsSheet(
+              target: testTarget,
+              night: testNight,
+              latitude: 40.7128,
+              longitude: -74.0060,
+              elevation: 10.0,
+              availableLists: const [],
+              onAddToList: (_, _, _) {},
+            ),
+          ),
+        ),
+      );
+
+      // Scroll down to Visual Sky Preview
+      await tester.scrollUntilVisible(
+        find.text('Visual Sky Preview'),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Visual Sky Preview'), findsOneWidget);
+
+      // Verify single Simulator button in toolbar below canvas is accessible on screen
+      final simulatorFinder = find.widgetWithText(InkWell, 'Simulator');
+      expect(simulatorFinder, findsOneWidget);
+
+      final simulatorRect = tester.getRect(simulatorFinder);
+      expect(simulatorRect.left, lessThan(360.0));
+
+      // Tap the Simulator button to ensure it opens EquipmentFramingDialog
+      await tester.tap(simulatorFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(EquipmentFramingDialog), findsOneWidget);
+    });
   });
 }
+

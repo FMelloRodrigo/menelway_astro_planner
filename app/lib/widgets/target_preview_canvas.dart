@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../core/equipment_manager.dart';
 import '../core/sky_image_service.dart';
@@ -92,7 +93,13 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
       });
     }
 
-    setState(() {});
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    } else {
+      setState(() {});
+    }
   }
 
   @override
@@ -451,6 +458,118 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
               const SizedBox(width: 8),
 
+              // Full Framing Simulator Button
+              if (widget.enableExpandDialog) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: "Open Full Framing Simulator",
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _openFramingSimulatorDialog,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionSurfaceVariant
+                              : AstroColors.spaceDarkSurfaceVariant,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.open_in_full_rounded,
+                              size: 15,
+                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Simulator",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(width: 8),
+
+              // Framing Simulator Mode Toggle
+              Tooltip(
+                message: "Toggle Sensor Framing Box",
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() => _isFramingEnabled = !_isFramingEnabled);
+                      if (_isFramingEnabled) {
+                        _fitToSensor();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: _isFramingEnabled
+                            ? (widget.isRedNightMode
+                                ? AstroColors.nightVisionRed.withValues(alpha: 0.22)
+                                : AstroColors.starGold.withValues(alpha: 0.22))
+                            : (widget.isRedNightMode
+                                ? AstroColors.nightVisionSurfaceVariant
+                                : AstroColors.spaceDarkSurfaceVariant),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _isFramingEnabled
+                              ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                              : borderColor,
+                          width: _isFramingEnabled ? 1.4 : 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.crop_rotate_rounded,
+                            size: 16,
+                            color: _isFramingEnabled
+                                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                : textColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Framing",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: _isFramingEnabled
+                                  ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                  : textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
               // FOV Badge
               Container(
                 height: 38,
@@ -517,116 +636,6 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   ],
                 ),
               ),
-
-              const SizedBox(width: 8),
-
-              // Framing Simulator Mode Toggle
-              Tooltip(
-                message: "Toggle Sensor Framing Box",
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      setState(() => _isFramingEnabled = !_isFramingEnabled);
-                      if (_isFramingEnabled) {
-                        _fitToSensor();
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      height: 38,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: _isFramingEnabled
-                            ? (widget.isRedNightMode
-                                ? AstroColors.nightVisionRed.withValues(alpha: 0.22)
-                                : AstroColors.starGold.withValues(alpha: 0.22))
-                            : (widget.isRedNightMode
-                                ? AstroColors.nightVisionSurfaceVariant
-                                : AstroColors.spaceDarkSurfaceVariant),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _isFramingEnabled
-                              ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                              : borderColor,
-                          width: _isFramingEnabled ? 1.4 : 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.crop_rotate_rounded,
-                            size: 16,
-                            color: _isFramingEnabled
-                                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                                : textColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Framing",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: _isFramingEnabled
-                                  ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                                  : textColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Full Framing Simulator Button
-              if (widget.enableExpandDialog) ...[
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: "Open Full Framing Simulator",
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _openFramingSimulatorDialog,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 38,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionSurfaceVariant
-                              : AstroColors.spaceDarkSurfaceVariant,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.open_in_full_rounded,
-                              size: 15,
-                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Simulator",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
