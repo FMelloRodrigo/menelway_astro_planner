@@ -12,6 +12,7 @@ class TargetItem {
   final double decDegrees;
   final double? magnitude;
   final double? majorAxisArcmin;
+  final double? positionAngleDeg;
   final double? surfaceBrightness;
   final String? commonName;
   final double peakAltitudeDeg;
@@ -36,6 +37,7 @@ class TargetItem {
     required this.decDegrees,
     this.magnitude,
     this.majorAxisArcmin,
+    this.positionAngleDeg,
     this.surfaceBrightness,
     this.commonName,
     required this.peakAltitudeDeg,

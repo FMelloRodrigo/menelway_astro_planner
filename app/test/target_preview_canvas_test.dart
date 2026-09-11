@@ -19,6 +19,7 @@ void main() {
       decDegrees: -5.39,
       magnitude: 4.0,
       majorAxisArcmin: 65.0,
+      positionAngleDeg: 55.0,
       surfaceBrightness: 11.5,
       peakAltitudeDeg: 62.0,
       visibleDurationHours: 5.5,
@@ -248,13 +249,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // 1. Should have auto-aligned to target (35.0°) and fit to sensor FOV as soon as user entered
-      expect(EquipmentManager.instance.cameraAngleDeg, 35.0);
+      // 1. Should have auto-aligned to target (55.0°) and fit to sensor FOV as soon as user entered
+      expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
       final canvasState = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
       final expectedInitialFov = (initialRig.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
       expect(canvasState.fovDeg, closeTo(expectedInitialFov, 0.01));
 
-      // Manually change angle away from 35°
+      // Manually change angle away from 55°
       EquipmentManager.instance.setCameraAngle(90.0);
       expect(EquipmentManager.instance.cameraAngleDeg, 90.0);
 
@@ -270,9 +271,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify active rig switched, angle auto-aligned back to 35.0°, and FOV fit to second sensor
+      // Verify active rig switched, angle auto-aligned back to 55.0°, and FOV fit to second sensor
       expect(EquipmentManager.instance.activeProfile.id, secondProfile.id);
-      expect(EquipmentManager.instance.cameraAngleDeg, 35.0);
+      expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
       final expectedSecondFov = (secondProfile.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
       expect(canvasState.fovDeg, closeTo(expectedSecondFov, 0.01));
     });

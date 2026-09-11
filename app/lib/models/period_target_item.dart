@@ -14,6 +14,7 @@ class PeriodTargetItem {
   final double decDegrees;
   final double? magnitude;
   final double? majorAxisArcmin;
+  final double? positionAngleDeg;
   final double? surfaceBrightness;
   final String? commonName;
   final double peakAltitudeDeg;
@@ -41,6 +42,7 @@ class PeriodTargetItem {
     required this.decDegrees,
     this.magnitude,
     this.majorAxisArcmin,
+    this.positionAngleDeg,
     this.surfaceBrightness,
     this.commonName,
     required this.peakAltitudeDeg,
@@ -109,17 +111,17 @@ class PeriodTargetItem {
   String get formattedRa {
     final h = raHours.floor();
     final m = ((raHours - h) * 60).floor();
-    final s = (((raHours - h) * 60 - m) * 60).toStringAsFixed(1);
-    return '${h.toString().padLeft(2, '0')}h ${m.toString().padLeft(2, '0')}m ${s.padLeft(4, '0')}s';
+    final s = (raHours - h - m / 60) * 3600;
+    return '${h.toString().padLeft(2, '0')}h ${m.toString().padLeft(2, '0')}m ${s.toStringAsFixed(1).padLeft(4, '0')}s';
   }
 
   String get formattedDec {
     final sign = decDegrees >= 0 ? '+' : '-';
-    final absD = decDegrees.abs();
-    final d = absD.floor();
-    final m = ((absD - d) * 60).floor();
-    final s = (((absD - d) * 60 - m) * 60).toStringAsFixed(1);
-    return '$sign${d.toString().padLeft(2, '0')}° ${m.toString().padLeft(2, '0')}\' ${s.padLeft(4, '0')}"';
+    final absDec = decDegrees.abs();
+    final d = absDec.floor();
+    final m = ((absDec - d) * 60).floor();
+    final s = (absDec - d - m / 60) * 3600;
+    return '$sign${d.toString().padLeft(2, '0')}° ${m.toString().padLeft(2, '0')}\' ${s.toStringAsFixed(0).padLeft(2, '0')}"';
   }
 
   TargetItem toTargetItem({DateTime? date}) {
@@ -138,6 +140,7 @@ class PeriodTargetItem {
       decDegrees: decDegrees,
       magnitude: magnitude,
       majorAxisArcmin: majorAxisArcmin,
+      positionAngleDeg: positionAngleDeg,
       surfaceBrightness: surfaceBrightness,
       commonName: commonName,
       peakAltitudeDeg: peakAltitudeDeg,

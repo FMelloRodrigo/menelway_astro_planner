@@ -84,6 +84,7 @@ typedef struct {
     double dec_degrees;
     double magnitude;
     double major_axis_arcmin;
+    double position_angle_deg;
     double surface_brightness;
     const char* common_name;
     double peak_altitude_deg;
@@ -114,6 +115,7 @@ typedef struct {
     double dec_degrees;
     double magnitude;
     double major_axis_arcmin;
+    double position_angle_deg;
     double surface_brightness;
     const char* common_name;
     double peak_altitude_deg;

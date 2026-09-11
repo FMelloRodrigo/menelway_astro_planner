@@ -26,6 +26,7 @@ struct DsoObject {
     std::optional<double> b_mag;
     std::optional<double> major_axis_arcmin;
     std::optional<double> minor_axis_arcmin;
+    std::optional<double> position_angle_deg;
     std::optional<double> surface_brightness;
     std::optional<std::string> common_names;
     std::optional<std::string> identifiers;

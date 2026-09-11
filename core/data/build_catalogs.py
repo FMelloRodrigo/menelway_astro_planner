@@ -253,6 +253,7 @@ def main():
         b_mag REAL,
         major_axis_arcmin REAL,
         minor_axis_arcmin REAL,
+        position_angle_deg REAL,
         surface_brightness REAL,
         common_names TEXT,
         identifiers TEXT
@@ -355,6 +356,9 @@ def main():
         min_str = get_val("MinAx")
         maj_ax = float(maj_str) if maj_str else None
         min_ax = float(min_str) if min_str else None
+
+        pos_ang_str = get_val("PosAng")
+        pos_ang = float(pos_ang_str) if pos_ang_str else None
 
         sb_str = get_val("SurfBr")
         surf_br = float(sb_str) if sb_str else None
@@ -459,6 +463,7 @@ def main():
             b_mag,
             maj_ax,
             min_ax,
+            pos_ang,
             surf_br,
             common_names,
             identifiers
@@ -489,6 +494,7 @@ def main():
                 None,             # b_mag
                 view["size"],     # major_axis_arcmin
                 None,             # minor_axis_arcmin
+                None,             # position_angle_deg
                 None,             # surface_brightness
                 raw_n if raw_n else None, # common_names
                 arp_ident         # identifiers
@@ -502,9 +508,9 @@ def main():
     INSERT INTO dso_objects (
         name, messier, caldwell, arp, herschel, ngc_ic, catalog, catalog_number,
         object_type, constellation, ra_deg, dec_deg,
-        magnitude, b_mag, major_axis_arcmin, minor_axis_arcmin,
+        magnitude, b_mag, major_axis_arcmin, minor_axis_arcmin, position_angle_deg,
         surface_brightness, common_names, identifiers
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     """, records)
 
     # Populate FTS

@@ -441,6 +441,7 @@ class AstroBridge {
 
           final mag = item.magnitude < 900.0 ? item.magnitude : null;
           final majAx = item.majorAxisArcmin >= 0.0 ? item.majorAxisArcmin : null;
+          final posAng = item.positionAngleDeg >= 0.0 ? item.positionAngleDeg : null;
           final sb = item.surfaceBrightness >= 0.0 ? item.surfaceBrightness : null;
 
           final mStr = item.messier.toDartString();
@@ -471,6 +472,7 @@ class AstroBridge {
             decDegrees: item.decDegrees,
             magnitude: mag,
             majorAxisArcmin: majAx,
+            positionAngleDeg: posAng,
             surfaceBrightness: sb,
             commonName: commonStr.isNotEmpty ? commonStr : null,
             peakAltitudeDeg: item.peakAltitudeDeg,
@@ -595,6 +597,7 @@ class AstroBridge {
             decDegrees: cItem.decDegrees,
             magnitude: cItem.magnitude < 900.0 ? cItem.magnitude : null,
             majorAxisArcmin: cItem.majorAxisArcmin >= 0 ? cItem.majorAxisArcmin : null,
+            positionAngleDeg: cItem.positionAngleDeg >= 0 ? cItem.positionAngleDeg : null,
             surfaceBrightness: cItem.surfaceBrightness >= 0 ? cItem.surfaceBrightness : null,
             commonName: cItem.commonName.address != 0 && cItem.commonName.toDartString().isNotEmpty
                 ? cItem.commonName.toDartString()

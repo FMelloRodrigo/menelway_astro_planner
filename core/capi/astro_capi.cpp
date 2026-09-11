@@ -205,6 +205,7 @@ AstroTargetList* astro_filter_targets(
             item.dec_degrees = r.dso.coordinates.dec.value;
             item.magnitude = r.dso.magnitude.value_or(999.0);
             item.major_axis_arcmin = r.dso.major_axis_arcmin.value_or(-1.0);
+            item.position_angle_deg = r.dso.position_angle_deg.value_or(-1.0);
             item.surface_brightness = r.dso.surface_brightness.value_or(-1.0);
             item.common_name = intern_str(r.dso.common_names.value_or(""));
             item.peak_altitude_deg = r.visibility.peak_altitude.value;
@@ -320,6 +321,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
             item.dec_degrees = r.dso.coordinates.dec.value;
             item.magnitude = r.dso.magnitude.value_or(999.0);
             item.major_axis_arcmin = r.dso.major_axis_arcmin.value_or(-1.0);
+            item.position_angle_deg = r.dso.position_angle_deg.value_or(-1.0);
             item.surface_brightness = r.dso.surface_brightness.value_or(-1.0);
             item.common_name = intern_str(r.dso.common_names.value_or(""));
             item.peak_altitude_deg = r.visibility.peak_altitude_deg;

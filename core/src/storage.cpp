@@ -70,13 +70,16 @@ catalog::DsoObject row_to_dso(sqlite3_stmt* stmt) {
         obj.minor_axis_arcmin = sqlite3_column_double(stmt, 16);
     }
     if (sqlite3_column_type(stmt, 17) != SQLITE_NULL) {
-        obj.surface_brightness = sqlite3_column_double(stmt, 17);
+        obj.position_angle_deg = sqlite3_column_double(stmt, 17);
+    }
+    if (sqlite3_column_type(stmt, 18) != SQLITE_NULL) {
+        obj.surface_brightness = sqlite3_column_double(stmt, 18);
     }
 
-    const auto* common = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 18));
+    const auto* common = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 19));
     if (common) obj.common_names = common;
 
-    const auto* ident = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 19));
+    const auto* ident = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 20));
     if (ident) obj.identifiers = ident;
 
     return obj;
@@ -269,7 +272,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         std::ostringstream sql;
         sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
             << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-            << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+            << "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
             << "FROM dso_objects d "
             << "JOIN dso_fts f ON d.id = f.rowid "
             << "WHERE dso_fts MATCH ? "
@@ -294,7 +297,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
             const char* fallback_sql =
                 "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
                 "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-                "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+                "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
                 "FROM dso_objects d "
                 "WHERE d.name LIKE ? OR d.messier LIKE ? OR d.caldwell LIKE ? OR d.arp LIKE ? "
                 "   OR d.herschel LIKE ? OR d.ngc_ic LIKE ? OR d.common_names LIKE ? OR d.identifiers LIKE ? "
@@ -319,7 +322,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
     std::ostringstream sql;
     sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
         << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-        << "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+        << "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
         << "FROM dso_objects d "
         << "WHERE 1=1 ";
 
@@ -401,7 +404,7 @@ std::optional<catalog::DsoObject> SqliteStorage::get_object_by_id(std::int64_t i
     const char* sql =
         "SELECT id, name, messier, caldwell, arp, herschel, ngc_ic, catalog, catalog_number, "
         "object_type, constellation, ra_deg, dec_deg, magnitude, b_mag, "
-        "major_axis_arcmin, minor_axis_arcmin, surface_brightness, common_names, identifiers "
+        "major_axis_arcmin, minor_axis_arcmin, position_angle_deg, surface_brightness, common_names, identifiers "
         "FROM dso_objects WHERE id = ?;";
 
     sqlite3_stmt* raw_stmt = nullptr;
@@ -654,7 +657,7 @@ std::vector<ObservingListItem> SqliteStorage::get_items_in_list(std::int64_t lis
         "SELECT i.list_id, i.dso_id, i.notes, i.status, i.added_at, "
         "d.id, d.name, d.messier, d.caldwell, d.ngc_ic, d.catalog, d.catalog_number, "
         "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-        "d.major_axis_arcmin, d.minor_axis_arcmin, d.surface_brightness, d.common_names, d.identifiers "
+        "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
         "FROM user_list_items i "
         "JOIN dso_objects d ON i.dso_id = d.id "
         "WHERE i.list_id = ? "

@@ -153,6 +153,9 @@ final class AstroTargetItem extends Struct {
   external double majorAxisArcmin;
 
   @Double()
+  external double positionAngleDeg;
+
+  @Double()
   external double surfaceBrightness;
 
   external Pointer<Utf8> commonName;
@@ -234,6 +237,9 @@ final class AstroPeriodTargetItem extends Struct {
 
   @Double()
   external double majorAxisArcmin;
+
+  @Double()
+  external double positionAngleDeg;
 
   @Double()
   external double surfaceBrightness;

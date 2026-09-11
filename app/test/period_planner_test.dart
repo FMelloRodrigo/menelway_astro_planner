@@ -16,6 +16,7 @@ void main() {
         decDegrees: 4.95,
         magnitude: 4.8,
         majorAxisArcmin: 24.0,
+        positionAngleDeg: 35.0,
         surfaceBrightness: 12.0,
         peakAltitudeDeg: 48.5,
         maxHoursObservable: 1.8,
@@ -31,6 +32,7 @@ void main() {
 
       expect(periodItem.id, 42);
       expect(periodItem.caldwell, 'C49');
+      expect(periodItem.positionAngleDeg, 35.0);
       expect(periodItem.observableDaysCount, 17);
       expect(periodItem.totalPeriodDays, 28);
       expect(periodItem.isObservable, isTrue);
@@ -41,6 +43,7 @@ void main() {
       expect(targetItem.id, 42);
       expect(targetItem.name, 'NGC 2244');
       expect(targetItem.caldwell, 'C49');
+      expect(targetItem.positionAngleDeg, 35.0);
       expect(targetItem.commonName, 'Rosette Nebula');
       expect(targetItem.objectType, 'Open Cluster');
       expect(targetItem.constellation, 'Mon');
@@ -78,10 +81,12 @@ void main() {
       expect(periodItem.observableDaysCount, 0);
       expect(periodItem.isObservable, isFalse);
       expect(periodItem.peakDate, isNull);
+      expect(periodItem.positionAngleDeg, isNull);
 
       final targetItem = periodItem.toTargetItem();
       expect(targetItem.meetsCriteria, isFalse);
       expect(targetItem.visibleDurationHours, 0.0);
+      expect(targetItem.positionAngleDeg, isNull);
     });
   });
 }

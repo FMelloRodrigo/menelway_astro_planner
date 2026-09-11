@@ -233,7 +233,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   }
 
   void _autoAlignWithTarget() {
-    EquipmentManager.instance.autoAlignWithTarget(35.0);
+    final pa = widget.target.positionAngleDeg ?? 0.0;
+    EquipmentManager.instance.autoAlignWithTarget(pa);
   }
 
   void _fitToSensor() {
@@ -1157,7 +1158,10 @@ class TargetVectorPainter extends CustomPainter {
 
         canvas.save();
         canvas.translate(targetCenter.dx, targetCenter.dy);
-        canvas.rotate(math.pi / 5.0);
+        final paRad = target.positionAngleDeg != null
+            ? (target.positionAngleDeg! * math.pi / 180.0)
+            : (math.pi / 5.0);
+        canvas.rotate(paRad);
 
         final lowerType = target.objectType.toLowerCase();
 

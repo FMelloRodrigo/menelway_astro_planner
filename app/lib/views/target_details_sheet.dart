@@ -526,7 +526,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}",
+                        "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}${widget.target.positionAngleDeg != null ? "  |  PA: ${widget.target.positionAngleDeg!.toStringAsFixed(1)}°" : ""}",
                         style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 12,
@@ -545,7 +545,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                     children: [
                       Expanded(
                         child: Text(
-                          "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}",
+                          "RA: ${widget.target.formattedRa}  |  Dec: ${widget.target.formattedDec}${widget.target.positionAngleDeg != null ? "  |  PA: ${widget.target.positionAngleDeg!.toStringAsFixed(1)}°" : ""}",
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 12,

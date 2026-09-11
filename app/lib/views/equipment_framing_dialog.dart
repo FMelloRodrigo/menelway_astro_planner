@@ -113,7 +113,7 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
     final text = '''
 --- ASTRO TARGET FRAMING PLAN ---
 Target: ${widget.target.displayName}
-Target Catalog Coordinates: RA: ${widget.target.formattedRa} | Dec: ${widget.target.formattedDec}
+Target Catalog Coordinates: RA: ${widget.target.formattedRa} | Dec: ${widget.target.formattedDec}${widget.target.positionAngleDeg != null ? ' | Target PA: ${widget.target.positionAngleDeg!.toStringAsFixed(1)}°' : ''}
 ${hasOffset ? 'Framing Center Coordinates: RA: ${_formatRa(centerRa)} | Dec: ${_formatDec(centerDec)}\nFraming Offset: ΔRA: ${(-panX >= 0 ? '+' : '')}${(-panX).toStringAsFixed(1)}\' | ΔDec: ${(dDecArcmin >= 0 ? '+' : '')}${dDecArcmin.toStringAsFixed(1)}\' (Total: ${totalOffset.toStringAsFixed(1)}\')' : 'Framing Center: Centered on target'}
 Equipment Rig: ${rig.name}
 Telescope: ${rig.telescope.name} (${rig.telescope.effectiveFocalLength.round()}mm ${rig.telescope.focalRatioString})
@@ -144,8 +144,8 @@ Sampling: ${rig.samplingCategory}
   }
 
   void _autoAlignWithTarget() {
-    // 35 degrees default visual axis tilt for galaxies/nebulae
-    EquipmentManager.instance.autoAlignWithTarget(35.0);
+    final pa = widget.target.positionAngleDeg ?? 0.0;
+    EquipmentManager.instance.autoAlignWithTarget(pa);
   }
 
   void _fitToSensor() {
