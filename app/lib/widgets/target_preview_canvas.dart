@@ -393,12 +393,17 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         const SizedBox(height: 10),
 
         // Row 1: Primary Controls & Settings (Survey, FOV, Mode, Framing, Simulator)
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
               // Survey Selector Chip
               PopupMenuButton<String>(
                 tooltip: "Select Sky Survey",
@@ -641,114 +646,163 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
             ],
           ),
         ),
+      ),
+    );
+  },
+),
 
         const SizedBox(height: 8),
 
-        // Row 2: Action & Composition Toolbar (Zoom & Rotation & Auto-Align & Fit)
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildLargeActionButton(
-                icon: Icons.remove_rounded,
-                tooltip: "Zoom Out (Wider FOV)",
-                onTap: _zoomOut,
-                color: textColor,
-                borderColor: borderColor,
-              ),
-              const SizedBox(width: 6),
-              _buildLargeActionButton(
-                icon: Icons.add_rounded,
-                tooltip: "Zoom In (Closer FOV)",
-                onTap: _zoomIn,
-                color: textColor,
-                borderColor: borderColor,
-              ),
-              const SizedBox(width: 6),
-              _buildLargeActionButton(
-                icon: Icons.restart_alt_rounded,
-                tooltip: "Reset Framing FOV",
-                onTap: _resetFov,
-                color: textColor,
-                borderColor: borderColor,
-              ),
-
-              if (_isFramingEnabled) ...[
-                const SizedBox(width: 10),
-                Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionRed.withValues(alpha: 0.5)
-                          : AstroColors.starGold.withValues(alpha: 0.5),
-                    ),
-                  ),
+        // Row 2: Zoom Controls Toolbar
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: Center(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildRotatorButton(
-                        icon: Icons.rotate_left_rounded,
-                        tooltip: "Rotate -15°",
-                        onTap: () => EquipmentManager.instance.rotateBy(-15),
+                      _buildLargeActionButton(
+                        icon: Icons.remove_rounded,
+                        tooltip: "Zoom Out (Wider FOV)",
+                        onTap: _zoomOut,
                         color: textColor,
+                        borderColor: borderColor,
                       ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          "${angle.toStringAsFixed(0)}°",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      _buildRotatorButton(
-                        icon: Icons.rotate_right_rounded,
-                        tooltip: "Rotate +15°",
-                        onTap: () => EquipmentManager.instance.rotateBy(15),
+                      const SizedBox(width: 8),
+                      _buildLargeActionButton(
+                        icon: Icons.add_rounded,
+                        tooltip: "Zoom In (Closer FOV)",
+                        onTap: _zoomIn,
                         color: textColor,
+                        borderColor: borderColor,
                       ),
-                      const SizedBox(width: 6),
-                      _buildTextActionButton(
-                        icon: Icons.auto_awesome_rounded,
-                        label: "Align",
-                        tooltip: "Auto-Align with Target Position Angle",
-                        onTap: _autoAlignWithTarget,
-                        accentColor: accentColor,
-                      ),
-                      const SizedBox(width: 6),
-                      _buildTextActionButton(
-                        icon: Icons.fit_screen_rounded,
-                        label: "Fit",
-                        tooltip: "Fit FOV to Sensor Size",
-                        onTap: _fitToSensor,
-                        accentColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                      const SizedBox(width: 8),
+                      _buildLargeActionButton(
+                        icon: Icons.restart_alt_rounded,
+                        tooltip: "Reset Framing FOV",
+                        onTap: _resetFov,
+                        color: textColor,
+                        borderColor: borderColor,
                       ),
                     ],
                   ),
                 ),
-              ],
-            ],
-          ),
+              ),
+            );
+          },
         ),
 
-        // Row 3: Active Rig Strip (When framing is on)
+        // Row 3: Framing Composition Controls (Rotate, Angle, Align, Fit)
+        if (_isFramingEnabled) ...[
+          const SizedBox(height: 8),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Center(
+                    child: Container(
+                      height: 46,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionSurfaceVariant
+                            : AstroColors.spaceDarkSurfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                              : AstroColors.starGold.withValues(alpha: 0.6),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildRotatorButton(
+                            icon: Icons.rotate_left_rounded,
+                            tooltip: "Rotate -15°",
+                            onTap: () => EquipmentManager.instance.rotateBy(-15),
+                            color: textColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Tooltip(
+                            message: "Sensor Rotation (tap to reset to 0°)",
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => EquipmentManager.instance.setCameraAngle(0),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                        .withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "${angle.toStringAsFixed(0)}°",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildRotatorButton(
+                            icon: Icons.rotate_right_rounded,
+                            tooltip: "Rotate +15°",
+                            onTap: () => EquipmentManager.instance.rotateBy(15),
+                            color: textColor,
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            width: 1,
+                            height: 22,
+                            color: borderColor.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 10),
+                          _buildTextActionButton(
+                            icon: Icons.auto_awesome_rounded,
+                            label: "Align",
+                            tooltip: "Auto-Align with Target Position Angle",
+                            onTap: _autoAlignWithTarget,
+                            accentColor: accentColor,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildTextActionButton(
+                            icon: Icons.fit_screen_rounded,
+                            label: "Fit",
+                            tooltip: "Fit FOV to Sensor Size",
+                            onTap: _fitToSensor,
+                            accentColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+
+        // Row 4: Active Rig Strip (When framing is on)
         if (_isFramingEnabled) ...[
           const SizedBox(height: 8),
           Material(
@@ -821,12 +875,32 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         ],
       );
     } else {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: imageViewport),
-          controlsPanel,
-        ],
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.hasBoundedHeight && constraints.maxHeight < 340) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: (constraints.maxHeight * 0.45).clamp(90.0, 200.0),
+                    child: imageViewport,
+                  ),
+                  controlsPanel,
+                ],
+              ),
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: imageViewport),
+              controlsPanel,
+            ],
+          );
+        },
       );
     }
   }
@@ -878,18 +952,18 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: widget.isRedNightMode
                   ? AstroColors.nightVisionSurfaceVariant
                   : AstroColors.spaceDarkSurfaceVariant,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: borderColor),
             ),
-            child: Icon(icon, size: 18, color: color),
+            child: Icon(icon, size: 22, color: color),
           ),
         ),
       ),
@@ -908,12 +982,16 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            width: 30,
-            height: 30,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
-            child: Icon(icon, size: 18, color: color),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 21, color: color),
           ),
         ),
       ),
@@ -933,23 +1011,25 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: accentColor.withValues(alpha: 0.5)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 15, color: accentColor),
-                const SizedBox(width: 4),
+                Icon(icon, size: 17, color: accentColor),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: accentColor,
                   ),
