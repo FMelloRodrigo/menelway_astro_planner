@@ -261,7 +261,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         : "${fovArcmin.toStringAsFixed(0)}'";
 
     final showPhoto = _imageBytes != null && _displayMode != PreviewDisplayMode.vectorOnly;
-    final showReticle = _displayMode != PreviewDisplayMode.photoOnly;
+    final isPhotoOnly = _displayMode == PreviewDisplayMode.photoOnly;
+    final showReticle = _displayMode == PreviewDisplayMode.photoWithReticle;
 
     final rig = EquipmentManager.instance.activeProfile;
     final angle = EquipmentManager.instance.cameraAngleDeg;
@@ -309,7 +310,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   target: widget.target,
                   fovDeg: _fovDeg,
                   isRedNightMode: widget.isRedNightMode,
-                  isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || !showPhoto,
+                  isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || (!showPhoto && !isPhotoOnly),
+                  isPhotoOnly: isPhotoOnly,
                   showReticle: showReticle,
                   showFraming: _isFramingEnabled,
                   equipment: rig,
@@ -620,7 +622,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     const SizedBox(width: 2),
                     _buildModeBtn(
                       icon: Icons.image_rounded,
-                      tooltip: "Photo Only",
+                      tooltip: "Photo Mode (Clean Image)",
                       isSelected: _displayMode == PreviewDisplayMode.photoOnly,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoOnly),
@@ -968,6 +970,7 @@ class TargetVectorPainter extends CustomPainter {
   final double fovDeg;
   final bool isRedNightMode;
   final bool isVectorOnly;
+  final bool isPhotoOnly;
   final bool showReticle;
   final bool showFraming;
   final EquipmentProfile? equipment;
@@ -981,6 +984,7 @@ class TargetVectorPainter extends CustomPainter {
     required this.fovDeg,
     required this.isRedNightMode,
     required this.isVectorOnly,
+    this.isPhotoOnly = false,
     required this.showReticle,
     this.showFraming = false,
     this.equipment,
@@ -992,6 +996,10 @@ class TargetVectorPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (isPhotoOnly && (!showFraming || equipment == null)) {
+      return;
+    }
+
     final center = Offset(size.width / 2, size.height / 2);
     final fovArcmin = fovDeg * 60.0;
     final minDim = math.min(size.width, size.height);
@@ -1038,120 +1046,123 @@ class TargetVectorPainter extends CustomPainter {
     }
 
     // 2. Draw Target Apparent Dimensions (Ellipse / Cloud / Cluster)
-    final majorArcmin = target.majorAxisArcmin;
-    final minorArcmin = target.surfaceBrightness != null && majorArcmin != null
-        ? majorArcmin * 0.65
-        : majorArcmin;
+    // Only in Vector mode or Photo + Reticle mode; in Photo Mode, do not draw target apparent vectors or circles.
+    if (!isPhotoOnly) {
+      final majorArcmin = target.majorAxisArcmin;
+      final minorArcmin = target.surfaceBrightness != null && majorArcmin != null
+          ? majorArcmin * 0.65
+          : majorArcmin;
 
-    if (majorArcmin != null && majorArcmin > 0) {
-      final radX = (majorArcmin / 2.0) * pixelsPerArcmin;
-      final radY = ((minorArcmin ?? majorArcmin) / 2.0) * pixelsPerArcmin;
+      if (majorArcmin != null && majorArcmin > 0) {
+        final radX = (majorArcmin / 2.0) * pixelsPerArcmin;
+        final radY = ((minorArcmin ?? majorArcmin) / 2.0) * pixelsPerArcmin;
 
-      canvas.save();
-      canvas.translate(targetCenter.dx, targetCenter.dy);
-      canvas.rotate(math.pi / 5.0);
+        canvas.save();
+        canvas.translate(targetCenter.dx, targetCenter.dy);
+        canvas.rotate(math.pi / 5.0);
 
-      final lowerType = target.objectType.toLowerCase();
+        final lowerType = target.objectType.toLowerCase();
 
-      if (lowerType.contains('galaxy')) {
-        // GALAXY
-        final haloPaint = Paint()
-          ..shader = RadialGradient(
-            colors: [
-              primaryColor.withValues(alpha: isVectorOnly ? 0.45 : 0.25),
-              primaryColor.withValues(alpha: 0.0),
-            ],
-            stops: const [0.2, 1.0],
-          ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
-        canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), haloPaint);
+        if (lowerType.contains('galaxy')) {
+          // GALAXY
+          final haloPaint = Paint()
+            ..shader = RadialGradient(
+              colors: [
+                primaryColor.withValues(alpha: isVectorOnly ? 0.45 : 0.25),
+                primaryColor.withValues(alpha: 0.0),
+              ],
+              stops: const [0.2, 1.0],
+            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), haloPaint);
 
-        final corePaint = Paint()
-          ..shader = RadialGradient(
-            colors: [
-              (isRedNightMode ? Colors.white : goldColor).withValues(alpha: 0.9),
-              primaryColor.withValues(alpha: 0.0),
-            ],
-          ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4));
-        canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4), corePaint);
+          final corePaint = Paint()
+            ..shader = RadialGradient(
+              colors: [
+                (isRedNightMode ? Colors.white : goldColor).withValues(alpha: 0.9),
+                primaryColor.withValues(alpha: 0.0),
+              ],
+            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4));
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4), corePaint);
 
-        final outlinePaint = Paint()
-          ..color = primaryColor.withValues(alpha: 0.6)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2;
-        canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
-      } else if (lowerType.contains('planetary')) {
-        // PLANETARY NEBULA
-        final ringPaint = Paint()
-          ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.deepSkyTeal).withValues(alpha: 0.7)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = math.max(2.0, radX * 0.25);
-        canvas.drawCircle(Offset.zero, radX, ringPaint);
+          final outlinePaint = Paint()
+            ..color = primaryColor.withValues(alpha: 0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2;
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
+        } else if (lowerType.contains('planetary')) {
+          // PLANETARY NEBULA
+          final ringPaint = Paint()
+            ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.deepSkyTeal).withValues(alpha: 0.7)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(2.0, radX * 0.25);
+          canvas.drawCircle(Offset.zero, radX, ringPaint);
 
-        final dwarfPaint = Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(Offset.zero, 1.8, dwarfPaint);
-      } else if (lowerType.contains('globular')) {
-        // GLOBULAR CLUSTER
-        final globPaint = Paint()
-          ..shader = RadialGradient(
-            colors: [
-              (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85),
-              goldColor.withValues(alpha: 0.4),
-              primaryColor.withValues(alpha: 0.0),
-            ],
-            stops: const [0.0, 0.4, 1.0],
-          ).createShader(Rect.fromCircle(center: Offset.zero, radius: radX));
-        canvas.drawCircle(Offset.zero, radX, globPaint);
+          final dwarfPaint = Paint()
+            ..color = Colors.white
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(Offset.zero, 1.8, dwarfPaint);
+        } else if (lowerType.contains('globular')) {
+          // GLOBULAR CLUSTER
+          final globPaint = Paint()
+            ..shader = RadialGradient(
+              colors: [
+                (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85),
+                goldColor.withValues(alpha: 0.4),
+                primaryColor.withValues(alpha: 0.0),
+              ],
+              stops: const [0.0, 0.4, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: radX));
+          canvas.drawCircle(Offset.zero, radX, globPaint);
 
-        final globBorder = Paint()
-          ..color = goldColor.withValues(alpha: 0.5)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0;
-        canvas.drawCircle(Offset.zero, radX, globBorder);
-      } else if (lowerType.contains('open cluster') || lowerType.contains('cluster')) {
-        // OPEN CLUSTER
-        final clusterBorder = Paint()
-          ..color = goldColor.withValues(alpha: 0.55)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0;
-        canvas.drawCircle(Offset.zero, radX, clusterBorder);
+          final globBorder = Paint()
+            ..color = goldColor.withValues(alpha: 0.5)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0;
+          canvas.drawCircle(Offset.zero, radX, globBorder);
+        } else if (lowerType.contains('open cluster') || lowerType.contains('cluster')) {
+          // OPEN CLUSTER
+          final clusterBorder = Paint()
+            ..color = goldColor.withValues(alpha: 0.55)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0;
+          canvas.drawCircle(Offset.zero, radX, clusterBorder);
 
-        final starP = Paint()..style = PaintingStyle.fill;
-        final cRand = math.Random(target.id * 7);
-        for (var i = 0; i < 18; i++) {
-          final r = math.sqrt(cRand.nextDouble()) * radX * 0.9;
-          final th = cRand.nextDouble() * 2 * math.pi;
-          starP.color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85);
-          canvas.drawCircle(Offset(r * math.cos(th), r * math.sin(th)), 1.2, starP);
+          final starP = Paint()..style = PaintingStyle.fill;
+          final cRand = math.Random(target.id * 7);
+          for (var i = 0; i < 18; i++) {
+            final r = math.sqrt(cRand.nextDouble()) * radX * 0.9;
+            final th = cRand.nextDouble() * 2 * math.pi;
+            starP.color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85);
+            canvas.drawCircle(Offset(r * math.cos(th), r * math.sin(th)), 1.2, starP);
+          }
+        } else {
+          // NEBULA / SUPERNOVA REMNANT
+          final nebPaint = Paint()
+            ..shader = RadialGradient(
+              colors: [
+                secondaryColor.withValues(alpha: isVectorOnly ? 0.5 : 0.3),
+                primaryColor.withValues(alpha: isVectorOnly ? 0.25 : 0.12),
+                primaryColor.withValues(alpha: 0.0),
+              ],
+              stops: const [0.0, 0.6, 1.0],
+            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), nebPaint);
+
+          final outlinePaint = Paint()
+            ..color = secondaryColor.withValues(alpha: 0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2;
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
         }
-      } else {
-        // NEBULA / SUPERNOVA REMNANT
-        final nebPaint = Paint()
-          ..shader = RadialGradient(
-            colors: [
-              secondaryColor.withValues(alpha: isVectorOnly ? 0.5 : 0.3),
-              primaryColor.withValues(alpha: isVectorOnly ? 0.25 : 0.12),
-              primaryColor.withValues(alpha: 0.0),
-            ],
-            stops: const [0.0, 0.6, 1.0],
-          ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
-        canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), nebPaint);
 
-        final outlinePaint = Paint()
-          ..color = secondaryColor.withValues(alpha: 0.6)
+        canvas.restore();
+      } else {
+        final pointPaint = Paint()
+          ..color = goldColor.withValues(alpha: 0.8)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.2;
-        canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
+        canvas.drawCircle(targetCenter, 6.0, pointPaint);
       }
-
-      canvas.restore();
-    } else {
-      final pointPaint = Paint()
-        ..color = goldColor.withValues(alpha: 0.8)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
-      canvas.drawCircle(targetCenter, 6.0, pointPaint);
     }
 
     // 3. Equipment Framing Simulator Sensor Frame Overlay
@@ -1162,8 +1173,8 @@ class TargetVectorPainter extends CustomPainter {
       final rectW = fovW * pixelsPerArcmin;
       final rectH = fovH * pixelsPerArcmin;
 
-      // If offset is non-zero, draw guide line and target catalog reticle
-      if (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0) {
+      // If offset is non-zero, draw guide line and target catalog reticle (only when reticle is enabled and not photo-only)
+      if (!isPhotoOnly && showReticle && (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0)) {
         final linePaint = Paint()
           ..color = goldColor.withValues(alpha: 0.35)
           ..style = PaintingStyle.stroke
@@ -1196,14 +1207,16 @@ class TargetVectorPainter extends CustomPainter {
         textPainter.paint(canvas, Offset(targetCenter.dx + 6, targetCenter.dy - 14));
       }
 
-      // Optical center crosshair at sensor center (viewport center)
-      final opticalCrossPaint = Paint()
-        ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.8)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2;
-      const optLen = 7.0;
-      canvas.drawLine(Offset(center.dx - optLen, center.dy), Offset(center.dx + optLen, center.dy), opticalCrossPaint);
-      canvas.drawLine(Offset(center.dx, center.dy - optLen), Offset(center.dx, center.dy + optLen), opticalCrossPaint);
+      // Optical center crosshair at sensor center (viewport center - only when reticle is enabled and not photo-only)
+      if (!isPhotoOnly && showReticle) {
+        final opticalCrossPaint = Paint()
+          ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+        const optLen = 7.0;
+        canvas.drawLine(Offset(center.dx - optLen, center.dy), Offset(center.dx + optLen, center.dy), opticalCrossPaint);
+        canvas.drawLine(Offset(center.dx, center.dy - optLen), Offset(center.dx, center.dy + optLen), opticalCrossPaint);
+      }
 
       canvas.save();
       canvas.translate(center.dx, center.dy);
@@ -1265,7 +1278,7 @@ class TargetVectorPainter extends CustomPainter {
     }
 
     // 4. Astrometric Reticle & Concentric Guides
-    if (showReticle) {
+    if (showReticle && !isPhotoOnly) {
       final reticlePaint = Paint()
         ..color = primaryColor.withValues(alpha: isVectorOnly ? 0.35 : 0.25)
         ..style = PaintingStyle.stroke
@@ -1288,14 +1301,16 @@ class TargetVectorPainter extends CustomPainter {
       canvas.drawLine(Offset(reticleCenter.dx, reticleCenter.dy + gap), Offset(reticleCenter.dx, reticleCenter.dy + gap + crossLen), crosshairPaint);
     }
 
-    // 5. Orientation Indicator (North at top, East at left)
-    _drawOrientation(canvas, size, primaryColor);
+    if (!isPhotoOnly) {
+      // 5. Orientation Indicator (North at top, East at left)
+      _drawOrientation(canvas, size, primaryColor);
 
-    // 6. Physical Scale Ruler Bar (Bottom Left)
-    _drawScaleBar(canvas, size, fovArcmin, pixelsPerArcmin, primaryColor);
+      // 6. Physical Scale Ruler Bar (Bottom Left)
+      _drawScaleBar(canvas, size, fovArcmin, pixelsPerArcmin, primaryColor);
 
-    // 7. Apparent Size Label (Bottom Right)
-    _drawApparentSizeLabel(canvas, size, primaryColor);
+      // 7. Apparent Size Label (Bottom Right)
+      _drawApparentSizeLabel(canvas, size, primaryColor);
+    }
   }
 
   void _drawOrientation(Canvas canvas, Size size, Color color) {
@@ -1399,6 +1414,7 @@ class TargetVectorPainter extends CustomPainter {
         oldDelegate.fovDeg != fovDeg ||
         oldDelegate.isRedNightMode != isRedNightMode ||
         oldDelegate.isVectorOnly != isVectorOnly ||
+        oldDelegate.isPhotoOnly != isPhotoOnly ||
         oldDelegate.showReticle != showReticle ||
         oldDelegate.showFraming != showFraming ||
         oldDelegate.equipment?.id != equipment?.id ||

@@ -184,5 +184,42 @@ void main() {
       await tester.tap(find.text('Copy Info'));
       await tester.pump();
     });
+
+    testWidgets('Photo Mode switches painter to isPhotoOnly and hides reticle/overlays', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TargetPreviewCanvas(
+              target: testTarget,
+              isRedNightMode: false,
+              height: 300,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Find initial TargetVectorPainter in default photoWithReticle mode
+      var customPaint = tester.widget<CustomPaint>(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is TargetVectorPainter),
+      );
+      var painter = customPaint.painter as TargetVectorPainter;
+      expect(painter.isPhotoOnly, isFalse);
+      expect(painter.showReticle, isTrue);
+
+      // Tap Photo Mode button
+      final photoModeBtn = find.byTooltip('Photo Mode (Clean Image)');
+      expect(photoModeBtn, findsOneWidget);
+      await tester.tap(photoModeBtn);
+      await tester.pump();
+
+      // Check updated painter state
+      customPaint = tester.widget<CustomPaint>(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is TargetVectorPainter),
+      );
+      painter = customPaint.painter as TargetVectorPainter;
+      expect(painter.isPhotoOnly, isTrue);
+      expect(painter.showReticle, isFalse);
+    });
   });
 }
