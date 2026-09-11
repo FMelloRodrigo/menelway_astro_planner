@@ -221,5 +221,60 @@ void main() {
       expect(painter.isPhotoOnly, isTrue);
       expect(painter.showReticle, isFalse);
     });
+
+    testWidgets('EquipmentFramingDialog auto-aligns to target and fits to sensor upon entering and when a new rig is selected', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      // Start with angle 0.0 and ensure multiple profiles exist
+      EquipmentManager.instance.setCameraAngle(0.0);
+      expect(EquipmentManager.instance.cameraAngleDeg, 0.0);
+      expect(EquipmentManager.instance.profiles.length, greaterThan(1));
+
+      final initialRig = EquipmentManager.instance.activeProfile;
+      final secondProfile = EquipmentManager.instance.profiles.firstWhere((p) => p.id != initialRig.id);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: EquipmentFramingDialog(
+              target: testTarget,
+              isRedNightMode: false,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // 1. Should have auto-aligned to target (35.0°) and fit to sensor FOV as soon as user entered
+      expect(EquipmentManager.instance.cameraAngleDeg, 35.0);
+      final canvasState = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+      final expectedInitialFov = (initialRig.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
+      expect(canvasState.fovDeg, closeTo(expectedInitialFov, 0.01));
+
+      // Manually change angle away from 35°
+      EquipmentManager.instance.setCameraAngle(90.0);
+      expect(EquipmentManager.instance.cameraAngleDeg, 90.0);
+
+      // 2. Switch rig using popup menu
+      final rigsDropdown = find.widgetWithText(Container, 'Rigs');
+      expect(rigsDropdown, findsOneWidget);
+      await tester.tap(rigsDropdown);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final secondProfileItem = find.text(secondProfile.name).last;
+      await tester.tap(secondProfileItem);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Verify active rig switched, angle auto-aligned back to 35.0°, and FOV fit to second sensor
+      expect(EquipmentManager.instance.activeProfile.id, secondProfile.id);
+      expect(EquipmentManager.instance.cameraAngleDeg, 35.0);
+      final expectedSecondFov = (secondProfile.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
+      expect(canvasState.fovDeg, closeTo(expectedSecondFov, 0.01));
+    });
   });
 }

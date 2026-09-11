@@ -26,13 +26,17 @@ class EquipmentFramingDialog extends StatefulWidget {
 class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
   final GlobalKey<TargetPreviewCanvasState> _canvasKey = GlobalKey<TargetPreviewCanvasState>();
   double _panStepArcmin = 5.0;
+  String _lastActiveProfileId = '';
 
   @override
   void initState() {
     super.initState();
+    _lastActiveProfileId = EquipmentManager.instance.activeProfile.id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         EquipmentManager.instance.resetPan();
+        _autoAlignWithTarget();
+        _fitToSensor();
       }
     });
     EquipmentManager.instance.addListener(_onEquipmentChanged);
@@ -45,7 +49,18 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
   }
 
   void _onEquipmentChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final currentProfileId = EquipmentManager.instance.activeProfile.id;
+    if (currentProfileId != _lastActiveProfileId) {
+      _lastActiveProfileId = currentProfileId;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _autoAlignWithTarget();
+          _fitToSensor();
+        }
+      });
+    }
+    setState(() {});
   }
 
   String _formatRa(double hours) {
@@ -194,7 +209,12 @@ Sampling: ${rig.samplingCategory}
                     ),
                     initialValue: rig.id,
                     onSelected: (id) {
+                      final isNew = id != EquipmentManager.instance.activeProfile.id;
                       EquipmentManager.instance.setActiveProfile(id);
+                      if (isNew) {
+                        _autoAlignWithTarget();
+                        _fitToSensor();
+                      }
                     },
                     itemBuilder: (ctx) => EquipmentManager.instance.profiles.map((p) {
                       return PopupMenuItem<String>(

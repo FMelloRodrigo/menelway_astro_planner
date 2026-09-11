@@ -54,12 +54,19 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   double _lastObservedPanX = 0.0;
   double _lastObservedPanY = 0.0;
   int _imageLoadRequestId = 0;
+  String _lastActiveProfileId = '';
 
   @override
   void initState() {
     super.initState();
     _isFramingEnabled = widget.initialFramingEnabled;
-    _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
+    _lastActiveProfileId = EquipmentManager.instance.activeProfile.id;
+    if (_isFramingEnabled) {
+      final rig = EquipmentManager.instance.activeProfile;
+      _fovDeg = (rig.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
+    } else {
+      _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
+    }
     _imageBasePanX = EquipmentManager.instance.panOffsetArcminX;
     _imageBasePanY = EquipmentManager.instance.panOffsetArcminY;
     _lastObservedPanX = _imageBasePanX;
@@ -77,6 +84,14 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
   void _onEquipmentStateChanged() {
     if (!mounted) return;
+
+    final currentProfileId = EquipmentManager.instance.activeProfile.id;
+    if (currentProfileId != _lastActiveProfileId) {
+      _lastActiveProfileId = currentProfileId;
+      if (_isFramingEnabled) {
+        _fitToSensor();
+      }
+    }
 
     final currentPanX = EquipmentManager.instance.panOffsetArcminX;
     final currentPanY = EquipmentManager.instance.panOffsetArcminY;
@@ -117,6 +132,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
       _loadImage();
     }
   }
+
+  /// Current Field of View in degrees
+  double get fovDeg => _fovDeg;
 
   /// Allows external callers (e.g. Fit to Sensor) to set custom FOV
   void setCustomFov(double fovDeg) {
