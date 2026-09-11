@@ -6,12 +6,14 @@ import '../core/catalog_manager.dart';
 import '../core/equipment_manager.dart';
 import '../core/geocoding_service.dart';
 import '../core/settings_service.dart';
+import '../core/favorites_manager.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
 import 'equipment_dialog.dart';
+import 'favorites_view.dart';
 import 'observing_lists_view.dart';
 import 'planner_view.dart';
 import 'target_search_view.dart';
@@ -53,6 +55,12 @@ class _MainScaffoldState extends State<MainScaffold> {
     _bootstrap();
   }
 
+  @override
+  void dispose() {
+    FavoritesManager.instance.removeListener(_onFavoritesChanged);
+    super.dispose();
+  }
+
   Future<void> _bootstrap() async {
     try {
       final dbPath = await CatalogManager.getDatabasePath();
@@ -88,6 +96,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         }
         _observingLists = AstroBridge.instance.getObservingLists();
       }
+
+      FavoritesManager.instance.init(widget.initialSettings?.favorites);
+      FavoritesManager.instance.addListener(_onFavoritesChanged);
 
       setState(() {
         _isInitializing = false;
@@ -136,6 +147,11 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
+  void _onFavoritesChanged() {
+    _saveSettings();
+    if (mounted) setState(() {});
+  }
+
   void _saveSettings() {
     SettingsService.saveSettings(
       filters: _filters,
@@ -143,6 +159,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       observingLists: _observingLists,
       equipmentProfiles: EquipmentManager.instance.profiles,
       activeEquipmentProfileId: EquipmentManager.instance.activeProfileId,
+      favorites: FavoritesManager.instance.favorites,
     );
   }
 
@@ -284,10 +301,13 @@ class _MainScaffoldState extends State<MainScaffold> {
     // 2. Clear SQLite user lists and items
     AstroBridge.instance.clearAllObservingLists();
 
-    // 3. Reset night mode if enabled
+    // 3. Clear favorites
+    FavoritesManager.instance.clear();
+
+    // 4. Reset night mode if enabled
     widget.onResetNightMode?.call();
 
-    // 4. Reset in-memory filters
+    // 5. Reset in-memory filters
     setState(() {
       _filters = FilterState();
       _observingLists = [];
@@ -1271,6 +1291,19 @@ class _MainScaffoldState extends State<MainScaffold> {
                   selectedIcon: Icon(Icons.playlist_play_rounded, color: accentColor),
                   label: const Text("Observing Lists"),
                 ),
+                NavigationRailDestination(
+                  icon: Icon(
+                    Icons.favorite_rounded,
+                    color: _selectedTabIndex == 3
+                        ? (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
+                  selectedIcon: Icon(
+                    Icons.favorite_rounded,
+                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                  ),
+                  label: const Text("Favorites"),
+                ),
               ],
             ),
 
@@ -1316,7 +1349,8 @@ class _MainScaffoldState extends State<MainScaffold> {
                           _runFiltering();
                         },
                       )
-                    : ObservingListsView(
+                    : _selectedTabIndex == 2
+                        ? ObservingListsView(
                         lists: _observingLists,
                         isRedNightMode: widget.isRedNightMode,
                         onCreateList: (name, desc, date) {
@@ -1334,6 +1368,20 @@ class _MainScaffoldState extends State<MainScaffold> {
                           _refreshObservingLists();
                           _saveSettings();
                         },
+                      )
+                    : FavoritesView(
+                        night: _nightSummary,
+                        filters: _filters,
+                        isRedNightMode: widget.isRedNightMode,
+                        availableLists: _observingLists,
+                        onAddToList: (listId, dsoId, notes) {
+                          AstroBridge.instance.addTargetToList(listId, dsoId, notes);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                        onExploreTargets: () {
+                          setState(() => _selectedTabIndex = 0);
+                        },
                       ),
           ),
         ],
@@ -1343,6 +1391,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 ),
       bottomNavigationBar: !isWide
           ? BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
               backgroundColor: widget.isRedNightMode
                   ? AstroColors.nightVisionSurface
                   : AstroColors.spaceDarkSurface,
@@ -1362,6 +1411,10 @@ class _MainScaffoldState extends State<MainScaffold> {
                 BottomNavigationBarItem(
                   icon: Icon(Icons.playlist_play_rounded),
                   label: "Observing Lists",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.favorite_rounded),
+                  label: "Favorites",
                 ),
               ],
             )

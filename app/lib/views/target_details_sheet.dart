@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../core/astro_bridge.dart';
 import '../core/catalog_manager.dart';
+import '../core/favorites_manager.dart';
 import '../models/altitude_point.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
@@ -56,8 +57,19 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   @override
   void initState() {
     super.initState();
+    FavoritesManager.instance.addListener(_onFavoritesChanged);
     _loadCurve();
     _loadYearlyVisibility();
+  }
+
+  @override
+  void dispose() {
+    FavoritesManager.instance.removeListener(_onFavoritesChanged);
+    super.dispose();
+  }
+
+  void _onFavoritesChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -254,6 +266,60 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       onPressed: _showAddToListDialog,
     );
 
+    final isFav = FavoritesManager.instance.isFavorite(widget.target.id);
+
+    final favBtn = Tooltip(
+      message: isFav ? "Remove from Favorites" : "Add to Favorites",
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          FavoritesManager.instance.toggleFavorite(widget.target);
+          final nowFav = FavoritesManager.instance.isFavorite(widget.target.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                nowFav
+                    ? "Added ${widget.target.displayName} to Favorites"
+                    : "Removed ${widget.target.displayName} from Favorites",
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isFav
+                ? (widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.25)
+                    : Colors.pinkAccent.withValues(alpha: 0.18))
+                : (widget.isRedNightMode
+                    ? AstroColors.nightVisionSurfaceVariant
+                    : const Color(0xFF222F42)),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isFav
+                  ? (widget.isRedNightMode
+                      ? AstroColors.nightVisionRed
+                      : Colors.pinkAccent.withValues(alpha: 0.7))
+                  : (widget.isRedNightMode
+                      ? AstroColors.nightVisionBorder
+                      : Colors.white.withValues(alpha: 0.3)),
+              width: 1.4,
+            ),
+          ),
+          child: Icon(
+            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            size: 20,
+            color: isFav
+                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
+                : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.85)),
+          ),
+        ),
+      ),
+    );
+
     final closeBtn = effectiveClose != null
         ? Tooltip(
             message: "Close details (Esc)",
@@ -331,18 +397,23 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(height: 6),
               badgesWrap,
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                  label: const Text("Add to Observing List"),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.playlist_add_rounded, size: 18),
+                      label: const Text("Add to Observing List"),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: _showAddToListDialog,
+                    ),
                   ),
-                  onPressed: _showAddToListDialog,
-                ),
+                  const SizedBox(width: 8),
+                  favBtn,
+                ],
               ),
             ] else ...[
               // Desktop Header
@@ -367,6 +438,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                     ),
                   ),
                   addToListBtn,
+                  const SizedBox(width: 8),
+                  favBtn,
                   if (closeBtn != null) ...[
                     const SizedBox(width: 8),
                     closeBtn,
@@ -452,37 +525,49 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildMetric(
-                          "Peak Altitude",
-                          "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
-                          Icons.trending_up_rounded,
+                        Expanded(
+                          child: _buildMetric(
+                            "Peak Altitude",
+                            "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
+                            Icons.trending_up_rounded,
+                          ),
                         ),
-                        _buildMetric(
-                          "Transit Time",
-                          DateFormat('HH:mm').format(widget.target.transitTime),
-                          Icons.schedule_rounded,
+                        Expanded(
+                          child: _buildMetric(
+                            "Transit Time",
+                            DateFormat('HH:mm').format(widget.target.transitTime),
+                            Icons.schedule_rounded,
+                          ),
                         ),
-                        _buildMetric(
-                          "Visible Duration",
-                          "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
-                          Icons.timer_outlined,
+                        Expanded(
+                          child: _buildMetric(
+                            "Visible Duration",
+                            "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
+                            Icons.timer_outlined,
+                          ),
                         ),
-                        _buildMetric(
-                          "Moon Distance",
-                          "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
-                          Icons.brightness_2_outlined,
+                        Expanded(
+                          child: _buildMetric(
+                            "Moon Distance",
+                            "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
+                            Icons.brightness_2_outlined,
+                          ),
                         ),
-                        _buildMetric(
-                          "Magnitude",
-                          widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
-                          Icons.auto_awesome_rounded,
+                        Expanded(
+                          child: _buildMetric(
+                            "Magnitude",
+                            widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
+                            Icons.auto_awesome_rounded,
+                          ),
                         ),
-                        _buildMetric(
-                          "Apparent Size",
-                          widget.target.majorAxisArcmin != null
-                              ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
-                              : "N/A",
-                          Icons.aspect_ratio_rounded,
+                        Expanded(
+                          child: _buildMetric(
+                            "Apparent Size",
+                            widget.target.majorAxisArcmin != null
+                                ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
+                                : "N/A",
+                            Icons.aspect_ratio_rounded,
+                          ),
                         ),
                       ],
                     ),

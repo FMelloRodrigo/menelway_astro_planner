@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import '../models/equipment_profile.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
+import '../models/target_item.dart';
 
 class AppSettingsData {
   final FilterState filters;
@@ -14,6 +15,7 @@ class AppSettingsData {
   final List<ObservingListModel>? observingListsBackup;
   final List<EquipmentProfile>? equipmentProfiles;
   final String? activeEquipmentProfileId;
+  final List<TargetItem>? favorites;
 
   AppSettingsData({
     required this.filters,
@@ -23,6 +25,7 @@ class AppSettingsData {
     this.observingListsBackup,
     this.equipmentProfiles,
     this.activeEquipmentProfileId,
+    this.favorites,
   });
 }
 
@@ -130,6 +133,13 @@ class SettingsService {
       }
       final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
 
+      List<TargetItem>? favorites;
+      if (data.containsKey('favorites') && data['favorites'] is List) {
+        favorites = (data['favorites'] as List<dynamic>)
+            .map((e) => TargetItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+
       return AppSettingsData(
         filters: filters,
         isRedNightMode: isRedNightMode,
@@ -138,13 +148,14 @@ class SettingsService {
         observingListsBackup: observingBackup,
         equipmentProfiles: equipmentProfiles,
         activeEquipmentProfileId: activeEquipmentProfileId,
+        favorites: favorites,
       );
     } catch (_) {
       return AppSettingsData(filters: FilterState());
     }
   }
 
-  /// Saves current filters, location, night mode, observing lists backup, and equipment profiles.
+  /// Saves current filters, location, night mode, observing lists backup, equipment profiles, and favorites.
   static Future<void> saveSettings({
     required FilterState filters,
     required bool isRedNightMode,
@@ -153,6 +164,7 @@ class SettingsService {
     List<ObservingListModel>? observingLists,
     List<EquipmentProfile>? equipmentProfiles,
     String? activeEquipmentProfileId,
+    List<TargetItem>? favorites,
   }) async {
     try {
       final file = await getSettingsFile();
@@ -177,6 +189,9 @@ class SettingsService {
       }
       if (activeEquipmentProfileId != null) {
         data['activeEquipmentProfileId'] = activeEquipmentProfileId;
+      }
+      if (favorites != null) {
+        data['favorites'] = favorites.map((t) => t.toJson()).toList();
       }
 
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
