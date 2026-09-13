@@ -47,7 +47,7 @@ class _AstroTargetsAppState extends State<AstroTargetsApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Astro Targets Planner',
+      title: 'Menelway Astro Planner',
       debugShowCheckedModeBanner: false,
       theme: _isRedNightMode ? AstroTheme.redNightVisionTheme() : AstroTheme.darkTheme(),
       home: MainScaffold(

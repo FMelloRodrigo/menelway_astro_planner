@@ -80,9 +80,15 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           _isLoadingImage = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() => _isLoadingImage = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Could not decode image: please ensure it is a valid JPG, PNG, or WebP file ($e)"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }

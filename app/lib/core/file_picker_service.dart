@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 /// Platform-agnostic image file picker that works on Windows desktop without
@@ -8,11 +9,13 @@ class FilePickerService {
       try {
         final psCommand = [
           '-NoProfile',
+          '-STA',
           '-Command',
           '''
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Add-Type -AssemblyName System.Windows.Forms
 \$dlg = New-Object System.Windows.Forms.OpenFileDialog
-\$dlg.Filter = "Panoramic / Image Files (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png|All Files (*.*)|*.*"
+\$dlg.Filter = "Panoramic / Image Files (*.jpg;*.jpeg;*.png;*.webp)|*.jpg;*.jpeg;*.png;*.webp|All Files (*.*)|*.*"
 \$dlg.Title = "Select Panorama Background Image"
 \$dlg.RestoreDirectory = \$true
 if (\$dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -21,7 +24,12 @@ if (\$dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
 ''',
         ];
 
-        final result = await Process.run('powershell', psCommand);
+        final result = await Process.run(
+          'powershell',
+          psCommand,
+          stdoutEncoding: utf8,
+          stderrEncoding: utf8,
+        );
         if (result.exitCode == 0) {
           final path = result.stdout.toString().trim();
           if (path.isNotEmpty && File(path).existsSync()) {

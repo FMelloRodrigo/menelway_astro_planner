@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.astrotargets.app" "\0"
-            VALUE "FileDescription", "app" "\0"
+            VALUE "CompanyName", "Menelway" "\0"
+            VALUE "FileDescription", "Menelway Astro Planner" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.astrotargets.app. All rights reserved." "\0"
-            VALUE "OriginalFilename", "app.exe" "\0"
-            VALUE "ProductName", "app" "\0"
+            VALUE "InternalName", "menelway_astro_planner" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Menelway Astro Planner. All rights reserved." "\0"
+            VALUE "OriginalFilename", "menelway_astro_planner.exe" "\0"
+            VALUE "ProductName", "Menelway Astro Planner" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

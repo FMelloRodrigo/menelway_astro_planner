@@ -831,7 +831,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "ASTRO TARGETS",
+                  "MENELWAY",
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
@@ -840,7 +840,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   ),
                 ),
                 Text(
-                  "Deep-Sky Imaging Planner",
+                  "Astro Target & Session Planner",
                   style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                 ),
               ],
