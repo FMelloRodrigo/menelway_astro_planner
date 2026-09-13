@@ -1,5 +1,35 @@
+class HorizonPointModel {
+  final double azimuth; // 0..360 deg
+  final double altitude; // 0..90 deg
+
+  const HorizonPointModel({
+    required this.azimuth,
+    required this.altitude,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'azimuth': azimuth,
+    'altitude': altitude,
+  };
+
+  factory HorizonPointModel.fromJson(Map<String, dynamic> json) {
+    return HorizonPointModel(
+      azimuth: (json['azimuth'] as num?)?.toDouble() ?? 0.0,
+      altitude: (json['altitude'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  HorizonPointModel copyWith({double? azimuth, double? altitude}) {
+    return HorizonPointModel(
+      azimuth: azimuth ?? this.azimuth,
+      altitude: altitude ?? this.altitude,
+    );
+  }
+}
+
 class FilterState {
   double minAltitude;
+  double maxAltitude;
   double minDurationHours;
   DateTime date;
   double minMoonSeparation;
@@ -13,6 +43,15 @@ class FilterState {
   Set<String> selectedCatalogs;
   Set<String> selectedObjectTypes;
   String searchQuery;
+
+  // Custom Horizon Profile
+  bool useCustomHorizon;
+  List<HorizonPointModel> horizonPoints;
+  String? panoramaImagePath;
+  double panoramaAzimuthOffset; // 0..360 degrees to align North
+  double panoramaAltitudeOffset; // -20..+20 degrees for ground baseline
+  double panoramaAltitudeScale; // 0.5..2.0 vertical stretch
+  double panoramaOpacity; // 0.1..1.0 transparency
 
   // Observing Time Window (Telescopius rule)
   bool useCustomTimeWindow;
@@ -29,6 +68,7 @@ class FilterState {
 
   FilterState({
     this.minAltitude = 30.0,
+    this.maxAltitude = 90.0,
     this.minDurationHours = 2.0,
     DateTime? date,
     this.minMoonSeparation = 15.0,
@@ -42,6 +82,13 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     this.searchQuery = '',
+    this.useCustomHorizon = false,
+    List<HorizonPointModel>? horizonPoints,
+    this.panoramaImagePath,
+    this.panoramaAzimuthOffset = 0.0,
+    this.panoramaAltitudeOffset = 0.0,
+    this.panoramaAltitudeScale = 1.0,
+    this.panoramaOpacity = 0.6,
     this.useCustomTimeWindow = false,
     this.customStartHour = 21,
     this.customStartMinute = 0,
@@ -52,6 +99,7 @@ class FilterState {
     this.observerElevation = 10.0,
     this.observerLocationName = 'New York, USA',
   })  : date = date ?? DateTime.now(),
+        horizonPoints = horizonPoints ?? [],
         selectedCatalogs = selectedCatalogs ?? {'Messier', 'Caldwell'},
         selectedObjectTypes = selectedObjectTypes ?? {
           'Galaxy',
@@ -111,6 +159,7 @@ class FilterState {
 
   FilterState copyWith({
     double? minAltitude,
+    double? maxAltitude,
     double? minDurationHours,
     DateTime? date,
     double? minMoonSeparation,
@@ -124,6 +173,13 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     String? searchQuery,
+    bool? useCustomHorizon,
+    List<HorizonPointModel>? horizonPoints,
+    String? panoramaImagePath,
+    double? panoramaAzimuthOffset,
+    double? panoramaAltitudeOffset,
+    double? panoramaAltitudeScale,
+    double? panoramaOpacity,
     bool? useCustomTimeWindow,
     int? customStartHour,
     int? customStartMinute,
@@ -136,6 +192,7 @@ class FilterState {
   }) {
     return FilterState(
       minAltitude: minAltitude ?? this.minAltitude,
+      maxAltitude: maxAltitude ?? this.maxAltitude,
       minDurationHours: minDurationHours ?? this.minDurationHours,
       date: date ?? this.date,
       minMoonSeparation: minMoonSeparation ?? this.minMoonSeparation,
@@ -149,6 +206,13 @@ class FilterState {
       selectedCatalogs: selectedCatalogs ?? Set.from(this.selectedCatalogs),
       selectedObjectTypes: selectedObjectTypes ?? Set.from(this.selectedObjectTypes),
       searchQuery: searchQuery ?? this.searchQuery,
+      useCustomHorizon: useCustomHorizon ?? this.useCustomHorizon,
+      horizonPoints: horizonPoints ?? List.from(this.horizonPoints),
+      panoramaImagePath: panoramaImagePath ?? this.panoramaImagePath,
+      panoramaAzimuthOffset: panoramaAzimuthOffset ?? this.panoramaAzimuthOffset,
+      panoramaAltitudeOffset: panoramaAltitudeOffset ?? this.panoramaAltitudeOffset,
+      panoramaAltitudeScale: panoramaAltitudeScale ?? this.panoramaAltitudeScale,
+      panoramaOpacity: panoramaOpacity ?? this.panoramaOpacity,
       useCustomTimeWindow: useCustomTimeWindow ?? this.useCustomTimeWindow,
       customStartHour: customStartHour ?? this.customStartHour,
       customStartMinute: customStartMinute ?? this.customStartMinute,
@@ -163,6 +227,7 @@ class FilterState {
 
   Map<String, dynamic> toJson() => {
     'minAltitude': minAltitude,
+    'maxAltitude': maxAltitude,
     'minDurationHours': minDurationHours,
     'minMoonSeparation': minMoonSeparation,
     'minAzimuth': minAzimuth,
@@ -175,6 +240,13 @@ class FilterState {
     'selectedCatalogs': selectedCatalogs.toList(),
     'selectedObjectTypes': selectedObjectTypes.toList(),
     'searchQuery': searchQuery,
+    'useCustomHorizon': useCustomHorizon,
+    'horizonPoints': horizonPoints.map((p) => p.toJson()).toList(),
+    'panoramaImagePath': panoramaImagePath,
+    'panoramaAzimuthOffset': panoramaAzimuthOffset,
+    'panoramaAltitudeOffset': panoramaAltitudeOffset,
+    'panoramaAltitudeScale': panoramaAltitudeScale,
+    'panoramaOpacity': panoramaOpacity,
     'useCustomTimeWindow': useCustomTimeWindow,
     'customStartHour': customStartHour,
     'customStartMinute': customStartMinute,
@@ -189,6 +261,7 @@ class FilterState {
   factory FilterState.fromJson(Map<String, dynamic> json) {
     return FilterState(
       minAltitude: (json['minAltitude'] as num?)?.toDouble() ?? 30.0,
+      maxAltitude: (json['maxAltitude'] as num?)?.toDouble() ?? 90.0,
       minDurationHours: (json['minDurationHours'] as num?)?.toDouble() ?? 2.0,
       minMoonSeparation: (json['minMoonSeparation'] as num?)?.toDouble() ?? 15.0,
       minAzimuth: (json['minAzimuth'] as num?)?.toDouble() ?? 0.0,
@@ -206,6 +279,16 @@ class FilterState {
           ?.map((e) => e.toString())
           .toSet(),
       searchQuery: json['searchQuery'] as String? ?? '',
+      useCustomHorizon: json['useCustomHorizon'] as bool? ?? false,
+      horizonPoints: (json['horizonPoints'] as List<dynamic>?)
+              ?.map((p) => HorizonPointModel.fromJson(p as Map<String, dynamic>))
+              .toList() ??
+          [],
+      panoramaImagePath: json['panoramaImagePath'] as String?,
+      panoramaAzimuthOffset: (json['panoramaAzimuthOffset'] as num?)?.toDouble() ?? 0.0,
+      panoramaAltitudeOffset: (json['panoramaAltitudeOffset'] as num?)?.toDouble() ?? 0.0,
+      panoramaAltitudeScale: (json['panoramaAltitudeScale'] as num?)?.toDouble() ?? 1.0,
+      panoramaOpacity: (json['panoramaOpacity'] as num?)?.toDouble() ?? 0.6,
       useCustomTimeWindow: json['useCustomTimeWindow'] as bool? ?? false,
       customStartHour: json['customStartHour'] as int? ?? 21,
       customStartMinute: json['customStartMinute'] as int? ?? 0,

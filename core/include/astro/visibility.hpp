@@ -20,6 +20,7 @@ struct AltitudePoint {
 
 struct VisibilityCriteria {
     units::Degrees min_altitude{30.0};
+    units::Degrees max_altitude{90.0};
     double min_duration_hours{2.0};
     time::JulianDate window_start{0.0};
     time::JulianDate window_end{0.0};

@@ -46,6 +46,7 @@ typedef struct {
 
 typedef struct {
     double min_altitude_deg;
+    double max_altitude_deg;
     double min_duration_hours;
     int64_t window_start_utc;
     int64_t window_end_utc;
@@ -68,6 +69,10 @@ typedef struct {
     int32_t custom_end_hour;
     int32_t custom_end_minute;
     int32_t utc_offset_minutes;
+    const double* horizon_azimuths;
+    const double* horizon_altitudes;
+    int32_t horizon_points_count;
+    int32_t use_custom_horizon;
 } AstroFilterCriteria;
 
 typedef struct {

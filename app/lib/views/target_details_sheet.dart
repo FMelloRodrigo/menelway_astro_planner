@@ -593,6 +593,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 night: widget.night,
                 targetName: widget.target.displayName,
                 minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
+                maxAltitudeThreshold: widget.filters?.maxAltitude ?? 90.0,
                 customWindowStart: (widget.filters?.useCustomTimeWindow == true)
                     ? widget.filters!.getWindowStart(widget.filters!.date)
                     : null,

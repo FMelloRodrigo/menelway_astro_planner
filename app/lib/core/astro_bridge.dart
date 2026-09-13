@@ -361,6 +361,46 @@ class AstroBridge {
     }
   }
 
+  void _populateCriteriaHorizon(
+    Pointer<AstroFilterCriteria> critPtr,
+    FilterState? filters,
+    List<Pointer<NativeType>> allocatedPointers,
+  ) {
+    if (filters == null) {
+      critPtr.ref.maxAltitudeDeg = 90.0;
+      critPtr.ref.useCustomHorizon = 0;
+      critPtr.ref.horizonPointsCount = 0;
+      critPtr.ref.horizonAzimuths = nullptr;
+      critPtr.ref.horizonAltitudes = nullptr;
+      return;
+    }
+
+    critPtr.ref.maxAltitudeDeg = filters.maxAltitude;
+
+    if (filters.useCustomHorizon && filters.horizonPoints.isNotEmpty) {
+      final count = filters.horizonPoints.length;
+      final azPtr = calloc<Double>(count);
+      final altPtr = calloc<Double>(count);
+      allocatedPointers.add(azPtr);
+      allocatedPointers.add(altPtr);
+
+      for (int i = 0; i < count; i++) {
+        azPtr[i] = filters.horizonPoints[i].azimuth;
+        altPtr[i] = filters.horizonPoints[i].altitude;
+      }
+
+      critPtr.ref.useCustomHorizon = 1;
+      critPtr.ref.horizonPointsCount = count;
+      critPtr.ref.horizonAzimuths = azPtr;
+      critPtr.ref.horizonAltitudes = altPtr;
+    } else {
+      critPtr.ref.useCustomHorizon = 0;
+      critPtr.ref.horizonPointsCount = 0;
+      critPtr.ref.horizonAzimuths = nullptr;
+      critPtr.ref.horizonAltitudes = nullptr;
+    }
+  }
+
   List<TargetItem> filterTargets({
     required FilterState filters,
     required NightSummary night,
@@ -370,6 +410,7 @@ class AstroBridge {
 
     final obsPtr = calloc<AstroObserver>();
     final critPtr = calloc<AstroFilterCriteria>();
+    final allocatedPointers = <Pointer<NativeType>>[];
 
     Pointer<Utf8>? catUtf8;
     Pointer<Utf8>? typeUtf8;
@@ -431,6 +472,7 @@ class AstroBridge {
       critPtr.ref.customEndHour = filters.customEndHour;
       critPtr.ref.customEndMinute = filters.customEndMinute;
       critPtr.ref.utcOffsetMinutes = filters.date.timeZoneOffset.inMinutes;
+      _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
 
       final listPtr = _filterTargets(_engine!, obsPtr, critPtr, stepMinutes);
       if (listPtr == nullptr) return [];
@@ -497,6 +539,9 @@ class AstroBridge {
       if (catUtf8 != null) calloc.free(catUtf8);
       if (typeUtf8 != null) calloc.free(typeUtf8);
       if (searchUtf8 != null) calloc.free(searchUtf8);
+      for (final p in allocatedPointers) {
+        calloc.free(p);
+      }
       calloc.free(obsPtr);
       calloc.free(critPtr);
     }
@@ -512,6 +557,7 @@ class AstroBridge {
 
     final obsPtr = calloc<AstroObserver>();
     final critPtr = calloc<AstroFilterCriteria>();
+    final allocatedPointers = <Pointer<NativeType>>[];
 
     Pointer<Utf8>? catUtf8;
     Pointer<Utf8>? typeUtf8;
@@ -552,6 +598,7 @@ class AstroBridge {
       critPtr.ref.customEndHour = filters.customEndHour;
       critPtr.ref.customEndMinute = filters.customEndMinute;
       critPtr.ref.utcOffsetMinutes = DateTime.now().timeZoneOffset.inMinutes;
+      _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
 
       final startUtc = periodStart.toUtc().millisecondsSinceEpoch ~/ 1000;
       final endUtc = periodEnd.toUtc().millisecondsSinceEpoch ~/ 1000;
@@ -627,6 +674,9 @@ class AstroBridge {
       if (catUtf8 != null) calloc.free(catUtf8);
       if (typeUtf8 != null) calloc.free(typeUtf8);
       if (searchUtf8 != null) calloc.free(searchUtf8);
+      for (final p in allocatedPointers) {
+        calloc.free(p);
+      }
       calloc.free(obsPtr);
       calloc.free(critPtr);
     }
@@ -757,6 +807,8 @@ class AstroBridge {
     obsPtr.ref.elevationM = elevation;
 
     final critPtr = calloc<AstroFilterCriteria>();
+    final allocatedPointers = <Pointer<NativeType>>[];
+
     critPtr.ref.minAltitudeDeg = filters?.minAltitude ?? minAltitude;
     critPtr.ref.minDurationHours = filters?.minDurationHours ?? minDurationHours;
     critPtr.ref.minAzimuthDeg = filters?.minAzimuth ?? 0.0;
@@ -769,6 +821,7 @@ class AstroBridge {
     critPtr.ref.customEndHour = filters?.customEndHour ?? 23;
     critPtr.ref.customEndMinute = filters?.customEndMinute ?? 0;
     critPtr.ref.utcOffsetMinutes = filters?.date.timeZoneOffset.inMinutes ?? DateTime.now().timeZoneOffset.inMinutes;
+    _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
 
     try {
       final jsonPtr = _getTargetYearlyVisibilityJson(
@@ -791,6 +844,9 @@ class AstroBridge {
     } catch (_) {
       return null;
     } finally {
+      for (final p in allocatedPointers) {
+        calloc.free(p);
+      }
       calloc.free(obsPtr);
       calloc.free(critPtr);
     }

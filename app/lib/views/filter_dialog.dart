@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../theme/astro_theme.dart';
+import 'horizon_maker_dialog.dart';
 
 class FilterDialog extends StatefulWidget {
   final FilterState initialFilters;
@@ -498,7 +499,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 2: Altitude & Duration (Telescopius core)
-                    _buildSectionHeader("Visibility & Altitude (Telescopius Rule)", Icons.terrain_rounded),
+                    _buildSectionHeader("Visibility & Altitude Range", Icons.terrain_rounded),
                     const SizedBox(height: 8),
                     if (isNarrow)
                       Column(
@@ -513,14 +514,32 @@ class _FilterDialogState extends State<FilterDialog> {
                               Slider(
                                 value: _state.minAltitude,
                                 min: 10,
-                                max: 70,
+                                max: math.min(70.0, _state.maxAltitude - 5),
                                 divisions: 12,
                                 activeColor: accentColor,
                                 onChanged: (v) => setState(() => _state.minAltitude = v),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Maximum Altitude: ${_state.maxAltitude.round()}°${_state.maxAltitude == 90.0 ? ' (Zenith)' : ''}",
+                                style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                              ),
+                              Slider(
+                                value: _state.maxAltitude,
+                                min: math.max(50.0, _state.minAltitude + 5),
+                                max: 90,
+                                divisions: 8,
+                                activeColor: accentColor,
+                                onChanged: (v) => setState(() => _state.maxAltitude = v),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -556,13 +575,13 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Minimum Altitude: ${_state.minAltitude.round()}°",
-                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                  "Min Altitude: ${_state.minAltitude.round()}°",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
                                   value: _state.minAltitude,
                                   min: 10,
-                                  max: 70,
+                                  max: math.min(70.0, _state.maxAltitude - 5),
                                   divisions: 12,
                                   activeColor: accentColor,
                                   onChanged: (v) => setState(() => _state.minAltitude = v),
@@ -570,16 +589,37 @@ class _FilterDialogState extends State<FilterDialog> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Max Altitude: ${_state.maxAltitude.round()}°${_state.maxAltitude == 90.0 ? ' (Zenith)' : ''}",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Slider(
+                                  value: _state.maxAltitude,
+                                  min: math.max(50.0, _state.minAltitude + 5),
+                                  max: 90,
+                                  divisions: 8,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => setState(() => _state.maxAltitude = v),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   _state.useCustomTimeWindow
-                                      ? "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)}h (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
-                                      : "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs",
-                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                      ? "Duration: ${_state.minDurationHours.toStringAsFixed(1)}h (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : "Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs",
+                                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 Builder(builder: (context) {
                                   final maxDur = _state.useCustomTimeWindow
@@ -811,6 +851,128 @@ class _FilterDialogState extends State<FilterDialog> {
                           ),
                         ],
                       ),
+
+                    const SizedBox(height: 16),
+
+                    // Section 2b: Custom Horizon Obstruction Mask (Horizon Maker)
+                    _buildSectionHeader("Custom Horizon Obstruction Mask", Icons.terrain_rounded),
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionSurfaceVariant
+                            : AstroColors.spaceDarkSurfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _state.useCustomHorizon
+                              ? (widget.isRedNightMode
+                                  ? AstroColors.nightVisionRed
+                                  : AstroColors.starlightCyan)
+                              : (widget.isRedNightMode
+                                  ? AstroColors.nightVisionBorder
+                                  : AstroColors.spaceDarkBorder),
+                          width: _state.useCustomHorizon ? 1.4 : 1.0,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.landscape_rounded,
+                                size: 20,
+                                color: _state.useCustomHorizon ? accentColor : textColor.withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Custom Horizon Profile",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      _state.horizonPoints.isEmpty
+                                          ? "No obstacle points defined yet (flat horizon)"
+                                          : "${_state.horizonPoints.length} obstacle points configured across 360°",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: textColor.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _state.useCustomHorizon,
+                                activeThumbColor: accentColor,
+                                onChanged: (val) {
+                                  setState(() => _state.useCustomHorizon = val);
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_state.horizonPoints.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            // Mini Preview Canvas
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                height: 38,
+                                width: double.infinity,
+                                color: widget.isRedNightMode ? Colors.black : const Color(0xFF090D14),
+                                child: CustomPaint(
+                                  painter: _MiniHorizonPreviewPainter(
+                                    points: _state.horizonPoints,
+                                    isRedNightMode: widget.isRedNightMode,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
+                                  ),
+                                  icon: Icon(Icons.draw_rounded, size: 16, color: accentColor),
+                                  label: Text(
+                                    _state.horizonPoints.isEmpty ? "Create Horizon Profile..." : "Open Horizon Maker...",
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                                  ),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => HorizonMakerDialog(
+                                        initialFilters: _state,
+                                        isRedNightMode: widget.isRedNightMode,
+                                        onApply: (updated) {
+                                          setState(() {
+                                            _state = updated;
+                                          });
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
                     const SizedBox(height: 16),
 
@@ -1386,3 +1548,55 @@ class _CompassPainter extends CustomPainter {
     return oldDelegate.minAz != minAz || oldDelegate.maxAz != maxAz || oldDelegate.isRed != isRed;
   }
 }
+
+class _MiniHorizonPreviewPainter extends CustomPainter {
+  final List<HorizonPointModel> points;
+  final bool isRedNightMode;
+
+  _MiniHorizonPreviewPainter({required this.points, required this.isRedNightMode});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+
+    final path = Path();
+    final fillPath = Path();
+
+    double azToX(double az) => (az / 360.0) * size.width;
+    double altToY(double alt) => size.height - (alt / 90.0) * size.height;
+
+    final firstY = altToY(points.first.altitude);
+
+    path.moveTo(0, firstY);
+    fillPath.moveTo(0, size.height);
+    fillPath.lineTo(0, firstY);
+
+    for (final p in points) {
+      final x = azToX(p.azimuth);
+      final y = altToY(p.altitude);
+      path.lineTo(x, y);
+      fillPath.lineTo(x, y);
+    }
+
+    final lastY = altToY(points.last.altitude);
+    path.lineTo(size.width, lastY);
+    fillPath.lineTo(size.width, lastY);
+    fillPath.lineTo(size.width, size.height);
+    fillPath.close();
+
+    final fillPaint = Paint()
+      ..color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.redAccent).withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, fillPaint);
+
+    final strokePaint = Paint()
+      ..color = isRedNightMode ? AstroColors.nightVisionRed : Colors.redAccent
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(path, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniHorizonPreviewPainter oldDelegate) => true;
+}
+

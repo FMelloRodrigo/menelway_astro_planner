@@ -50,7 +50,8 @@ TargetVisibilityResult evaluate_visibility(
         units::Degrees moon_sep = coordinates::angular_separation(target, moon.coords);
 
         // Check criteria
-        bool passes_alt = horiz.altitude.value >= criteria.min_altitude.value;
+        bool passes_alt = horiz.altitude.value >= criteria.min_altitude.value &&
+                          horiz.altitude.value <= criteria.max_altitude.value;
         bool passes_az = criteria.azimuth_range.contains(horiz.azimuth);
         bool passes_quad = horizon::is_in_quadrant(horiz.azimuth, criteria.quadrant);
         bool passes_moon = moon_sep.value >= criteria.min_moon_separation.value;
@@ -238,8 +239,7 @@ YearlyVisibilityResult calculate_yearly_visibility(
                 auto vis = evaluate_visibility(target, obs, day_crit, /*step_minutes=*/15, /*include_samples=*/false);
                 dr.hours = vis.max_continuous_hours;
                 dr.peak_alt = vis.peak_altitude.value;
-                dr.is_obs = (vis.max_continuous_hours >= criteria.min_duration_hours) &&
-                            (vis.peak_altitude.value >= criteria.min_altitude.value);
+                dr.is_obs = vis.meets_criteria;
             }
 
             all_days.push_back(dr);

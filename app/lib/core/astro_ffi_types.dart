@@ -57,6 +57,9 @@ final class AstroFilterCriteria extends Struct {
   external double minAltitudeDeg;
 
   @Double()
+  external double maxAltitudeDeg;
+
+  @Double()
   external double minDurationHours;
 
   @Int64()
@@ -118,6 +121,16 @@ final class AstroFilterCriteria extends Struct {
 
   @Int32()
   external int utcOffsetMinutes;
+
+  external Pointer<Double> horizonAzimuths;
+
+  external Pointer<Double> horizonAltitudes;
+
+  @Int32()
+  external int horizonPointsCount;
+
+  @Int32()
+  external int useCustomHorizon;
 }
 
 final class AstroTargetItem extends Struct {

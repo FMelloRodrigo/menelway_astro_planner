@@ -60,6 +60,26 @@ static char* duplicate_string(const std::string& str) {
     return copy;
 }
 
+static void apply_criteria_extra(const AstroFilterCriteria* criteria, astro::visibility::VisibilityCriteria& vis_crit) {
+    if (!criteria) return;
+    if (criteria->max_altitude_deg > 0.0) {
+        vis_crit.max_altitude = astro::units::Degrees{criteria->max_altitude_deg};
+    }
+    if (criteria->use_custom_horizon != 0 &&
+        criteria->horizon_points_count > 0 &&
+        criteria->horizon_azimuths &&
+        criteria->horizon_altitudes) {
+        astro::horizon::HorizonProfile profile;
+        for (int32_t i = 0; i < criteria->horizon_points_count; ++i) {
+            profile.add_point(
+                astro::units::Degrees{criteria->horizon_azimuths[i]},
+                astro::units::Degrees{criteria->horizon_altitudes[i]}
+            );
+        }
+        vis_crit.custom_horizon = std::move(profile);
+    }
+}
+
 AstroEngine* astro_engine_create(const char* db_path) {
     try {
         auto ctx = std::make_unique<AstroEngineContext>();
@@ -175,6 +195,7 @@ AstroTargetList* astro_filter_targets(
             astro::units::Degrees{criteria->max_azimuth_deg}
         };
         vis_crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
+        apply_criteria_extra(criteria, vis_crit);
 
         int step = step_minutes > 0 ? step_minutes : 10;
         auto results = ctx->storage->filter_targets(obs, filter_opts, vis_crit, step);
@@ -289,6 +310,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
         vis_crit.custom_end_hour = criteria->custom_end_hour;
         vis_crit.custom_end_minute = criteria->custom_end_minute;
         vis_crit.utc_offset_minutes = criteria->utc_offset_minutes;
+        apply_criteria_extra(criteria, vis_crit);
 
         astro::time::JulianDate start_jd = astro::time::unix_to_julian_date(period_start_utc);
         astro::time::JulianDate end_jd = astro::time::unix_to_julian_date(period_end_utc);
@@ -559,6 +581,7 @@ const char* astro_get_target_yearly_visibility_json(
             crit.custom_end_hour = criteria->custom_end_hour;
             crit.custom_end_minute = criteria->custom_end_minute;
             crit.utc_offset_minutes = criteria->utc_offset_minutes;
+            apply_criteria_extra(criteria, crit);
         } else {
             crit.min_altitude = astro::units::Degrees{30.0};
             crit.min_duration_hours = 2.0;

@@ -11,6 +11,7 @@ class AltitudeCurveChart extends StatefulWidget {
   final NightSummary night;
   final String targetName;
   final double minAltitudeThreshold;
+  final double maxAltitudeThreshold;
   final bool isRedNightMode;
   final DateTime? customWindowStart;
   final DateTime? customWindowEnd;
@@ -21,6 +22,7 @@ class AltitudeCurveChart extends StatefulWidget {
     required this.night,
     required this.targetName,
     this.minAltitudeThreshold = 30.0,
+    this.maxAltitudeThreshold = 90.0,
     this.isRedNightMode = false,
     this.customWindowStart,
     this.customWindowEnd,
@@ -155,6 +157,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         points: widget.targetPoints,
                         night: widget.night,
                         minAltitudeThreshold: widget.minAltitudeThreshold,
+                        maxAltitudeThreshold: widget.maxAltitudeThreshold,
                         hoverFraction: _hoverFraction,
                         isRedNightMode: widget.isRedNightMode,
                         startTime: startTime,
@@ -178,6 +181,7 @@ class _AltitudeChartPainter extends CustomPainter {
   final List<AltitudePoint> points;
   final NightSummary night;
   final double minAltitudeThreshold;
+  final double maxAltitudeThreshold;
   final double? hoverFraction;
   final bool isRedNightMode;
   final DateTime startTime;
@@ -189,6 +193,7 @@ class _AltitudeChartPainter extends CustomPainter {
     required this.points,
     required this.night,
     required this.minAltitudeThreshold,
+    required this.maxAltitudeThreshold,
     required this.hoverFraction,
     required this.isRedNightMode,
     required this.startTime,
@@ -251,6 +256,27 @@ class _AltitudeChartPainter extends CustomPainter {
       final textSpan = TextSpan(text: "${alt.toInt()}°", style: textStyle);
       final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)..layout();
       tp.paint(canvas, Offset(6, y - tp.height - 2));
+    }
+
+    if (maxAltitudeThreshold < 90.0) {
+      final yMax = altToY(maxAltitudeThreshold);
+      final maxPaint = Paint()
+        ..color = (isRedNightMode ? AstroColors.nightVisionRedDim : Colors.amberAccent).withValues(alpha: 0.55)
+        ..strokeWidth = 1.0
+        ..style = PaintingStyle.stroke;
+      _drawDashedLine(canvas, Offset(0, yMax), Offset(size.width, yMax), maxPaint);
+
+      final tpMax = TextPainter(
+        text: TextSpan(
+          text: "MAX: ${maxAltitudeThreshold.toInt()}°",
+          style: textStyle.copyWith(
+            color: isRedNightMode ? AstroColors.nightVisionRedDim : Colors.amberAccent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tpMax.paint(canvas, Offset(size.width - tpMax.width - 8, yMax - tpMax.height - 2));
     }
 
     // 3. Draw Target Altitude Path
