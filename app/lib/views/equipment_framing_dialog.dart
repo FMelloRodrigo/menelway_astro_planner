@@ -35,7 +35,6 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         EquipmentManager.instance.resetPan();
-        _autoAlignWithTarget();
         _fitToSensor();
       }
     });
@@ -55,7 +54,6 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
       _lastActiveProfileId = currentProfileId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _autoAlignWithTarget();
           _fitToSensor();
         }
       });
@@ -212,7 +210,6 @@ Sampling: ${rig.samplingCategory}
                       final isNew = id != EquipmentManager.instance.activeProfile.id;
                       EquipmentManager.instance.setActiveProfile(id);
                       if (isNew) {
-                        _autoAlignWithTarget();
                         _fitToSensor();
                       }
                     },
@@ -396,19 +393,6 @@ Sampling: ${rig.samplingCategory}
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.auto_awesome_rounded, size: 15),
-                label: const Text("Auto-Align", style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  foregroundColor: accentColor,
-                  side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
-                ),
-                onPressed: _autoAlignWithTarget,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
                 icon: const Icon(Icons.fit_screen_rounded, size: 15),
                 label: const Text("Fit to Sensor", style: TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
@@ -417,6 +401,20 @@ Sampling: ${rig.samplingCategory}
                   side: BorderSide(color: borderColor),
                 ),
                 onPressed: _fitToSensor,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: "Auto-Align with Target Position Angle",
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.auto_awesome_rounded, size: 13),
+                label: const Text("Align", style: TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  foregroundColor: textColor,
+                  side: BorderSide(color: borderColor),
+                ),
+                onPressed: _autoAlignWithTarget,
               ),
             ),
           ],

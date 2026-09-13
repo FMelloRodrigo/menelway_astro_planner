@@ -65,7 +65,7 @@ AstroEngine* astro_engine_create(const char* db_path) {
         auto ctx = std::make_unique<AstroEngineContext>();
         ctx->storage = std::make_unique<astro::storage::SqliteStorage>(db_path ? db_path : "");
         if (!ctx->storage->is_open()) {
-            ctx->last_error = ctx->storage->last_error();
+            return nullptr;
         }
         return reinterpret_cast<AstroEngine*>(ctx.release());
     } catch (const std::exception& e) {

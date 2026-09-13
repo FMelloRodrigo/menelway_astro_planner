@@ -14,7 +14,6 @@ import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 import 'equipment_dialog.dart';
-import 'equipment_framing_dialog.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;

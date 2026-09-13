@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
+import 'catalog_manager.dart';
 import '../models/equipment_profile.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
@@ -36,61 +37,22 @@ class SettingsService {
   static Future<File> getSettingsFile() async {
     // 1. Try next to the executable for true Windows portable zero-install mode
     try {
-      final exeDir = p.dirname(Platform.resolvedExecutable);
-      final portableFile = File(p.join(exeDir, settingsFileName));
-      if (await portableFile.exists()) {
+      if (Platform.isWindows) {
+        final exeDir = p.dirname(Platform.resolvedExecutable);
+        final portableFile = File(p.join(exeDir, settingsFileName));
+        if (await portableFile.exists()) {
+          return portableFile;
+        }
+        // Test if directory is writable by attempting to create/touch the file
+        await portableFile.writeAsString('{}');
         return portableFile;
       }
-      // Test if directory is writable by attempting to create/touch the file
-      await portableFile.writeAsString('{}');
-      return portableFile;
     } catch (_) {
-      // If exe directory is protected or read-only, fallback to local app data
+      // If exe directory is protected or read-only, fallback to storage directory
     }
 
-    // 2. Fallback to user AppData or mobile files directory
-    Directory appDir;
-    if (Platform.isAndroid) {
-      Directory? found;
-      try {
-        final parent = Directory.systemTemp.parent;
-        if (parent.existsSync()) {
-          final candidate = Directory(p.join(parent.path, 'files'));
-          if (!candidate.existsSync()) {
-            candidate.createSync(recursive: true);
-          }
-          if (candidate.existsSync()) {
-            found = candidate;
-          }
-        }
-      } catch (_) {}
-
-      if (found == null) {
-        final candidates = [
-          '/data/user/0/com.astrotargets.app.app/files',
-          '/data/data/com.astrotargets.app.app/files',
-          '/data/user/0/com.astrotargets.app/files',
-          '/data/data/com.astrotargets.app/files',
-        ];
-        for (final pth in candidates) {
-          final d = Directory(pth);
-          if (d.existsSync()) {
-            found = d;
-            break;
-          }
-        }
-        appDir = found ?? Directory(candidates.first);
-      } else {
-        appDir = found;
-      }
-    } else {
-      appDir = Directory(p.join(Platform.environment['LOCALAPPDATA'] ?? '.', 'AstroTargetsTool'));
-    }
-
-    if (!await appDir.exists()) {
-      await appDir.create(recursive: true);
-    }
-
+    // 2. Storage directory (native filesDir on mobile or local AppData on desktop)
+    final appDir = await CatalogManager.getStorageDirectory();
     return File(p.join(appDir.path, settingsFileName));
   }
 

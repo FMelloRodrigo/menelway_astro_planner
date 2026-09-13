@@ -293,7 +293,11 @@ class AstroBridge {
     }
     final dbPathUtf8 = dbPath.toNativeUtf8();
     try {
-      _engine = _engineCreate(dbPathUtf8);
+      final ptr = _engineCreate(dbPathUtf8);
+      if (ptr == nullptr) {
+        throw StateError("Failed to initialize AstroEngine at path: $dbPath. Database may be missing or corrupt.");
+      }
+      _engine = ptr;
     } finally {
       calloc.free(dbPathUtf8);
     }

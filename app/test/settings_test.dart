@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/models/filter_state.dart';
 import 'package:app/models/observing_list.dart';
 import 'package:app/core/settings_service.dart';
+import 'package:app/core/catalog_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -134,6 +136,25 @@ void main() {
       expect(cleared.isRedNightMode, false);
       expect(cleared.filters.observerLocationName, 'New York, USA');
       expect(cleared.filters.observerLat, 40.7128);
+    });
+
+    test('CatalogManager getStorageDirectory resolves an existing writable directory', () async {
+      final dir = await CatalogManager.getStorageDirectory();
+      expect(dir.existsSync(), isTrue);
+      // Verify directory is writable by creating a small test probe
+      final probe = File('${dir.path}/.probe_test');
+      await probe.writeAsString('test');
+      expect(probe.existsSync(), isTrue);
+      await probe.delete();
+    });
+
+    test('CatalogManager getDatabasePath resolves a valid non-empty path', () async {
+      final dbPath = await CatalogManager.getDatabasePath();
+      expect(dbPath.isNotEmpty, isTrue);
+      expect(dbPath.endsWith('catalogs.db'), isTrue);
+      final file = File(dbPath);
+      expect(file.existsSync(), isTrue);
+      expect(await file.length(), greaterThan(1024 * 1024));
     });
   });
 }

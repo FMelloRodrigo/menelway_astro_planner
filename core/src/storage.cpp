@@ -186,20 +186,40 @@ std::string build_fts_query(const std::string& input) {
 } // namespace
 
 SqliteStorage::SqliteStorage(const std::string& db_path) {
+    if (db_path.empty()) {
+        last_error_ = "Database path is empty";
+        return;
+    }
     int rc = sqlite3_open_v2(
         db_path.c_str(),
         &db_,
-        SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,
+        SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
         nullptr
     );
     if (rc != SQLITE_OK) {
-        last_error_ = sqlite3_errmsg(db_);
+        last_error_ = db_ ? sqlite3_errmsg(db_) : ("Failed to open database: " + db_path);
         if (db_) {
             sqlite3_close(db_);
             db_ = nullptr;
         }
     } else {
-        init_schema();
+        // Verify that the database contains the required dso_objects table
+        sqlite3_stmt* check_stmt = nullptr;
+        const char* check_sql = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='dso_objects';";
+        int table_count = 0;
+        if (sqlite3_prepare_v2(db_, check_sql, -1, &check_stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(check_stmt) == SQLITE_ROW) {
+                table_count = sqlite3_column_int(check_stmt, 0);
+            }
+            sqlite3_finalize(check_stmt);
+        }
+        if (table_count == 0) {
+            last_error_ = "Database file is missing 'dso_objects' table";
+            sqlite3_close(db_);
+            db_ = nullptr;
+        } else {
+            init_schema();
+        }
     }
 }
 

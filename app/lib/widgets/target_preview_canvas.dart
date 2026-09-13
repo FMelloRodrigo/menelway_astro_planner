@@ -232,11 +232,6 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     }
   }
 
-  void _autoAlignWithTarget() {
-    final pa = widget.target.positionAngleDeg ?? 0.0;
-    EquipmentManager.instance.autoAlignWithTarget(pa);
-  }
-
   void _fitToSensor() {
     final rig = EquipmentManager.instance.activeProfile;
     final diag = rig.sensorFovDiagonalDeg;
@@ -796,14 +791,6 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                             color: borderColor.withValues(alpha: 0.6),
                           ),
                           const SizedBox(width: 10),
-                          _buildTextActionButton(
-                            icon: Icons.auto_awesome_rounded,
-                            label: "Align",
-                            tooltip: "Auto-Align with Target Position Angle",
-                            onTap: _autoAlignWithTarget,
-                            accentColor: accentColor,
-                          ),
-                          const SizedBox(width: 8),
                           _buildTextActionButton(
                             icon: Icons.fit_screen_rounded,
                             label: "Fit",

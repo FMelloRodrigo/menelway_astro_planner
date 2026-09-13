@@ -190,7 +190,7 @@ class _FavoritesViewState extends State<FavoritesView> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
-                value: selectedListId,
+                initialValue: selectedListId,
                 decoration: const InputDecoration(labelText: "Target Observing List"),
                 dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
                 items: widget.availableLists.map((l) {

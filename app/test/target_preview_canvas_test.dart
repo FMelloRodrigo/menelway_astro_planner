@@ -113,10 +113,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Check that rotation buttons and active rig strip appear
+      // Check that rotation buttons and active rig strip appear (Align removed from preview box)
       expect(find.byIcon(Icons.rotate_left_rounded), findsOneWidget);
       expect(find.byIcon(Icons.rotate_right_rounded), findsOneWidget);
-      expect(find.text('Align'), findsOneWidget);
+      expect(find.text('Align'), findsNothing);
       expect(find.text('Fit'), findsOneWidget);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     });
@@ -223,7 +223,7 @@ void main() {
       expect(painter.showReticle, isFalse);
     });
 
-    testWidgets('EquipmentFramingDialog auto-aligns to target and fits to sensor upon entering and when a new rig is selected', (tester) async {
+    testWidgets('EquipmentFramingDialog does not auto-align to target, but fits to sensor upon entering and when a new rig is selected', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -249,13 +249,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // 1. Should have auto-aligned to target (55.0°) and fit to sensor FOV as soon as user entered
-      expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
+      // 1. Should NOT have auto-aligned to target (remains 0.0°), but FOV fits to sensor upon entering
+      expect(EquipmentManager.instance.cameraAngleDeg, 0.0);
       final canvasState = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
       final expectedInitialFov = (initialRig.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
       expect(canvasState.fovDeg, closeTo(expectedInitialFov, 0.01));
 
-      // Manually change angle away from 55°
+      // Manually change angle away to 90°
       EquipmentManager.instance.setCameraAngle(90.0);
       expect(EquipmentManager.instance.cameraAngleDeg, 90.0);
 
@@ -271,11 +271,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      // Verify active rig switched, angle auto-aligned back to 55.0°, and FOV fit to second sensor
+      // Verify active rig switched, angle remains 90.0° (did not auto-align), and FOV fit to second sensor
       expect(EquipmentManager.instance.activeProfile.id, secondProfile.id);
-      expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
+      expect(EquipmentManager.instance.cameraAngleDeg, 90.0);
       final expectedSecondFov = (secondProfile.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
       expect(canvasState.fovDeg, closeTo(expectedSecondFov, 0.01));
+
+      // 3. Small Align button exists and manual tap aligns to target PA (55.0°)
+      final alignBtn = find.widgetWithText(OutlinedButton, 'Align');
+      expect(alignBtn, findsOneWidget);
+      await tester.tap(alignBtn);
+      await tester.pump();
+      expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
     });
   });
 }
