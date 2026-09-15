@@ -3,37 +3,42 @@ $ErrorActionPreference = "Stop"
 
 $workspaceRoot = $PSScriptRoot
 $releaseDir = Join-Path $workspaceRoot "app\build\windows\x64\runner\Release"
-$distDir = Join-Path $workspaceRoot "dist\astro_targets_planner_win64_portable"
-$zipFile = Join-Path $workspaceRoot "dist\astro_targets_planner_win64_portable.zip"
-$menelwayZip = Join-Path $workspaceRoot "dist\menelway_astro_planner_win64_portable.zip"
+$distDirLegacy = Join-Path $workspaceRoot "dist\astro_targets_planner_win64_portable"
+$distDirMenelway = Join-Path $workspaceRoot "dist\menelway_astro_planner_win64_portable"
+$zipFileLegacy = Join-Path $workspaceRoot "dist\astro_targets_planner_win64_portable.zip"
+$zipFileMenelway = Join-Path $workspaceRoot "dist\menelway_astro_planner_win64_portable.zip"
 
 Write-Host "Creating portable release bundle..." -ForegroundColor Cyan
 
-if (Test-Path $distDir) {
-    Remove-Item $distDir -Recurse -Force
-}
-if (Test-Path $zipFile) {
-    Remove-Item $zipFile -Force
-}
-if (Test-Path $menelwayZip) {
-    Remove-Item $menelwayZip -Force
+# 1. Ensure runner Release dir has menelway_astro_planner.exe directly
+if (Test-Path "$releaseDir\app.exe") {
+    Copy-Item "$releaseDir\app.exe" "$releaseDir\menelway_astro_planner.exe" -Force
 }
 
-New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+# 2. Clean previous dist bundles
+if (Test-Path $distDirLegacy) { Remove-Item $distDirLegacy -Recurse -Force }
+if (Test-Path $distDirMenelway) { Remove-Item $distDirMenelway -Recurse -Force }
+if (Test-Path $zipFileLegacy) { Remove-Item $zipFileLegacy -Force }
+if (Test-Path $zipFileMenelway) { Remove-Item $zipFileMenelway -Force }
 
-# Copy release files
-Copy-Item "$releaseDir\*" -Destination $distDir -Recurse -Force
+New-Item -ItemType Directory -Path $distDirMenelway -Force | Out-Null
 
-# Create descriptive executable alias
-if (Test-Path "$distDir\app.exe") {
-    Copy-Item "$distDir\app.exe" "$distDir\menelway_astro_planner.exe" -Force
-    Copy-Item "$distDir\app.exe" "$distDir\astro_targets_planner.exe" -Force
+# Copy release files to Menelway dist folder
+Copy-Item "$releaseDir\*" -Destination $distDirMenelway -Recurse -Force
+
+# Create descriptive executable aliases
+if (Test-Path "$distDirMenelway\app.exe") {
+    Copy-Item "$distDirMenelway\app.exe" "$distDirMenelway\menelway_astro_planner.exe" -Force
+    Copy-Item "$distDirMenelway\app.exe" "$distDirMenelway\astro_targets_planner.exe" -Force
 }
 
 # Ensure catalogs.db is also at root for easy standalone inspection
-if (Test-Path "$distDir\data\flutter_assets\assets\catalogs.db") {
-    Copy-Item "$distDir\data\flutter_assets\assets\catalogs.db" "$distDir\catalogs.db" -Force
+if (Test-Path "$distDirMenelway\data\flutter_assets\assets\catalogs.db") {
+    Copy-Item "$distDirMenelway\data\flutter_assets\assets\catalogs.db" "$distDirMenelway\catalogs.db" -Force
 }
+
+# Mirror to legacy folder for backwards-compatibility
+Copy-Item "$distDirMenelway" -Destination $distDirLegacy -Recurse -Force
 
 # Write README
 $readmeContent = @"
@@ -65,14 +70,15 @@ SYSTEM REQUIREMENTS:
 - Windows 10 x64 or Windows 11 x64.
 "@
 
-Set-Content -Path "$distDir\README.txt" -Value $readmeContent
+Set-Content -Path "$distDirMenelway\README.txt" -Value $readmeContent
+Set-Content -Path "$distDirLegacy\README.txt" -Value $readmeContent
 
-# Compress into zip package
-Write-Host "Compressing into $zipFile..." -ForegroundColor Cyan
-Compress-Archive -Path "$distDir\*" -DestinationPath $zipFile -Force
-Copy-Item $zipFile $menelwayZip -Force
+# Compress into zip packages
+Write-Host "Compressing into $zipFileMenelway..." -ForegroundColor Cyan
+Compress-Archive -Path "$distDirMenelway\*" -DestinationPath $zipFileMenelway -Force
+Copy-Item $zipFileMenelway $zipFileLegacy -Force
 
-$zipSizeMb = (Get-Item $zipFile).Length / 1MB
+$zipSizeMb = (Get-Item $zipFileMenelway).Length / 1MB
 Write-Host "Portable package created successfully!" -ForegroundColor Green
-Write-Host "  Zip Path: $menelwayZip" -ForegroundColor Green
+Write-Host "  Zip Path: $zipFileMenelway" -ForegroundColor Green
 Write-Host "  Zip Size: $([math]::Round($zipSizeMb, 2)) MB" -ForegroundColor Green
