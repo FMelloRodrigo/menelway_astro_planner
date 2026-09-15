@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 /// Platform-agnostic image file picker that works on Windows desktop without
-/// requiring third-party native plugin symlinks or Developer Mode privileges.
+/// requiring third-party native plugin symlinks or Developer Mode privileges,
+/// and works natively on Android via platform storage channels.
 class FilePickerService {
+  static const MethodChannel _storageChannel = MethodChannel('com.astrotargets.app/storage');
+
   static Future<String?> pickPanoramaImage() async {
     if (Platform.isWindows) {
       try {
@@ -36,8 +41,20 @@ if (\$dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
             return path;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Windows file picker error: $e');
+      }
+    } else if (Platform.isAndroid) {
+      try {
+        final String? path = await _storageChannel.invokeMethod<String>('pickImage');
+        if (path != null && path.isNotEmpty && File(path).existsSync()) {
+          return path;
+        }
+      } catch (e) {
+        debugPrint('Android file picker error: $e');
+      }
     }
     return null;
   }
 }
+

@@ -66,7 +66,17 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
   Future<void> _loadDecodedImage(String path) async {
     final file = File(path);
-    if (!file.existsSync()) return;
+    if (!file.existsSync()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Selected image file does not exist or cannot be accessed: $path"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => _isLoadingImage = true);
     try {
@@ -94,9 +104,20 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   }
 
   Future<void> _pickImage() async {
-    final path = await FilePickerService.pickPanoramaImage();
-    if (path != null && path.isNotEmpty) {
-      await _loadDecodedImage(path);
+    try {
+      final path = await FilePickerService.pickPanoramaImage();
+      if (path != null && path.isNotEmpty) {
+        await _loadDecodedImage(path);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error picking panorama image: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -398,7 +419,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
               color: accentColor,
             ),
             label: Text(
-              _decodedImage != null ? "Change Panorama..." : "Import Panorama (JPG)...",
+              _decodedImage != null ? "Change Panorama..." : "Import Panorama Image...",
               style: TextStyle(fontSize: 12, color: textColor),
             ),
             onPressed: _isLoadingImage ? null : _pickImage,
