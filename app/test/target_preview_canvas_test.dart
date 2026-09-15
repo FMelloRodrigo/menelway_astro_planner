@@ -284,5 +284,56 @@ void main() {
       await tester.pump();
       expect(EquipmentManager.instance.cameraAngleDeg, 55.0);
     });
+
+    testWidgets('Zoom Step Size chips (10%, 25%, 50%) adjust step and zoom buttons scale FOV symmetrically', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TargetPreviewCanvas(
+              target: testTarget,
+              isRedNightMode: false,
+              height: 250,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final canvasState = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+
+      // Default should be 25% (0.25)
+      expect(canvasState.zoomStepPercent, 0.25);
+      expect(find.text('10%'), findsOneWidget);
+      expect(find.text('25%'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+
+      final initialFov = canvasState.fovDeg;
+
+      // Tap 50%
+      await tester.tap(find.text('50%'));
+      await tester.pump();
+      expect(canvasState.zoomStepPercent, 0.50);
+
+      // Tap Zoom In (+) -> newFov = initialFov / 1.50
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pump();
+      expect(canvasState.fovDeg, closeTo(initialFov / 1.50, 0.001));
+
+      // Tap Zoom Out (-) -> returns to initialFov symmetrically
+      await tester.tap(find.byIcon(Icons.remove_rounded));
+      await tester.pump();
+      expect(canvasState.fovDeg, closeTo(initialFov, 0.001));
+
+      // Tap 10%
+      await tester.tap(find.text('10%'));
+      await tester.pump();
+      expect(canvasState.zoomStepPercent, 0.10);
+
+      // Tap Zoom Out (-) -> newFov = initialFov * 1.10
+      await tester.tap(find.byIcon(Icons.remove_rounded));
+      await tester.pump();
+      expect(canvasState.fovDeg, closeTo(initialFov * 1.10, 0.001));
+    });
   });
 }

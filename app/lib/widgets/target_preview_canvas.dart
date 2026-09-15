@@ -55,6 +55,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   double _lastObservedPanY = 0.0;
   int _imageLoadRequestId = 0;
   String _lastActiveProfileId = '';
+  static double _zoomStepPercent = 0.25;
 
   @override
   void initState() {
@@ -208,8 +209,16 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     }
   }
 
+  double get zoomStepPercent => _zoomStepPercent;
+  void setZoomStepPercent(double step) {
+    if ((_zoomStepPercent - step).abs() > 0.001) {
+      setState(() => _zoomStepPercent = step);
+    }
+  }
+
   void _zoomIn() {
-    final newFov = (_fovDeg * 0.75).clamp(0.15, 14.0);
+    final factor = 1.0 + _zoomStepPercent;
+    final newFov = (_fovDeg / factor).clamp(0.15, 14.0);
     if (newFov != _fovDeg) {
       setState(() => _fovDeg = newFov);
       _loadImage();
@@ -217,7 +226,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   }
 
   void _zoomOut() {
-    final newFov = (_fovDeg * 1.35).clamp(0.15, 14.0);
+    final factor = 1.0 + _zoomStepPercent;
+    final newFov = (_fovDeg * factor).clamp(0.15, 14.0);
     if (newFov != _fovDeg) {
       setState(() => _fovDeg = newFov);
       _loadImage();
@@ -702,6 +712,29 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         color: textColor,
                         borderColor: borderColor,
                       ),
+                      const SizedBox(width: 10),
+                      // Zoom Step Size Selector
+                      Container(
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionSurfaceVariant
+                              : AstroColors.spaceDarkSurfaceVariant,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildZoomStepChip(0.10, "10%", accentColor, textColor),
+                            const SizedBox(width: 4),
+                            _buildZoomStepChip(0.25, "25%", accentColor, textColor),
+                            const SizedBox(width: 4),
+                            _buildZoomStepChip(0.50, "50%", accentColor, textColor),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -970,6 +1003,47 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               border: Border.all(color: borderColor),
             ),
             child: Icon(icon, size: 22, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildZoomStepChip(
+    double stepPercent,
+    String label,
+    Color accentColor,
+    Color textColor,
+  ) {
+    final isSelected = (_zoomStepPercent - stepPercent).abs() < 0.01;
+    return Tooltip(
+      message: "Zoom step: $label FOV per click",
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _zoomStepPercent = stepPercent),
+          borderRadius: BorderRadius.circular(7),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? accentColor.withValues(alpha: 0.22)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(
+                color: isSelected ? accentColor : Colors.transparent,
+                width: 1.0,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? accentColor : textColor.withValues(alpha: 0.75),
+              ),
+            ),
           ),
         ),
       ),
