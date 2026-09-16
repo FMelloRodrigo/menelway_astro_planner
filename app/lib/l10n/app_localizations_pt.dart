@@ -363,4 +363,707 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get exploreTargets => 'Explorar Alvos';
+
+  @override
+  String get observingTimeWindow => 'Janela de Tempo de Observação';
+
+  @override
+  String get astronomicalDarkness => 'Escuridão Astronômica';
+
+  @override
+  String get astroDarknessShort => 'Escur. Astronômica';
+
+  @override
+  String get customTimeLimit => 'Limite de Tempo Personalizado';
+
+  @override
+  String get customWindowShort => 'Janela Personalizada';
+
+  @override
+  String get startTime => 'INÍCIO';
+
+  @override
+  String get endTime => 'TÉRMINO';
+
+  @override
+  String get window => 'JANELA';
+
+  @override
+  String get hoursShort => 'h';
+
+  @override
+  String get duskMidnight => 'Crepúsculo - Meia-noite';
+
+  @override
+  String get midnightDawn => 'Meia-noite - Alvorecer';
+
+  @override
+  String get visibilityAltitudeRange => 'Visibilidade e Faixa de Altitude';
+
+  @override
+  String get zenith => '(Zênite)';
+
+  @override
+  String minimumAltitude(String degrees) {
+    return 'Altitude Mínima: $degrees°';
+  }
+
+  @override
+  String maximumAltitude(String degrees) {
+    return 'Altitude Máxima: $degrees°';
+  }
+
+  @override
+  String minimumDuration(String hours) {
+    return 'Duração Mínima: ${hours}h';
+  }
+
+  @override
+  String durationLabel(String hours) {
+    return 'Duração: ${hours}h';
+  }
+
+  @override
+  String get directionAzimuthRange => 'Direção e Faixa de Azimute';
+
+  @override
+  String get directionPresetMode => 'Predefinição / Modo de Direção';
+
+  @override
+  String get quadrantAll => 'Todas as Direções (0° - 360°)';
+
+  @override
+  String get quadrantN => 'Norte (315° - 45°)';
+
+  @override
+  String get quadrantE => 'Leste (45° - 135°)';
+
+  @override
+  String get quadrantS => 'Sul (135° - 225°)';
+
+  @override
+  String get quadrantW => 'Oeste (225° - 315°)';
+
+  @override
+  String get quadrantNE => 'Nordeste (0° - 90°)';
+
+  @override
+  String get quadrantSE => 'Sudeste (90° - 180°)';
+
+  @override
+  String get quadrantSW => 'Sudoeste (180° - 270°)';
+
+  @override
+  String get quadrantNW => 'Noroeste (270° - 360°)';
+
+  @override
+  String get quadrantCustom => 'Faixa de Graus Personalizada';
+
+  @override
+  String minAzimuthLabel(String deg, String cardinal) {
+    return 'Mín: $deg° ($cardinal)';
+  }
+
+  @override
+  String maxAzimuthLabel(String deg, String cardinal) {
+    return 'Máx: $deg° ($cardinal)';
+  }
+
+  @override
+  String get compassAll360 => 'Todos 360°';
+
+  @override
+  String get compassClosed => '0° (Fechado)';
+
+  @override
+  String compassSpan(String span) {
+    return 'Extensão: $span°';
+  }
+
+  @override
+  String get customHorizonMask => 'Máscara de Obstrução de Horizonte';
+
+  @override
+  String get customHorizonProfile => 'Perfil de Horizonte Personalizado';
+
+  @override
+  String get noObstaclePoints => 'Nenhum obstáculo definido (horizonte plano)';
+
+  @override
+  String obstaclePointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pontos de obstáculo configurados em 360°',
+      one: '1 ponto de obstáculo configurado em 360°',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get createHorizonProfile => 'Criar Perfil de Horizonte...';
+
+  @override
+  String get openHorizonMaker => 'Abrir Criador de Horizonte...';
+
+  @override
+  String get moonDistance => 'Distância da Lua';
+
+  @override
+  String minMoonDistanceLabel(String degrees) {
+    return 'Distância mín. da Lua: $degrees°';
+  }
+
+  @override
+  String get catalogs => 'Catálogos';
+
+  @override
+  String get objectTypes => 'Tipos de Objeto';
+
+  @override
+  String get magnitudeApparentSize => 'Magnitude e Tamanho Aparente';
+
+  @override
+  String faintestLimitLabel(String mag) {
+    return 'Limite Menos Brilhante (Mag Máx): $mag';
+  }
+
+  @override
+  String get lowerBrighter => '(menor = mais brilhante)';
+
+  @override
+  String minSizeLabelAlt(String size) {
+    return 'Tamanho Mín: $size\'';
+  }
+
+  @override
+  String get equipmentRigsTooltip => 'Equipamentos e Óptica';
+
+  @override
+  String get equipmentRigsButton => 'Equipamentos';
+
+  @override
+  String get settingsAndDataTooltip => 'Configurações e Dados';
+
+  @override
+  String get settingsLocation => 'Local do Observador...';
+
+  @override
+  String get actionCannotBeUndone => 'Esta ação não pode ser desfeita.';
+
+  @override
+  String get cleanDataSuccessSnackBar =>
+      'Todos os dados salvos, configurações e listas de observação foram apagados.';
+
+  @override
+  String get selectedCoordsElevation => 'Coordenadas Selecionadas e Elevação';
+
+  @override
+  String get popularAstroSites => 'Locais Populares de Astrofotografia:';
+
+  @override
+  String get applyLocation => 'Aplicar Localização';
+
+  @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get retry => 'Tentar Novamente';
+
+  @override
+  String get failedLoadCore => 'Falha ao carregar o núcleo astronômico';
+
+  @override
+  String get initializingEngine =>
+      'Inicializando motor astronômico e banco de dados...';
+
+  @override
+  String get equipmentDialogTitle => 'Equipamentos e Óptica';
+
+  @override
+  String get addEquipmentRig => 'Adicionar Equipamento';
+
+  @override
+  String get editEquipmentRig => 'Editar Equipamento';
+
+  @override
+  String get backToList => 'Voltar para Lista';
+
+  @override
+  String get editRig => 'Editar';
+
+  @override
+  String get deleteRigTooltip => 'Excluir Equipamento';
+
+  @override
+  String get createNewRig => 'Criar Novo Equipamento';
+
+  @override
+  String get rigProfileName => 'Nome do Perfil do Equipamento';
+
+  @override
+  String get telescopeOptics => 'Telescópio / Óptica';
+
+  @override
+  String get searchScopeHint =>
+      'Buscar telescópio: ex: RedCat, FRA400, 72ED, C8, Seestar...';
+
+  @override
+  String get telescopeName => 'Nome do Telescópio';
+
+  @override
+  String get focalLengthMm => 'Distância Focal (mm)';
+
+  @override
+  String get apertureMm => 'Abertura (mm)';
+
+  @override
+  String get reducerFactor => 'Redutor (ex: 0.8)';
+
+  @override
+  String get cameraSensor => 'Câmera / Sensor';
+
+  @override
+  String get searchCameraHint =>
+      'Buscar câmera: ex: ASI2600, ASI533, IMX571, Sony A7, Canon...';
+
+  @override
+  String get cameraName => 'Nome da Câmera';
+
+  @override
+  String get sensorWidthMm => 'Largura do Sensor (mm)';
+
+  @override
+  String get sensorHeightMm => 'Altura do Sensor (mm)';
+
+  @override
+  String get pixelSizeMicrons => 'Tamanho do Pixel (µm)';
+
+  @override
+  String get computedOpticalSpecs => 'Especificações Ópticas Calculadas';
+
+  @override
+  String get effectiveFocal => 'Focal Efetiva';
+
+  @override
+  String get focalRatio => 'Razão Focal';
+
+  @override
+  String get sensorFov => 'FOV do Sensor';
+
+  @override
+  String get imageScale => 'Escala de Imagem';
+
+  @override
+  String get sampling => 'Amostragem';
+
+  @override
+  String get saveRig => 'Salvar Equipamento';
+
+  @override
+  String get gearButton => 'Equip.';
+
+  @override
+  String get switchRigTooltip => 'Trocar Equipamento';
+
+  @override
+  String get rigsLabel => 'Equipamentos';
+
+  @override
+  String get manageRigsTooltip => 'Gerenciar Equipamentos / Adicionar Óptica';
+
+  @override
+  String get closeFramingSimulator => 'Fechar Simulador de Enquadramento';
+
+  @override
+  String get framingSimulatorTitle => 'Simulador de Enquadramento';
+
+  @override
+  String activeRigLabel(String rigName) {
+    return 'Equipamento Ativo: $rigName';
+  }
+
+  @override
+  String get cameraRotatorAngle => 'Ângulo de Rotação da Câmera';
+
+  @override
+  String get fitToSensor => 'Ajustar ao Sensor';
+
+  @override
+  String get autoAlignTarget => 'Alinhar';
+
+  @override
+  String get autoAlignTargetTooltip =>
+      'Autoalinhar com Ângulo de Posição do Alvo';
+
+  @override
+  String get ruleOfThirdsGrid => 'Grade da Regra dos Terços';
+
+  @override
+  String get ruleOfThirdsSubtitle =>
+      'Linhas de composição sobre o quadro do sensor';
+
+  @override
+  String get opticalSystemMetrics => 'Métricas do Sistema Óptico';
+
+  @override
+  String get effectiveFocalLength => 'Distância Focal Efetiva';
+
+  @override
+  String get sensorFovDegrees => 'Campo de Visão do Sensor';
+
+  @override
+  String get sensorFovArcmin => 'FOV do Sensor (Minutos de Arco)';
+
+  @override
+  String get imageScalePixelSize => 'Escala de Imagem (Tamanho do Pixel)';
+
+  @override
+  String get samplingDiagnosis => 'Diagnóstico de Amostragem';
+
+  @override
+  String get sensorResolution => 'Resolução do Sensor';
+
+  @override
+  String get copyFramingInfo => 'Copiar Info';
+
+  @override
+  String get copyFramingSpecsTooltip =>
+      'Copiar Especificações de Enquadramento (N.I.N.A. / ASIAIR / Stellarium)';
+
+  @override
+  String get framingSpecsCopied =>
+      'Especificações de enquadramento copiadas para a área de transferência';
+
+  @override
+  String get framingPanOffset => 'Deslocamento de Enquadramento';
+
+  @override
+  String get stepSize => 'Passo';
+
+  @override
+  String get centered => 'Centralizado';
+
+  @override
+  String offsetLabel(String offset) {
+    return '$offset\' deslocado';
+  }
+
+  @override
+  String get useArrowsToFrame => 'Use as setas para enquadrar fora do centro';
+
+  @override
+  String get resetToCenter => 'Redefinir para o Centro do Alvo';
+
+  @override
+  String get darkTime => 'Escuro';
+
+  @override
+  String get moonPhaseNewMoon => 'Lua Nova';
+
+  @override
+  String get moonPhaseWaxingCrescent => 'Lua Crescente';
+
+  @override
+  String get moonPhaseFirstQuarter => 'Quarto Crescente';
+
+  @override
+  String get moonPhaseWaxingGibbous => 'Crescente Gibosa';
+
+  @override
+  String get moonPhaseFullMoon => 'Lua Cheia';
+
+  @override
+  String get moonPhaseWaningGibbous => 'Minguante Gibosa';
+
+  @override
+  String get moonPhaseThirdQuarter => 'Quarto Minguante';
+
+  @override
+  String get moonPhaseWaningCrescent => 'Lua Minguante';
+
+  @override
+  String get elevationShort => 'Elevação';
+
+  @override
+  String searchResultSubtitle(String lat, String lon, String elev) {
+    return 'Lat: $lat° | Lon: $lon° | Elevação: ${elev}m';
+  }
+
+  @override
+  String get visualSkyPreview => 'Pré-visualização do Céu';
+
+  @override
+  String get noObservingListsFound =>
+      'Nenhuma lista de observação encontrada. Crie uma lista primeiro!';
+
+  @override
+  String get defaultListNotes => 'Alvo para astrofotografia';
+
+  @override
+  String addToListDialogTitle(String targetName) {
+    return 'Adicionar $targetName à Lista';
+  }
+
+  @override
+  String get targetObservingListLabel => 'Lista de Observação';
+
+  @override
+  String get sessionNotesLabel => 'Notas da Sessão / Filtros';
+
+  @override
+  String get addBtn => 'Adicionar';
+
+  @override
+  String addedToObservingListSuccess(String targetName) {
+    return 'Adicionado $targetName à lista de observação';
+  }
+
+  @override
+  String get simbadQuerying => 'Consultando CDS / SIMBAD...';
+
+  @override
+  String simbadVerified(String objectType) {
+    return 'Verificado no SIMBAD: $objectType';
+  }
+
+  @override
+  String get simbadNotFound => 'Nenhum registro online adicional encontrado.';
+
+  @override
+  String get removeFromFavorites => 'Remover dos Favoritos';
+
+  @override
+  String get addToFavorites => 'Adicionar aos Favoritos';
+
+  @override
+  String addedToFavorites(String targetName) {
+    return 'Adicionado $targetName aos Favoritos';
+  }
+
+  @override
+  String removedFromFavorites(String targetName) {
+    return 'Removido $targetName dos Favoritos';
+  }
+
+  @override
+  String get closeDetailsTooltip => 'Fechar detalhes (Esc)';
+
+  @override
+  String get closeBtn => 'Fechar';
+
+  @override
+  String get transitTimeMetric => 'Horário de Trânsito';
+
+  @override
+  String get visibleDurationMetric => 'Duração Visível';
+
+  @override
+  String get moonDistanceMetric => 'Distância da Lua';
+
+  @override
+  String get apparentSizeMetric => 'Tamanho Aparente';
+
+  @override
+  String get verifyOnlineSimbad => 'Verificar Online (SIMBAD)';
+
+  @override
+  String get simulatingYearlyVisibility =>
+      'Simulando visibilidade de 12 meses ao longo do ano...';
+
+  @override
+  String get visibleTonight => 'Visível Esta Noite';
+
+  @override
+  String get unreachable => 'Inalcançável';
+
+  @override
+  String get notObservableFiltered => 'Não observável com filtros ativos';
+
+  @override
+  String get notObservableBelowLimits => 'Não observável (abaixo dos limites)';
+
+  @override
+  String startsTomorrow(String date) {
+    return 'Começa amanhã ($date)';
+  }
+
+  @override
+  String startsInDays(int days, String date) {
+    return 'Começa em $days dias ($date)';
+  }
+
+  @override
+  String startsOnDate(String date) {
+    return 'Começa em $date';
+  }
+
+  @override
+  String get inSeasonBelowLimits =>
+      'Em Temporada · Abaixo dos limites esta noite';
+
+  @override
+  String offSeasonEnded(String date) {
+    return 'Fora de Temporada (Terminou em $date)';
+  }
+
+  @override
+  String get simulationModeLabel => 'MODO DE SIMULAÇÃO:';
+
+  @override
+  String get activeFiltersMode => 'Filtros Ativos';
+
+  @override
+  String get fullSkyNightMode => 'Céu Completo e Noite';
+
+  @override
+  String get yearlyObservingWindow => 'JANELA ANUAL DE OBSERVAÇÃO';
+
+  @override
+  String yearlyDaysObservablePeak(int days, String hours, String date) {
+    return '$days dias observáveis este ano • Pico: ${hours}h em $date';
+  }
+
+  @override
+  String theoreticalMaxAtTransit(String alt, String extra) {
+    return 'Máximo teórico: $alt° no trânsito$extra';
+  }
+
+  @override
+  String limitsSubtitle(String minAlt, String minHours) {
+    return 'Limites: ≥$minAlt° por ≥${minHours}h';
+  }
+
+  @override
+  String get yearRoundCircumpolar => 'Ano Todo (Circumpolar)';
+
+  @override
+  String get notObservableWithFilters => 'Não observável com os filtros atuais';
+
+  @override
+  String neverReachesLatitude(String minAlt, String maxAlt) {
+    return 'Nunca atinge $minAlt° nesta latitude (Máx: $maxAlt°)';
+  }
+
+  @override
+  String get clearSearchTooltip => 'Limpar busca';
+
+  @override
+  String get searchTargetTooltip => 'Buscar alvo';
+
+  @override
+  String get windowFullDarkness => 'Janela: Escuridão (Noite Toda)';
+
+  @override
+  String targetsFoundCount(int count) {
+    return '$count alvos encontrados';
+  }
+
+  @override
+  String get showingMatchingOnly =>
+      'Exibindo apenas alvos correspondentes aos filtros ativos esta noite.';
+
+  @override
+  String get searchIncludesOutsideFilters =>
+      'A busca inclui alvos fora dos filtros ativos esta noite. Clique em qualquer alvo para ver sua janela anual.';
+
+  @override
+  String get showAll => 'Mostrar Todos';
+
+  @override
+  String get hideNonMatching => 'Ocultar Não Correspondentes';
+
+  @override
+  String visibleDurationShort(String hours) {
+    return '${hours}h visível';
+  }
+
+  @override
+  String visibleDurationAbove(String hours, String alt) {
+    return '${hours}h acima de $alt°';
+  }
+
+  @override
+  String get outsideFilters => 'Fora dos Filtros';
+
+  @override
+  String get outsideActiveFilters => 'Fora dos Filtros Ativos';
+
+  @override
+  String get belowZero => 'Abaixo de 0°';
+
+  @override
+  String get belowHorizon => 'Abaixo do Horizonte';
+
+  @override
+  String peakAltitudeShort(String alt) {
+    return 'Pico: $alt°';
+  }
+
+  @override
+  String moonSeparationShort(String sep) {
+    return 'Lua: $sep°';
+  }
+
+  @override
+  String get selectSkySurveyTooltip => 'Selecionar Levantamento do Céu';
+
+  @override
+  String get openFramingSimulatorTooltip =>
+      'Abrir Simulador de Enquadramento Completo';
+
+  @override
+  String get framingSimulatorShort => 'Simulador';
+
+  @override
+  String get toggleFramingBoxTooltip =>
+      'Alternar Caixa de Enquadramento do Sensor';
+
+  @override
+  String get framingModeShort => 'Enquadramento';
+
+  @override
+  String get photoReticleTooltip => 'Foto + Retículo';
+
+  @override
+  String get photoCleanTooltip => 'Modo Foto (Imagem Limpa)';
+
+  @override
+  String get vectorSizeTooltip => 'Tamanho Aparente Vetorial';
+
+  @override
+  String get zoomOutTooltip => 'Diminuir Zoom (FOV Mais Amplo)';
+
+  @override
+  String get zoomInTooltip => 'Aumentar Zoom (FOV Mais Próximo)';
+
+  @override
+  String get resetFovTooltip => 'Redefinir FOV de Enquadramento';
+
+  @override
+  String get rotateMinus15 => 'Girar -15°';
+
+  @override
+  String get rotatePlus15 => 'Girar +15°';
+
+  @override
+  String get fitFovToSensorTooltip => 'Ajustar FOV ao Tamanho do Sensor';
+
+  @override
+  String get offlineSkyFallback => 'Modo Céu Offline';
+
+  @override
+  String get noAltitudeData =>
+      'Nenhum dado de altitude disponível para a janela';
+
+  @override
+  String altitudeVsTimeTarget(String targetName) {
+    return 'Altitude vs. Tempo: $targetName';
+  }
+
+  @override
+  String get astronomicalDarknessLabel => 'ESCURIDÃO ASTRONÔMICA';
+
+  @override
+  String get observingWindowLabel => 'JANELA DE OBSERVAÇÃO';
 }

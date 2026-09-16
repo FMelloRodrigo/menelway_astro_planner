@@ -162,5 +162,393 @@
 
   "noFavoritesYet": "No favorite targets yet",
   "noFavoritesDesc": "Click the star icon on any target card or details sheet to pin favorites here.",
-  "exploreTargets": "Explore Targets"
+  "exploreTargets": "Explore Targets",
+
+  "observingTimeWindow": "Observing Time Window",
+  "astronomicalDarkness": "Astronomical Darkness",
+  "astroDarknessShort": "Astro Darkness",
+  "customTimeLimit": "Custom Time Limit",
+  "customWindowShort": "Custom Window",
+  "startTime": "START TIME",
+  "endTime": "END TIME",
+  "window": "WINDOW",
+  "hoursShort": "hrs",
+  "duskMidnight": "Dusk - Midnight",
+  "midnightDawn": "Midnight - Dawn",
+  "visibilityAltitudeRange": "Visibility & Altitude Range",
+  "zenith": "(Zenith)",
+  "minimumAltitude": "Minimum Altitude: {degrees}°",
+  "@minimumAltitude": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "maximumAltitude": "Maximum Altitude: {degrees}°",
+  "@maximumAltitude": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "minimumDuration": "Minimum Duration: {hours}h",
+  "@minimumDuration": {
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "durationLabel": "Duration: {hours}h",
+  "@durationLabel": {
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "directionAzimuthRange": "Direction & Azimuth Range",
+  "directionPresetMode": "Direction Preset / Mode",
+  "quadrantAll": "All Directions (0° - 360°)",
+  "quadrantN": "North (315° - 45°)",
+  "quadrantE": "East (45° - 135°)",
+  "quadrantS": "South (135° - 225°)",
+  "quadrantW": "West (225° - 315°)",
+  "quadrantNE": "North-East (0° - 90°)",
+  "quadrantSE": "South-East (90° - 180°)",
+  "quadrantSW": "South-West (180° - 270°)",
+  "quadrantNW": "North-West (270° - 360°)",
+  "quadrantCustom": "Custom Degree Range",
+  "minAzimuthLabel": "Min: {deg}° ({cardinal})",
+  "@minAzimuthLabel": {
+    "placeholders": {
+      "deg": { "type": "String" },
+      "cardinal": { "type": "String" }
+    }
+  },
+  "maxAzimuthLabel": "Max: {deg}° ({cardinal})",
+  "@maxAzimuthLabel": {
+    "placeholders": {
+      "deg": { "type": "String" },
+      "cardinal": { "type": "String" }
+    }
+  },
+  "compassAll360": "All 360°",
+  "compassClosed": "0° (Closed)",
+  "compassSpan": "Span: {span}°",
+  "@compassSpan": {
+    "placeholders": {
+      "span": { "type": "String" }
+    }
+  },
+  "customHorizonMask": "Custom Horizon Obstruction Mask",
+  "customHorizonProfile": "Custom Horizon Profile",
+  "noObstaclePoints": "No obstacle points defined yet (flat horizon)",
+  "obstaclePointsCount": "{count, plural, =1{1 obstacle point configured across 360°} other{{count} obstacle points configured across 360°}}",
+  "@obstaclePointsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "createHorizonProfile": "Create Horizon Profile...",
+  "openHorizonMaker": "Open Horizon Maker...",
+  "moonDistance": "Moon Distance",
+  "minMoonDistanceLabel": "Min distance from Moon: {degrees}°",
+  "@minMoonDistanceLabel": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "catalogs": "Catalogs",
+  "objectTypes": "Object Types",
+  "magnitudeApparentSize": "Magnitude & Apparent Size",
+  "faintestLimitLabel": "Faintest Limit (Max Mag): {mag}",
+  "@faintestLimitLabel": {
+    "placeholders": {
+      "mag": { "type": "String" }
+    }
+  },
+  "lowerBrighter": "(lower = brighter)",
+  "minSizeLabelAlt": "Min Size: {size}'",
+  "@minSizeLabelAlt": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "equipmentRigsTooltip": "Equipment Rigs & Optics",
+  "equipmentRigsButton": "Equipment Rigs",
+  "settingsAndDataTooltip": "Settings & Data",
+  "settingsLocation": "Observer Location...",
+  "actionCannotBeUndone": "This action cannot be undone.",
+  "cleanDataSuccessSnackBar": "All saved data, settings, and observing lists have been cleared.",
+  "selectedCoordsElevation": "Selected Coordinates & Elevation",
+  "popularAstroSites": "Popular Astrophotography Sites:",
+  "applyLocation": "Apply Location",
+  "cancel": "Cancel",
+  "retry": "Retry",
+  "failedLoadCore": "Failed to load astronomical core",
+  "initializingEngine": "Initializing Astro Targets Engine & Database...",
+  "equipmentDialogTitle": "Equipment Rigs & Optics",
+  "addEquipmentRig": "Add Equipment Rig",
+  "editEquipmentRig": "Edit Equipment Rig",
+  "backToList": "Back to List",
+  "editRig": "Edit",
+  "deleteRigTooltip": "Delete Rig",
+  "createNewRig": "Create New Rig",
+  "rigProfileName": "Rig Profile Name",
+  "telescopeOptics": "Telescope / Optics",
+  "searchScopeHint": "Search scope: e.g. RedCat, FRA400, 72ED, C8, Seestar...",
+  "telescopeName": "Telescope Name",
+  "focalLengthMm": "Focal Length (mm)",
+  "apertureMm": "Aperture (mm)",
+  "reducerFactor": "Reducer (e.g. 0.8)",
+  "cameraSensor": "Camera / Sensor",
+  "searchCameraHint": "Search camera: e.g. ASI2600, ASI533, IMX571, Sony A7, Canon...",
+  "cameraName": "Camera Name",
+  "sensorWidthMm": "Sensor Width (mm)",
+  "sensorHeightMm": "Sensor Height (mm)",
+  "pixelSizeMicrons": "Pixel Size (µm)",
+  "computedOpticalSpecs": "Computed Optical Specifications",
+  "effectiveFocal": "Effective Focal",
+  "focalRatio": "Focal Ratio",
+  "sensorFov": "Sensor FOV",
+  "imageScale": "Image Scale",
+  "sampling": "Sampling",
+  "saveRig": "Save Rig",
+  "gearButton": "Gear",
+  "switchRigTooltip": "Switch Equipment Rig",
+  "rigsLabel": "Rigs",
+  "manageRigsTooltip": "Manage Rigs / Add Gear",
+  "closeFramingSimulator": "Close Framing Simulator",
+  "framingSimulatorTitle": "Equipment Framing Simulator",
+  "activeRigLabel": "Active Rig: {rigName}",
+  "@activeRigLabel": {
+    "placeholders": {
+      "rigName": { "type": "String" }
+    }
+  },
+  "cameraRotatorAngle": "Camera Rotator Angle",
+  "fitToSensor": "Fit to Sensor",
+  "autoAlignTarget": "Align",
+  "autoAlignTargetTooltip": "Auto-Align with Target Position Angle",
+  "ruleOfThirdsGrid": "Rule of Thirds Grid",
+  "ruleOfThirdsSubtitle": "Overlay composition cross-lines inside sensor frame",
+  "opticalSystemMetrics": "Optical System Metrics",
+  "effectiveFocalLength": "Effective Focal Length",
+  "sensorFovDegrees": "Sensor Field of View",
+  "sensorFovArcmin": "Sensor FOV (Arcmin)",
+  "imageScalePixelSize": "Image Scale (Pixel Size)",
+  "samplingDiagnosis": "Sampling Diagnosis",
+  "sensorResolution": "Sensor Resolution",
+  "copyFramingInfo": "Copy Info",
+  "copyFramingSpecsTooltip": "Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)",
+  "framingSpecsCopied": "Framing specs copied to clipboard (ready for N.I.N.A. / ASIAIR / Stellarium)",
+  "framingPanOffset": "Framing Pan Offset",
+  "stepSize": "Step Size",
+  "centered": "Centered",
+  "offsetLabel": "{offset}' offset",
+  "@offsetLabel": {
+    "placeholders": {
+      "offset": { "type": "String" }
+    }
+  },
+  "useArrowsToFrame": "Use arrows to frame off-center composition",
+  "resetToCenter": "Reset to Target Center",
+
+  "darkTime": "Dark",
+  "moonPhaseNewMoon": "New Moon",
+  "moonPhaseWaxingCrescent": "Waxing Crescent",
+  "moonPhaseFirstQuarter": "First Quarter",
+  "moonPhaseWaxingGibbous": "Waxing Gibbous",
+  "moonPhaseFullMoon": "Full Moon",
+  "moonPhaseWaningGibbous": "Waning Gibbous",
+  "moonPhaseThirdQuarter": "Third Quarter",
+  "moonPhaseWaningCrescent": "Waning Crescent",
+
+  "elevationShort": "Elevation",
+  "searchResultSubtitle": "Lat: {lat}° | Lon: {lon}° | Elevation: {elev}m",
+  "@searchResultSubtitle": {
+    "placeholders": {
+      "lat": { "type": "String" },
+      "lon": { "type": "String" },
+      "elev": { "type": "String" }
+    }
+  },
+
+  "visualSkyPreview": "Visual Sky Preview",
+  "noObservingListsFound": "No observing lists found. Create a list first!",
+  "defaultListNotes": "Target for imaging",
+  "addToListDialogTitle": "Add {targetName} to List",
+  "@addToListDialogTitle": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "targetObservingListLabel": "Target Observing List",
+  "sessionNotesLabel": "Session Notes / Filters",
+  "addBtn": "Add",
+  "addedToObservingListSuccess": "Added {targetName} to observing list",
+  "@addedToObservingListSuccess": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "simbadQuerying": "Querying CDS / SIMBAD...",
+  "simbadVerified": "Verified on SIMBAD: {objectType}",
+  "@simbadVerified": {
+    "placeholders": {
+      "objectType": { "type": "String" }
+    }
+  },
+  "simbadNotFound": "No additional online records found.",
+  "removeFromFavorites": "Remove from Favorites",
+  "addToFavorites": "Add to Favorites",
+  "addedToFavorites": "Added {targetName} to Favorites",
+  "@addedToFavorites": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "removedFromFavorites": "Removed {targetName} from Favorites",
+  "@removedFromFavorites": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "closeDetailsTooltip": "Close details (Esc)",
+  "closeBtn": "Close",
+  "transitTimeMetric": "Transit Time",
+  "visibleDurationMetric": "Visible Duration",
+  "moonDistanceMetric": "Moon Distance",
+  "apparentSizeMetric": "Apparent Size",
+  "verifyOnlineSimbad": "Verify Online (SIMBAD)",
+  "simulatingYearlyVisibility": "Simulating 12-month visibility across the year...",
+  "visibleTonight": "Visible Tonight",
+  "unreachable": "Unreachable",
+  "notObservableFiltered": "Not observable with active filters",
+  "notObservableBelowLimits": "Not observable (below limits)",
+  "startsTomorrow": "Starts tomorrow ({date})",
+  "@startsTomorrow": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "startsInDays": "Starts in {days} days ({date})",
+  "@startsInDays": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "startsOnDate": "Starts {date}",
+  "@startsOnDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "inSeasonBelowLimits": "In Season · Below limits tonight",
+  "offSeasonEnded": "Off-Season (Ended {date})",
+  "@offSeasonEnded": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "simulationModeLabel": "SIMULATION MODE:",
+  "activeFiltersMode": "Active Filters",
+  "fullSkyNightMode": "Full Sky & Night",
+  "yearlyObservingWindow": "YEARLY OBSERVING WINDOW",
+  "yearlyDaysObservablePeak": "{days} days observable this year • Peak: {hours}h on {date}",
+  "@yearlyDaysObservablePeak": {
+    "placeholders": {
+      "days": { "type": "int" },
+      "hours": { "type": "String" },
+      "date": { "type": "String" }
+    }
+  },
+  "theoreticalMaxAtTransit": "Theoretical max: {alt}° at transit{extra}",
+  "@theoreticalMaxAtTransit": {
+    "placeholders": {
+      "alt": { "type": "String" },
+      "extra": { "type": "String" }
+    }
+  },
+  "limitsSubtitle": "Limits: ≥{minAlt}° for ≥{minHours}h",
+  "@limitsSubtitle": {
+    "placeholders": {
+      "minAlt": { "type": "String" },
+      "minHours": { "type": "String" }
+    }
+  },
+  "yearRoundCircumpolar": "Year-Round (Circumpolar)",
+  "notObservableWithFilters": "Not observable with current filters",
+  "neverReachesLatitude": "Never reaches {minAlt}° at this latitude (Max: {maxAlt}°)",
+  "@neverReachesLatitude": {
+    "placeholders": {
+      "minAlt": { "type": "String" },
+      "maxAlt": { "type": "String" }
+    }
+  },
+
+  "clearSearchTooltip": "Clear search",
+  "searchTargetTooltip": "Search target",
+  "windowFullDarkness": "Window: Darkness (Full Night)",
+  "targetsFoundCount": "{count} targets found",
+  "@targetsFoundCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "showingMatchingOnly": "Showing only targets matching active filters tonight.",
+  "searchIncludesOutsideFilters": "Search includes targets outside active filters tonight. Click any target to view its yearly window.",
+  "showAll": "Show All",
+  "hideNonMatching": "Hide Non-Matching",
+  "visibleDurationShort": "{hours}h visible",
+  "@visibleDurationShort": {
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "visibleDurationAbove": "{hours}h above {alt}°",
+  "@visibleDurationAbove": {
+    "placeholders": {
+      "hours": { "type": "String" },
+      "alt": { "type": "String" }
+    }
+  },
+  "outsideFilters": "Outside Filters",
+  "outsideActiveFilters": "Outside Active Filters",
+  "belowZero": "Below 0°",
+  "belowHorizon": "Below Horizon",
+  "peakAltitudeShort": "Peak: {alt}°",
+  "@peakAltitudeShort": {
+    "placeholders": {
+      "alt": { "type": "String" }
+    }
+  },
+  "moonSeparationShort": "Moon: {sep}°",
+  "@moonSeparationShort": {
+    "placeholders": {
+      "sep": { "type": "String" }
+    }
+  },
+
+  "selectSkySurveyTooltip": "Select Sky Survey",
+  "openFramingSimulatorTooltip": "Open Full Framing Simulator",
+  "framingSimulatorShort": "Simulator",
+  "toggleFramingBoxTooltip": "Toggle Sensor Framing Box",
+  "framingModeShort": "Framing",
+  "photoReticleTooltip": "Photo + Reticle",
+  "photoCleanTooltip": "Photo Mode (Clean Image)",
+  "vectorSizeTooltip": "Vector Apparent Size",
+  "zoomOutTooltip": "Zoom Out (Wider FOV)",
+  "zoomInTooltip": "Zoom In (Closer FOV)",
+  "resetFovTooltip": "Reset Framing FOV",
+  "rotateMinus15": "Rotate -15°",
+  "rotatePlus15": "Rotate +15°",
+  "fitFovToSensorTooltip": "Fit FOV to Sensor Size",
+  "offlineSkyFallback": "Offline Sky Fallback",
+
+  "noAltitudeData": "No altitude data available for window",
+  "altitudeVsTimeTarget": "Altitude vs. Time: {targetName}",
+  "@altitudeVsTimeTarget": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "astronomicalDarknessLabel": "ASTRONOMICAL DARKNESS",
+  "observingWindowLabel": "OBSERVING WINDOW"
 }

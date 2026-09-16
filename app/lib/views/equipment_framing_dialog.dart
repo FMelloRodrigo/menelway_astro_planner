@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/equipment_manager.dart';
+import '../l10n/app_localizations.dart';
 import '../models/equipment_profile.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
@@ -123,9 +124,10 @@ Sampling: ${rig.samplingCategory}
 ---------------------------------''';
 
     Clipboard.setData(ClipboardData(text: text));
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Framing specs copied to clipboard (ready for N.I.N.A. / ASIAIR / Stellarium)"),
+      SnackBar(
+        content: Text(l10n?.framingSpecsCopied ?? "Framing specs copied to clipboard (ready for N.I.N.A. / ASIAIR / Stellarium)"),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -152,6 +154,7 @@ Sampling: ${rig.samplingCategory}
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
@@ -185,12 +188,12 @@ Sampling: ${rig.samplingCategory}
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${widget.target.displayName} — Equipment Framing Simulator",
+                          "${widget.target.displayName} — ${l10n?.framingSimulatorTitle ?? "Equipment Framing Simulator"}",
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          "Active Rig: ${rig.name}",
+                          l10n?.activeRigLabel(rig.name) ?? "Active Rig: ${rig.name}",
                           style: TextStyle(fontSize: 11, color: accentColor),
                         ),
                       ],
@@ -199,7 +202,7 @@ Sampling: ${rig.samplingCategory}
 
                   // Equipment Selector Dropdown
                   PopupMenuButton<String>(
-                    tooltip: "Switch Equipment Rig",
+                    tooltip: l10n?.switchRigTooltip ?? "Switch Equipment Rig",
                     color: surfaceColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -231,7 +234,7 @@ Sampling: ${rig.samplingCategory}
                         children: [
                           Icon(Icons.tune_rounded, size: 14, color: accentColor),
                           const SizedBox(width: 4),
-                          Text("Rigs", style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w600)),
+                          Text(l10n?.rigsLabel ?? "Rigs", style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w600)),
                           const SizedBox(width: 2),
                           Icon(Icons.arrow_drop_down_rounded, size: 16, color: textColor),
                         ],
@@ -242,13 +245,13 @@ Sampling: ${rig.samplingCategory}
                   const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.settings_suggest_rounded, size: 20),
-                    tooltip: "Manage Rigs / Add Gear",
+                    tooltip: l10n?.manageRigsTooltip ?? "Manage Rigs / Add Gear",
                     onPressed: _openEquipmentManager,
                   ),
                   const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 22),
-                    tooltip: "Close Framing Simulator",
+                    tooltip: l10n?.closeFramingSimulator ?? "Close Framing Simulator",
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -271,7 +274,7 @@ Sampling: ${rig.samplingCategory}
                           Expanded(
                             flex: 4,
                             child: SingleChildScrollView(
-                              child: _buildControlsPanel(rig, angle, textColor, accentColor, borderColor),
+                              child: _buildControlsPanel(rig, angle, textColor, accentColor, borderColor, l10n),
                             ),
                           ),
                         ],
@@ -282,7 +285,7 @@ Sampling: ${rig.samplingCategory}
                           const SizedBox(height: 12),
                           Expanded(
                             child: SingleChildScrollView(
-                              child: _buildControlsPanel(rig, angle, textColor, accentColor, borderColor),
+                              child: _buildControlsPanel(rig, angle, textColor, accentColor, borderColor, l10n),
                             ),
                           ),
                         ],
@@ -315,6 +318,7 @@ Sampling: ${rig.samplingCategory}
     Color textColor,
     Color accentColor,
     Color borderColor,
+    AppLocalizations? l10n,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -336,7 +340,7 @@ Sampling: ${rig.samplingCategory}
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      "Camera Rotator Angle",
+                      l10n?.cameraRotatorAngle ?? "Camera Rotator Angle",
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -384,7 +388,7 @@ Sampling: ${rig.samplingCategory}
         const SizedBox(height: 12),
 
         // Framing Pan Offset Controller
-        _buildPanCard(rig, textColor, accentColor, borderColor),
+        _buildPanCard(rig, textColor, accentColor, borderColor, l10n),
 
         const SizedBox(height: 12),
 
@@ -394,7 +398,7 @@ Sampling: ${rig.samplingCategory}
             Expanded(
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.fit_screen_rounded, size: 15),
-                label: const Text("Fit to Sensor", style: TextStyle(fontSize: 12)),
+                label: Text(l10n?.fitToSensor ?? "Fit to Sensor", style: const TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   foregroundColor: textColor,
@@ -405,10 +409,10 @@ Sampling: ${rig.samplingCategory}
             ),
             const SizedBox(width: 8),
             Tooltip(
-              message: "Auto-Align with Target Position Angle",
+              message: l10n?.autoAlignTargetTooltip ?? "Auto-Align with Target Position Angle",
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.auto_awesome_rounded, size: 13),
-                label: const Text("Align", style: TextStyle(fontSize: 11)),
+                label: Text(l10n?.autoAlignTarget ?? "Align", style: const TextStyle(fontSize: 11)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   foregroundColor: textColor,
@@ -424,8 +428,8 @@ Sampling: ${rig.samplingCategory}
 
         // Rule of Thirds Grid Toggle
         SwitchListTile(
-          title: Text("Rule of Thirds Grid", style: TextStyle(fontSize: 13, color: textColor, fontWeight: FontWeight.w600)),
-          subtitle: Text("Overlay composition cross-lines inside sensor frame", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
+          title: Text(l10n?.ruleOfThirdsGrid ?? "Rule of Thirds Grid", style: TextStyle(fontSize: 13, color: textColor, fontWeight: FontWeight.w600)),
+          subtitle: Text(l10n?.ruleOfThirdsSubtitle ?? "Overlay composition cross-lines inside sensor frame", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
           value: EquipmentManager.instance.showRuleOfThirds,
           activeThumbColor: accentColor,
           dense: true,
@@ -446,14 +450,14 @@ Sampling: ${rig.samplingCategory}
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Optical System Metrics", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+              Text(l10n?.opticalSystemMetrics ?? "Optical System Metrics", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
               const Divider(height: 12),
-              _buildMetricRow("Effective Focal Length", "${rig.telescope.effectiveFocalLength.round()} mm (${rig.telescope.focalRatioString})", textColor),
-              _buildMetricRow("Sensor Field of View", "${rig.sensorFovWidthDeg.toStringAsFixed(2)}° × ${rig.sensorFovHeightDeg.toStringAsFixed(2)}°", textColor),
-              _buildMetricRow("Sensor FOV (Arcmin)", "${rig.sensorFovWidthArcmin.toStringAsFixed(1)}' × ${rig.sensorFovHeightArcmin.toStringAsFixed(1)}'", textColor),
-              _buildMetricRow("Image Scale (Pixel Size)", "${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\" / pixel", textColor),
-              _buildMetricRow("Sampling Diagnosis", rig.samplingCategory, accentColor),
-              _buildMetricRow("Sensor Resolution", "${rig.camera.resolutionWidthPx} × ${rig.camera.resolutionHeightPx} (${rig.camera.megapixels.toStringAsFixed(1)} MP)", textColor),
+              _buildMetricRow(l10n?.effectiveFocalLength ?? "Effective Focal Length", "${rig.telescope.effectiveFocalLength.round()} mm (${rig.telescope.focalRatioString})", textColor),
+              _buildMetricRow(l10n?.sensorFovDegrees ?? "Sensor Field of View", "${rig.sensorFovWidthDeg.toStringAsFixed(2)}° × ${rig.sensorFovHeightDeg.toStringAsFixed(2)}°", textColor),
+              _buildMetricRow(l10n?.sensorFovArcmin ?? "Sensor FOV (Arcmin)", "${rig.sensorFovWidthArcmin.toStringAsFixed(1)}' × ${rig.sensorFovHeightArcmin.toStringAsFixed(1)}'", textColor),
+              _buildMetricRow(l10n?.imageScalePixelSize ?? "Image Scale (Pixel Size)", "${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\" / pixel", textColor),
+              _buildMetricRow(l10n?.samplingDiagnosis ?? "Sampling Diagnosis", rig.samplingCategory, accentColor),
+              _buildMetricRow(l10n?.sensorResolution ?? "Sensor Resolution", "${rig.camera.resolutionWidthPx} × ${rig.camera.resolutionHeightPx} (${rig.camera.megapixels.toStringAsFixed(1)} MP)", textColor),
             ],
           ),
         ),
@@ -464,7 +468,7 @@ Sampling: ${rig.samplingCategory}
         Align(
           alignment: Alignment.centerRight,
           child: Tooltip(
-            message: "Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)",
+            message: l10n?.copyFramingSpecsTooltip ?? "Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)",
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -483,7 +487,7 @@ Sampling: ${rig.samplingCategory}
                       Icon(Icons.copy_rounded, size: 12, color: accentColor),
                       const SizedBox(width: 4),
                       Text(
-                        "Copy Info",
+                        l10n?.copyFramingInfo ?? "Copy Info",
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -501,7 +505,7 @@ Sampling: ${rig.samplingCategory}
     );
   }
 
-  Widget _buildPanCard(EquipmentProfile rig, Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildPanCard(EquipmentProfile rig, Color textColor, Color accentColor, Color borderColor, AppLocalizations? l10n) {
     final panX = EquipmentManager.instance.panOffsetArcminX;
     final panY = EquipmentManager.instance.panOffsetArcminY;
     final totalOffset = EquipmentManager.instance.totalPanOffsetArcmin;
@@ -535,7 +539,7 @@ Sampling: ${rig.samplingCategory}
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  "Framing Pan Offset",
+                  l10n?.framingPanOffset ?? "Framing Pan Offset",
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -549,7 +553,9 @@ Sampling: ${rig.samplingCategory}
                   border: Border.all(color: hasOffset ? accentColor.withValues(alpha: 0.4) : borderColor),
                 ),
                 child: Text(
-                  hasOffset ? "${totalOffset.toStringAsFixed(1)}' offset" : "Centered",
+                  hasOffset
+                      ? (l10n?.offsetLabel(totalOffset.toStringAsFixed(1)) ?? "${totalOffset.toStringAsFixed(1)}' offset")
+                      : (l10n?.centered ?? "Centered"),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -594,7 +600,7 @@ Sampling: ${rig.samplingCategory}
                         const SizedBox(width: 4),
                         _buildPanBtn(
                           Icons.filter_center_focus_rounded,
-                          "Reset to Target Center",
+                          l10n?.resetToCenter ?? "Reset to Target Center",
                           () => EquipmentManager.instance.resetPan(),
                           hasOffset ? accentColor : textColor.withValues(alpha: 0.4),
                           isCenter: true,
@@ -624,7 +630,7 @@ Sampling: ${rig.samplingCategory}
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Step Size", style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
+                    Text(l10n?.stepSize ?? "Step Size", style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 4,
@@ -674,7 +680,7 @@ Sampling: ${rig.samplingCategory}
                       ),
                     ] else ...[
                       Text(
-                        "Use arrows to frame off-center composition",
+                        l10n?.useArrowsToFrame ?? "Use arrows to frame off-center composition",
                         style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
                       ),
                     ],

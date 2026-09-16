@@ -727,6 +727,1236 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Explore Targets'**
   String get exploreTargets;
+
+  /// No description provided for @observingTimeWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Observing Time Window'**
+  String get observingTimeWindow;
+
+  /// No description provided for @astronomicalDarkness.
+  ///
+  /// In en, this message translates to:
+  /// **'Astronomical Darkness'**
+  String get astronomicalDarkness;
+
+  /// No description provided for @astroDarknessShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Astro Darkness'**
+  String get astroDarknessShort;
+
+  /// No description provided for @customTimeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Time Limit'**
+  String get customTimeLimit;
+
+  /// No description provided for @customWindowShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Window'**
+  String get customWindowShort;
+
+  /// No description provided for @startTime.
+  ///
+  /// In en, this message translates to:
+  /// **'START TIME'**
+  String get startTime;
+
+  /// No description provided for @endTime.
+  ///
+  /// In en, this message translates to:
+  /// **'END TIME'**
+  String get endTime;
+
+  /// No description provided for @window.
+  ///
+  /// In en, this message translates to:
+  /// **'WINDOW'**
+  String get window;
+
+  /// No description provided for @hoursShort.
+  ///
+  /// In en, this message translates to:
+  /// **'hrs'**
+  String get hoursShort;
+
+  /// No description provided for @duskMidnight.
+  ///
+  /// In en, this message translates to:
+  /// **'Dusk - Midnight'**
+  String get duskMidnight;
+
+  /// No description provided for @midnightDawn.
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight - Dawn'**
+  String get midnightDawn;
+
+  /// No description provided for @visibilityAltitudeRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility & Altitude Range'**
+  String get visibilityAltitudeRange;
+
+  /// No description provided for @zenith.
+  ///
+  /// In en, this message translates to:
+  /// **'(Zenith)'**
+  String get zenith;
+
+  /// No description provided for @minimumAltitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Altitude: {degrees}°'**
+  String minimumAltitude(String degrees);
+
+  /// No description provided for @maximumAltitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum Altitude: {degrees}°'**
+  String maximumAltitude(String degrees);
+
+  /// No description provided for @minimumDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Duration: {hours}h'**
+  String minimumDuration(String hours);
+
+  /// No description provided for @durationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration: {hours}h'**
+  String durationLabel(String hours);
+
+  /// No description provided for @directionAzimuthRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction & Azimuth Range'**
+  String get directionAzimuthRange;
+
+  /// No description provided for @directionPresetMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction Preset / Mode'**
+  String get directionPresetMode;
+
+  /// No description provided for @quadrantAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All Directions (0° - 360°)'**
+  String get quadrantAll;
+
+  /// No description provided for @quadrantN.
+  ///
+  /// In en, this message translates to:
+  /// **'North (315° - 45°)'**
+  String get quadrantN;
+
+  /// No description provided for @quadrantE.
+  ///
+  /// In en, this message translates to:
+  /// **'East (45° - 135°)'**
+  String get quadrantE;
+
+  /// No description provided for @quadrantS.
+  ///
+  /// In en, this message translates to:
+  /// **'South (135° - 225°)'**
+  String get quadrantS;
+
+  /// No description provided for @quadrantW.
+  ///
+  /// In en, this message translates to:
+  /// **'West (225° - 315°)'**
+  String get quadrantW;
+
+  /// No description provided for @quadrantNE.
+  ///
+  /// In en, this message translates to:
+  /// **'North-East (0° - 90°)'**
+  String get quadrantNE;
+
+  /// No description provided for @quadrantSE.
+  ///
+  /// In en, this message translates to:
+  /// **'South-East (90° - 180°)'**
+  String get quadrantSE;
+
+  /// No description provided for @quadrantSW.
+  ///
+  /// In en, this message translates to:
+  /// **'South-West (180° - 270°)'**
+  String get quadrantSW;
+
+  /// No description provided for @quadrantNW.
+  ///
+  /// In en, this message translates to:
+  /// **'North-West (270° - 360°)'**
+  String get quadrantNW;
+
+  /// No description provided for @quadrantCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Degree Range'**
+  String get quadrantCustom;
+
+  /// No description provided for @minAzimuthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min: {deg}° ({cardinal})'**
+  String minAzimuthLabel(String deg, String cardinal);
+
+  /// No description provided for @maxAzimuthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max: {deg}° ({cardinal})'**
+  String maxAzimuthLabel(String deg, String cardinal);
+
+  /// No description provided for @compassAll360.
+  ///
+  /// In en, this message translates to:
+  /// **'All 360°'**
+  String get compassAll360;
+
+  /// No description provided for @compassClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'0° (Closed)'**
+  String get compassClosed;
+
+  /// No description provided for @compassSpan.
+  ///
+  /// In en, this message translates to:
+  /// **'Span: {span}°'**
+  String compassSpan(String span);
+
+  /// No description provided for @customHorizonMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Horizon Obstruction Mask'**
+  String get customHorizonMask;
+
+  /// No description provided for @customHorizonProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Horizon Profile'**
+  String get customHorizonProfile;
+
+  /// No description provided for @noObstaclePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'No obstacle points defined yet (flat horizon)'**
+  String get noObstaclePoints;
+
+  /// No description provided for @obstaclePointsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 obstacle point configured across 360°} other{{count} obstacle points configured across 360°}}'**
+  String obstaclePointsCount(int count);
+
+  /// No description provided for @createHorizonProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Horizon Profile...'**
+  String get createHorizonProfile;
+
+  /// No description provided for @openHorizonMaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Horizon Maker...'**
+  String get openHorizonMaker;
+
+  /// No description provided for @moonDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Moon Distance'**
+  String get moonDistance;
+
+  /// No description provided for @minMoonDistanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min distance from Moon: {degrees}°'**
+  String minMoonDistanceLabel(String degrees);
+
+  /// No description provided for @catalogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogs'**
+  String get catalogs;
+
+  /// No description provided for @objectTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Object Types'**
+  String get objectTypes;
+
+  /// No description provided for @magnitudeApparentSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Magnitude & Apparent Size'**
+  String get magnitudeApparentSize;
+
+  /// No description provided for @faintestLimitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Faintest Limit (Max Mag): {mag}'**
+  String faintestLimitLabel(String mag);
+
+  /// No description provided for @lowerBrighter.
+  ///
+  /// In en, this message translates to:
+  /// **'(lower = brighter)'**
+  String get lowerBrighter;
+
+  /// No description provided for @minSizeLabelAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Min Size: {size}\''**
+  String minSizeLabelAlt(String size);
+
+  /// No description provided for @equipmentRigsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment Rigs & Optics'**
+  String get equipmentRigsTooltip;
+
+  /// No description provided for @equipmentRigsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment Rigs'**
+  String get equipmentRigsButton;
+
+  /// No description provided for @settingsAndDataTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings & Data'**
+  String get settingsAndDataTooltip;
+
+  /// No description provided for @settingsLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Observer Location...'**
+  String get settingsLocation;
+
+  /// No description provided for @actionCannotBeUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'This action cannot be undone.'**
+  String get actionCannotBeUndone;
+
+  /// No description provided for @cleanDataSuccessSnackBar.
+  ///
+  /// In en, this message translates to:
+  /// **'All saved data, settings, and observing lists have been cleared.'**
+  String get cleanDataSuccessSnackBar;
+
+  /// No description provided for @selectedCoordsElevation.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Coordinates & Elevation'**
+  String get selectedCoordsElevation;
+
+  /// No description provided for @popularAstroSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular Astrophotography Sites:'**
+  String get popularAstroSites;
+
+  /// No description provided for @applyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Location'**
+  String get applyLocation;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @failedLoadCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load astronomical core'**
+  String get failedLoadCore;
+
+  /// No description provided for @initializingEngine.
+  ///
+  /// In en, this message translates to:
+  /// **'Initializing Astro Targets Engine & Database...'**
+  String get initializingEngine;
+
+  /// No description provided for @equipmentDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment Rigs & Optics'**
+  String get equipmentDialogTitle;
+
+  /// No description provided for @addEquipmentRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Equipment Rig'**
+  String get addEquipmentRig;
+
+  /// No description provided for @editEquipmentRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Equipment Rig'**
+  String get editEquipmentRig;
+
+  /// No description provided for @backToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to List'**
+  String get backToList;
+
+  /// No description provided for @editRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get editRig;
+
+  /// No description provided for @deleteRigTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Rig'**
+  String get deleteRigTooltip;
+
+  /// No description provided for @createNewRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Rig'**
+  String get createNewRig;
+
+  /// No description provided for @rigProfileName.
+  ///
+  /// In en, this message translates to:
+  /// **'Rig Profile Name'**
+  String get rigProfileName;
+
+  /// No description provided for @telescopeOptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Telescope / Optics'**
+  String get telescopeOptics;
+
+  /// No description provided for @searchScopeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search scope: e.g. RedCat, FRA400, 72ED, C8, Seestar...'**
+  String get searchScopeHint;
+
+  /// No description provided for @telescopeName.
+  ///
+  /// In en, this message translates to:
+  /// **'Telescope Name'**
+  String get telescopeName;
+
+  /// No description provided for @focalLengthMm.
+  ///
+  /// In en, this message translates to:
+  /// **'Focal Length (mm)'**
+  String get focalLengthMm;
+
+  /// No description provided for @apertureMm.
+  ///
+  /// In en, this message translates to:
+  /// **'Aperture (mm)'**
+  String get apertureMm;
+
+  /// No description provided for @reducerFactor.
+  ///
+  /// In en, this message translates to:
+  /// **'Reducer (e.g. 0.8)'**
+  String get reducerFactor;
+
+  /// No description provided for @cameraSensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera / Sensor'**
+  String get cameraSensor;
+
+  /// No description provided for @searchCameraHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search camera: e.g. ASI2600, ASI533, IMX571, Sony A7, Canon...'**
+  String get searchCameraHint;
+
+  /// No description provided for @cameraName.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera Name'**
+  String get cameraName;
+
+  /// No description provided for @sensorWidthMm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor Width (mm)'**
+  String get sensorWidthMm;
+
+  /// No description provided for @sensorHeightMm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor Height (mm)'**
+  String get sensorHeightMm;
+
+  /// No description provided for @pixelSizeMicrons.
+  ///
+  /// In en, this message translates to:
+  /// **'Pixel Size (µm)'**
+  String get pixelSizeMicrons;
+
+  /// No description provided for @computedOpticalSpecs.
+  ///
+  /// In en, this message translates to:
+  /// **'Computed Optical Specifications'**
+  String get computedOpticalSpecs;
+
+  /// No description provided for @effectiveFocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Effective Focal'**
+  String get effectiveFocal;
+
+  /// No description provided for @focalRatio.
+  ///
+  /// In en, this message translates to:
+  /// **'Focal Ratio'**
+  String get focalRatio;
+
+  /// No description provided for @sensorFov.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor FOV'**
+  String get sensorFov;
+
+  /// No description provided for @imageScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Scale'**
+  String get imageScale;
+
+  /// No description provided for @sampling.
+  ///
+  /// In en, this message translates to:
+  /// **'Sampling'**
+  String get sampling;
+
+  /// No description provided for @saveRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Rig'**
+  String get saveRig;
+
+  /// No description provided for @gearButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Gear'**
+  String get gearButton;
+
+  /// No description provided for @switchRigTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch Equipment Rig'**
+  String get switchRigTooltip;
+
+  /// No description provided for @rigsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rigs'**
+  String get rigsLabel;
+
+  /// No description provided for @manageRigsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Rigs / Add Gear'**
+  String get manageRigsTooltip;
+
+  /// No description provided for @closeFramingSimulator.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Framing Simulator'**
+  String get closeFramingSimulator;
+
+  /// No description provided for @framingSimulatorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Equipment Framing Simulator'**
+  String get framingSimulatorTitle;
+
+  /// No description provided for @activeRigLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Rig: {rigName}'**
+  String activeRigLabel(String rigName);
+
+  /// No description provided for @cameraRotatorAngle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera Rotator Angle'**
+  String get cameraRotatorAngle;
+
+  /// No description provided for @fitToSensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit to Sensor'**
+  String get fitToSensor;
+
+  /// No description provided for @autoAlignTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Align'**
+  String get autoAlignTarget;
+
+  /// No description provided for @autoAlignTargetTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Align with Target Position Angle'**
+  String get autoAlignTargetTooltip;
+
+  /// No description provided for @ruleOfThirdsGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule of Thirds Grid'**
+  String get ruleOfThirdsGrid;
+
+  /// No description provided for @ruleOfThirdsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overlay composition cross-lines inside sensor frame'**
+  String get ruleOfThirdsSubtitle;
+
+  /// No description provided for @opticalSystemMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Optical System Metrics'**
+  String get opticalSystemMetrics;
+
+  /// No description provided for @effectiveFocalLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Effective Focal Length'**
+  String get effectiveFocalLength;
+
+  /// No description provided for @sensorFovDegrees.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor Field of View'**
+  String get sensorFovDegrees;
+
+  /// No description provided for @sensorFovArcmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor FOV (Arcmin)'**
+  String get sensorFovArcmin;
+
+  /// No description provided for @imageScalePixelSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Scale (Pixel Size)'**
+  String get imageScalePixelSize;
+
+  /// No description provided for @samplingDiagnosis.
+  ///
+  /// In en, this message translates to:
+  /// **'Sampling Diagnosis'**
+  String get samplingDiagnosis;
+
+  /// No description provided for @sensorResolution.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor Resolution'**
+  String get sensorResolution;
+
+  /// No description provided for @copyFramingInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Info'**
+  String get copyFramingInfo;
+
+  /// No description provided for @copyFramingSpecsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)'**
+  String get copyFramingSpecsTooltip;
+
+  /// No description provided for @framingSpecsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Framing specs copied to clipboard (ready for N.I.N.A. / ASIAIR / Stellarium)'**
+  String get framingSpecsCopied;
+
+  /// No description provided for @framingPanOffset.
+  ///
+  /// In en, this message translates to:
+  /// **'Framing Pan Offset'**
+  String get framingPanOffset;
+
+  /// No description provided for @stepSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Step Size'**
+  String get stepSize;
+
+  /// No description provided for @centered.
+  ///
+  /// In en, this message translates to:
+  /// **'Centered'**
+  String get centered;
+
+  /// No description provided for @offsetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{offset}\' offset'**
+  String offsetLabel(String offset);
+
+  /// No description provided for @useArrowsToFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Use arrows to frame off-center composition'**
+  String get useArrowsToFrame;
+
+  /// No description provided for @resetToCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Target Center'**
+  String get resetToCenter;
+
+  /// No description provided for @darkTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get darkTime;
+
+  /// No description provided for @moonPhaseNewMoon.
+  ///
+  /// In en, this message translates to:
+  /// **'New Moon'**
+  String get moonPhaseNewMoon;
+
+  /// No description provided for @moonPhaseWaxingCrescent.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing Crescent'**
+  String get moonPhaseWaxingCrescent;
+
+  /// No description provided for @moonPhaseFirstQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'First Quarter'**
+  String get moonPhaseFirstQuarter;
+
+  /// No description provided for @moonPhaseWaxingGibbous.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing Gibbous'**
+  String get moonPhaseWaxingGibbous;
+
+  /// No description provided for @moonPhaseFullMoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Moon'**
+  String get moonPhaseFullMoon;
+
+  /// No description provided for @moonPhaseWaningGibbous.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning Gibbous'**
+  String get moonPhaseWaningGibbous;
+
+  /// No description provided for @moonPhaseThirdQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Third Quarter'**
+  String get moonPhaseThirdQuarter;
+
+  /// No description provided for @moonPhaseWaningCrescent.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning Crescent'**
+  String get moonPhaseWaningCrescent;
+
+  /// No description provided for @elevationShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Elevation'**
+  String get elevationShort;
+
+  /// No description provided for @searchResultSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lat: {lat}° | Lon: {lon}° | Elevation: {elev}m'**
+  String searchResultSubtitle(String lat, String lon, String elev);
+
+  /// No description provided for @visualSkyPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Visual Sky Preview'**
+  String get visualSkyPreview;
+
+  /// No description provided for @noObservingListsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No observing lists found. Create a list first!'**
+  String get noObservingListsFound;
+
+  /// No description provided for @defaultListNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Target for imaging'**
+  String get defaultListNotes;
+
+  /// No description provided for @addToListDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {targetName} to List'**
+  String addToListDialogTitle(String targetName);
+
+  /// No description provided for @targetObservingListLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Observing List'**
+  String get targetObservingListLabel;
+
+  /// No description provided for @sessionNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Session Notes / Filters'**
+  String get sessionNotesLabel;
+
+  /// No description provided for @addBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addBtn;
+
+  /// No description provided for @addedToObservingListSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {targetName} to observing list'**
+  String addedToObservingListSuccess(String targetName);
+
+  /// No description provided for @simbadQuerying.
+  ///
+  /// In en, this message translates to:
+  /// **'Querying CDS / SIMBAD...'**
+  String get simbadQuerying;
+
+  /// No description provided for @simbadVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified on SIMBAD: {objectType}'**
+  String simbadVerified(String objectType);
+
+  /// No description provided for @simbadNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No additional online records found.'**
+  String get simbadNotFound;
+
+  /// No description provided for @removeFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Favorites'**
+  String get removeFromFavorites;
+
+  /// No description provided for @addToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Favorites'**
+  String get addToFavorites;
+
+  /// No description provided for @addedToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {targetName} to Favorites'**
+  String addedToFavorites(String targetName);
+
+  /// No description provided for @removedFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {targetName} from Favorites'**
+  String removedFromFavorites(String targetName);
+
+  /// No description provided for @closeDetailsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Close details (Esc)'**
+  String get closeDetailsTooltip;
+
+  /// No description provided for @closeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeBtn;
+
+  /// No description provided for @transitTimeMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Transit Time'**
+  String get transitTimeMetric;
+
+  /// No description provided for @visibleDurationMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible Duration'**
+  String get visibleDurationMetric;
+
+  /// No description provided for @moonDistanceMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Moon Distance'**
+  String get moonDistanceMetric;
+
+  /// No description provided for @apparentSizeMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'Apparent Size'**
+  String get apparentSizeMetric;
+
+  /// No description provided for @verifyOnlineSimbad.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Online (SIMBAD)'**
+  String get verifyOnlineSimbad;
+
+  /// No description provided for @simulatingYearlyVisibility.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulating 12-month visibility across the year...'**
+  String get simulatingYearlyVisibility;
+
+  /// No description provided for @visibleTonight.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible Tonight'**
+  String get visibleTonight;
+
+  /// No description provided for @unreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get unreachable;
+
+  /// No description provided for @notObservableFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'Not observable with active filters'**
+  String get notObservableFiltered;
+
+  /// No description provided for @notObservableBelowLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Not observable (below limits)'**
+  String get notObservableBelowLimits;
+
+  /// No description provided for @startsTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts tomorrow ({date})'**
+  String startsTomorrow(String date);
+
+  /// No description provided for @startsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts in {days} days ({date})'**
+  String startsInDays(int days, String date);
+
+  /// No description provided for @startsOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts {date}'**
+  String startsOnDate(String date);
+
+  /// No description provided for @inSeasonBelowLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'In Season · Below limits tonight'**
+  String get inSeasonBelowLimits;
+
+  /// No description provided for @offSeasonEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-Season (Ended {date})'**
+  String offSeasonEnded(String date);
+
+  /// No description provided for @simulationModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SIMULATION MODE:'**
+  String get simulationModeLabel;
+
+  /// No description provided for @activeFiltersMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Filters'**
+  String get activeFiltersMode;
+
+  /// No description provided for @fullSkyNightMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Full Sky & Night'**
+  String get fullSkyNightMode;
+
+  /// No description provided for @yearlyObservingWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'YEARLY OBSERVING WINDOW'**
+  String get yearlyObservingWindow;
+
+  /// No description provided for @yearlyDaysObservablePeak.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days observable this year • Peak: {hours}h on {date}'**
+  String yearlyDaysObservablePeak(int days, String hours, String date);
+
+  /// No description provided for @theoreticalMaxAtTransit.
+  ///
+  /// In en, this message translates to:
+  /// **'Theoretical max: {alt}° at transit{extra}'**
+  String theoreticalMaxAtTransit(String alt, String extra);
+
+  /// No description provided for @limitsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits: ≥{minAlt}° for ≥{minHours}h'**
+  String limitsSubtitle(String minAlt, String minHours);
+
+  /// No description provided for @yearRoundCircumpolar.
+  ///
+  /// In en, this message translates to:
+  /// **'Year-Round (Circumpolar)'**
+  String get yearRoundCircumpolar;
+
+  /// No description provided for @notObservableWithFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Not observable with current filters'**
+  String get notObservableWithFilters;
+
+  /// No description provided for @neverReachesLatitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Never reaches {minAlt}° at this latitude (Max: {maxAlt}°)'**
+  String neverReachesLatitude(String minAlt, String maxAlt);
+
+  /// No description provided for @clearSearchTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get clearSearchTooltip;
+
+  /// No description provided for @searchTargetTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search target'**
+  String get searchTargetTooltip;
+
+  /// No description provided for @windowFullDarkness.
+  ///
+  /// In en, this message translates to:
+  /// **'Window: Darkness (Full Night)'**
+  String get windowFullDarkness;
+
+  /// No description provided for @targetsFoundCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} targets found'**
+  String targetsFoundCount(int count);
+
+  /// No description provided for @showingMatchingOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing only targets matching active filters tonight.'**
+  String get showingMatchingOnly;
+
+  /// No description provided for @searchIncludesOutsideFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Search includes targets outside active filters tonight. Click any target to view its yearly window.'**
+  String get searchIncludesOutsideFilters;
+
+  /// No description provided for @showAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show All'**
+  String get showAll;
+
+  /// No description provided for @hideNonMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Non-Matching'**
+  String get hideNonMatching;
+
+  /// No description provided for @visibleDurationShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h visible'**
+  String visibleDurationShort(String hours);
+
+  /// No description provided for @visibleDurationAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h above {alt}°'**
+  String visibleDurationAbove(String hours, String alt);
+
+  /// No description provided for @outsideFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside Filters'**
+  String get outsideFilters;
+
+  /// No description provided for @outsideActiveFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside Active Filters'**
+  String get outsideActiveFilters;
+
+  /// No description provided for @belowZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Below 0°'**
+  String get belowZero;
+
+  /// No description provided for @belowHorizon.
+  ///
+  /// In en, this message translates to:
+  /// **'Below Horizon'**
+  String get belowHorizon;
+
+  /// No description provided for @peakAltitudeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak: {alt}°'**
+  String peakAltitudeShort(String alt);
+
+  /// No description provided for @moonSeparationShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Moon: {sep}°'**
+  String moonSeparationShort(String sep);
+
+  /// No description provided for @selectSkySurveyTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Sky Survey'**
+  String get selectSkySurveyTooltip;
+
+  /// No description provided for @openFramingSimulatorTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Full Framing Simulator'**
+  String get openFramingSimulatorTooltip;
+
+  /// No description provided for @framingSimulatorShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulator'**
+  String get framingSimulatorShort;
+
+  /// No description provided for @toggleFramingBoxTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle Sensor Framing Box'**
+  String get toggleFramingBoxTooltip;
+
+  /// No description provided for @framingModeShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Framing'**
+  String get framingModeShort;
+
+  /// No description provided for @photoReticleTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo + Reticle'**
+  String get photoReticleTooltip;
+
+  /// No description provided for @photoCleanTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo Mode (Clean Image)'**
+  String get photoCleanTooltip;
+
+  /// No description provided for @vectorSizeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Vector Apparent Size'**
+  String get vectorSizeTooltip;
+
+  /// No description provided for @zoomOutTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom Out (Wider FOV)'**
+  String get zoomOutTooltip;
+
+  /// No description provided for @zoomInTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom In (Closer FOV)'**
+  String get zoomInTooltip;
+
+  /// No description provided for @resetFovTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Framing FOV'**
+  String get resetFovTooltip;
+
+  /// No description provided for @rotateMinus15.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate -15°'**
+  String get rotateMinus15;
+
+  /// No description provided for @rotatePlus15.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate +15°'**
+  String get rotatePlus15;
+
+  /// No description provided for @fitFovToSensorTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit FOV to Sensor Size'**
+  String get fitFovToSensorTooltip;
+
+  /// No description provided for @offlineSkyFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Sky Fallback'**
+  String get offlineSkyFallback;
+
+  /// No description provided for @noAltitudeData.
+  ///
+  /// In en, this message translates to:
+  /// **'No altitude data available for window'**
+  String get noAltitudeData;
+
+  /// No description provided for @altitudeVsTimeTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Altitude vs. Time: {targetName}'**
+  String altitudeVsTimeTarget(String targetName);
+
+  /// No description provided for @astronomicalDarknessLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ASTRONOMICAL DARKNESS'**
+  String get astronomicalDarknessLabel;
+
+  /// No description provided for @observingWindowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'OBSERVING WINDOW'**
+  String get observingWindowLabel;
 }
 
 class _AppLocalizationsDelegate

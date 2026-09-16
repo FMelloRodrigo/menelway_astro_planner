@@ -8,6 +8,7 @@ import '../core/geocoding_service.dart';
 import '../core/settings_service.dart';
 import '../core/favorites_manager.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -175,6 +176,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _resetFiltersOnly() {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _filters = FilterState(
         observerLat: _filters.observerLat,
@@ -188,8 +190,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Target filters reset to default (location preserved)."),
+        SnackBar(
+          content: Text(l10n?.filtersResetSuccess ?? "Target filters reset to default (location preserved)."),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -269,9 +271,9 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              "This action cannot be undone.",
-              style: TextStyle(
+            Text(
+              l10n?.actionCannotBeUndone ?? "This action cannot be undone.",
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.redAccent,
@@ -302,6 +304,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Future<void> _performCleanAllData() async {
+    final l10n = AppLocalizations.of(context);
     // 1. Clear user settings file
     await SettingsService.clearSettings();
 
@@ -330,8 +333,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("All saved data, settings, and observing lists have been cleared."),
+        SnackBar(
+          content: Text(l10n?.cleanDataSuccessSnackBar ?? "All saved data, settings, and observing lists have been cleared."),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -354,6 +357,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final l10n = AppLocalizations.of(context);
           final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
           final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
@@ -372,13 +376,13 @@ class _MainScaffoldState extends State<MainScaffold> {
                 searchResults = results;
                 isSearching = false;
                 if (results.isEmpty) {
-                  searchError = "No matching cities found for '$q'.";
+                  searchError = l10n?.locationNotFound(q) ?? "No matching cities found for '$q'.";
                 }
               });
             } catch (e) {
               setDialogState(() {
                 isSearching = false;
-                searchError = "Connection error. Check internet connection.";
+                searchError = l10n?.connectionError ?? "Connection error. Check internet connection.";
               });
             }
           }
@@ -398,7 +402,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Icon(Icons.location_city_rounded, color: accentColor, size: 22),
                 const SizedBox(width: 8),
                 Text(
-                  "Observer Location",
+                  l10n?.locationEditTitle ?? "Observer Location",
                   style: TextStyle(
                     color: textColor,
                     fontSize: 17,
@@ -416,7 +420,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   children: [
                     // Search by City & Country (Open-Meteo)
                     Text(
-                      "Search City & Country (Online)",
+                      l10n?.searchCityOnline ?? "Search City & Country (Online)",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -427,11 +431,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                     TextField(
                       controller: searchController,
                       decoration: InputDecoration(
-                        hintText: "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
+                        hintText: l10n?.searchCityHint ?? "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
                         prefixIcon: const Icon(Icons.search_rounded, size: 20),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                          tooltip: "Search online",
+                          tooltip: l10n?.searchOnlineTooltip ?? "Search online",
                           onPressed: doSearch,
                         ),
                       ),
@@ -484,7 +488,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                                 ),
                               ),
                               subtitle: Text(
-                                "Lat: ${r.latitude.toStringAsFixed(2)}° | Lon: ${r.longitude.toStringAsFixed(2)}° | Elevation: ${r.elevation.round()}m",
+                                l10n?.searchResultSubtitle(
+                                  r.latitude.toStringAsFixed(2),
+                                  r.longitude.toStringAsFixed(2),
+                                  r.elevation.round().toString(),
+                                ) ?? "Lat: ${r.latitude.toStringAsFixed(2)}° | Lon: ${r.longitude.toStringAsFixed(2)}° | Elevation: ${r.elevation.round()}m",
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: textColor.withValues(alpha: 0.6),
@@ -516,7 +524,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         Icon(Icons.tune_rounded, size: 14, color: textColor.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
-                          "Selected Coordinates & Elevation",
+                          l10n?.selectedCoordsElevation ?? "Selected Coordinates & Elevation",
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -532,7 +540,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         Expanded(
                           child: TextField(
                             controller: latController,
-                            decoration: const InputDecoration(labelText: "Latitude (°)"),
+                            decoration: InputDecoration(labelText: l10n?.latitude ?? "Latitude (°)"),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -540,7 +548,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         Expanded(
                           child: TextField(
                             controller: lonController,
-                            decoration: const InputDecoration(labelText: "Longitude (°)"),
+                            decoration: InputDecoration(labelText: l10n?.longitude ?? "Longitude (°)"),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -548,7 +556,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         Expanded(
                           child: TextField(
                             controller: eleController,
-                            decoration: const InputDecoration(labelText: "Elevation (m)"),
+                            decoration: InputDecoration(labelText: l10n?.elevation ?? "Elevation (m)"),
                             keyboardType: TextInputType.number,
                           ),
                         ),
@@ -558,7 +566,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     const SizedBox(height: 12),
                     // Quick Presets
                     Text(
-                      "Popular Astrophotography Sites:",
+                      l10n?.popularAstroSites ?? "Popular Astrophotography Sites:",
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.5)),
                     ),
                     const SizedBox(height: 6),
@@ -618,11 +626,11 @@ class _MainScaffoldState extends State<MainScaffold> {
             ),
             actions: [
               TextButton(
-                child: const Text("Cancel"),
+                child: Text(l10n?.cancel ?? "Cancel"),
                 onPressed: () => Navigator.of(ctx).pop(),
               ),
               FilledButton(
-                child: const Text("Apply Location"),
+                child: Text(l10n?.applyLocation ?? "Apply Location"),
                 onPressed: () {
                   final newLat = double.tryParse(latController.text) ?? _filters.observerLat;
                   final newLon = double.tryParse(lonController.text) ?? _filters.observerLon;
@@ -653,6 +661,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Widget _buildMobileStatusStrip(Color textColor, Color accentColor) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -721,7 +730,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.dark_mode_outlined, size: 13, color: AstroColors.nebulaIndigo),
                     const SizedBox(width: 4),
                     Text(
-                      "Dark: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      "${l10n?.darkTime ?? 'Dark'}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(width: 8),
@@ -783,7 +792,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               CircularProgressIndicator(color: accentColor),
               const SizedBox(height: 16),
               Text(
-                "Initializing Astro Targets Engine & Database...",
+                l10n?.initializingEngine ?? "Initializing Astro Targets Engine & Database...",
                 style: TextStyle(color: textColor.withValues(alpha: 0.7)),
               ),
             ],
@@ -803,7 +812,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
                 const SizedBox(height: 12),
                 Text(
-                  "Failed to load astronomical core",
+                  l10n?.failedLoadCore ?? "Failed to load astronomical core",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 const SizedBox(height: 8),
@@ -811,7 +820,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _bootstrap,
-                  child: const Text("Retry"),
+                  child: Text(l10n?.retry ?? "Retry"),
                 ),
               ],
             ),
@@ -915,7 +924,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.brightness_2_rounded, size: 14, color: AstroColors.starGold),
                     const SizedBox(width: 4),
                     Text(
-                      "${(_nightSummary!.moonIllumination * 100).round()}% (${_nightSummary!.moonPhaseName})",
+                      "${(_nightSummary!.moonIllumination * 100).round()}% (${localizeMoonPhase(_nightSummary!.moonPhaseName, l10n)})",
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
                     ),
                   ],
@@ -1111,7 +1120,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           // Equipment Rigs Manager Button
           if (isWide)
             Tooltip(
-              message: "Equipment Rigs & Optics",
+              message: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
               child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 backgroundColor: widget.isRedNightMode
@@ -1135,7 +1144,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
               ),
               label: Text(
-                "Equipment Rigs",
+                l10n?.equipmentRigsButton ?? "Equipment Rigs",
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -1158,7 +1167,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           )
           else
             IconButton(
-              tooltip: "Equipment Rigs & Optics",
+              tooltip: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
               style: IconButton.styleFrom(
                 backgroundColor: widget.isRedNightMode
                     ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
@@ -1195,7 +1204,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
           // Settings & Clean Data Menu Pill
           PopupMenuButton<String>(
-            tooltip: "Settings & Data",
+            tooltip: l10n?.settingsAndDataTooltip ?? "Settings & Data",
             color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
             elevation: 10,
             shape: RoundedRectangleBorder(
@@ -1228,7 +1237,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Observer Location...",
+                            l10n?.settingsLocation ?? "Observer Location...",
                             style: TextStyle(
                               color: textColor,
                               fontSize: 13,
@@ -1260,7 +1269,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Reset Target Filters",
+                          l10n?.resetFilters ?? "Reset Target Filters",
                           style: TextStyle(
                             color: textColor,
                             fontSize: 13,
@@ -1268,7 +1277,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                           ),
                         ),
                         Text(
-                          "Clear filter limits & keep observer location",
+                          l10n?.resetFiltersDesc ?? "Clear filter limits & keep observer location",
                           style: TextStyle(color: textColor.withValues(alpha: 0.75), fontSize: 11),
                         ),
                       ],
@@ -1286,12 +1295,12 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Clean All Saved Data...",
-                          style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w700),
+                        Text(
+                          l10n?.cleanData ?? "Clean All Saved Data...",
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          "Wipe lists, custom location, & local settings",
+                          l10n?.cleanDataDesc ?? "Wipe lists, custom location, & local settings",
                           style: TextStyle(
                             color: widget.isRedNightMode
                                 ? textColor.withValues(alpha: 0.8)
@@ -1316,8 +1325,8 @@ class _MainScaffoldState extends State<MainScaffold> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
-                        : AstroColors.starlightCyan.withValues(alpha: 0.55),
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
+                      : AstroColors.starlightCyan.withValues(alpha: 0.55),
                     width: 1.4,
                   ),
                   boxShadow: [
@@ -1341,7 +1350,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     if (isWide) ...[
                       const SizedBox(width: 6),
                       Text(
-                        "Settings & Data",
+                        l10n?.settingsAndData ?? "Settings & Data",
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,

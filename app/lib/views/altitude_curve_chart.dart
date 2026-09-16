@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../models/altitude_point.dart';
 import '../models/night_summary.dart';
 import '../theme/astro_theme.dart';
+import '../l10n/app_localizations.dart';
 
 class AltitudeCurveChart extends StatefulWidget {
   final List<AltitudePoint> targetPoints;
@@ -37,6 +38,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (widget.targetPoints.isEmpty) {
       return Container(
         height: 220,
@@ -47,8 +49,8 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
             color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
           ),
         ),
-        child: const Center(
-          child: Text("No altitude data available for window", style: TextStyle(color: Colors.white54)),
+        child: Center(
+          child: Text(l10n?.noAltitudeData ?? "No altitude data available for window", style: const TextStyle(color: Colors.white54)),
         ),
       );
     }
@@ -81,7 +83,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    "Altitude vs. Time: ${widget.targetName}",
+                    l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}",
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -107,7 +109,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         "${DateFormat('HH:mm').format(hoveredPoint.time)}  •  "
                         "Alt: ${hoveredPoint.altitude.toStringAsFixed(1)}°  •  "
                         "Az: ${hoveredPoint.azimuth.toStringAsFixed(0)}°  •  "
-                        "Moon: ${hoveredPoint.moonSeparation.toStringAsFixed(0)}°",
+                        "${l10n?.moonSeparationShort(hoveredPoint.moonSeparation.toStringAsFixed(0)) ?? 'Moon: ${hoveredPoint.moonSeparation.toStringAsFixed(0)}°'}",
                         style: TextStyle(
                           fontSize: 11,
                           fontFamily: 'monospace',
@@ -164,6 +166,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         endTime: endTime,
                         customWindowStart: widget.customWindowStart,
                         customWindowEnd: widget.customWindowEnd,
+                        l10n: l10n,
                       ),
                     ),
                   ),
@@ -188,6 +191,7 @@ class _AltitudeChartPainter extends CustomPainter {
   final DateTime endTime;
   final DateTime? customWindowStart;
   final DateTime? customWindowEnd;
+  final AppLocalizations? l10n;
 
   _AltitudeChartPainter({
     required this.points,
@@ -200,6 +204,7 @@ class _AltitudeChartPainter extends CustomPainter {
     required this.endTime,
     this.customWindowStart,
     this.customWindowEnd,
+    this.l10n,
   });
 
   @override
@@ -386,7 +391,7 @@ class _AltitudeChartPainter extends CustomPainter {
         letterSpacing: 0.5,
       );
       final tp = TextPainter(
-        text: TextSpan(text: "ASTRONOMICAL DARKNESS", style: labelStyle),
+        text: TextSpan(text: l10n?.astronomicalDarknessLabel ?? "ASTRONOMICAL DARKNESS", style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(darkRect.center.dx - tp.width / 2, 8));
@@ -421,7 +426,7 @@ class _AltitudeChartPainter extends CustomPainter {
         letterSpacing: 0.5,
       );
       final tp = TextPainter(
-        text: TextSpan(text: "OBSERVING WINDOW", style: labelStyle),
+        text: TextSpan(text: l10n?.observingWindowLabel ?? "OBSERVING WINDOW", style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(winStartX + 4, rect.bottom - tp.height - 4));

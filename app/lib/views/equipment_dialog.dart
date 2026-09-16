@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/equipment_database.dart';
 import '../core/equipment_manager.dart';
+import '../l10n/app_localizations.dart';
 import '../models/equipment_profile.dart';
 import '../theme/astro_theme.dart';
 
@@ -208,6 +209,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
@@ -233,14 +235,18 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _isEditing ? (_editingId == null ? "Add Equipment Rig" : "Edit Equipment Rig") : "Equipment Rigs & Optics",
+                      _isEditing
+                          ? (_editingId == null
+                              ? (l10n?.addEquipmentRig ?? "Add Equipment Rig")
+                              : (l10n?.editEquipmentRig ?? "Edit Equipment Rig"))
+                          : (l10n?.equipmentDialogTitle ?? "Equipment Rigs & Optics"),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
                     ),
                   ),
                   if (_isEditing)
                     TextButton.icon(
                       icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: const Text("Back to List"),
+                      label: Text(l10n?.backToList ?? "Back to List"),
                       onPressed: () => setState(() => _isEditing = false),
                     )
                   else
@@ -254,7 +260,9 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
               // Content Area
               Expanded(
-                child: _isEditing ? _buildEditor(textColor, accentColor, borderColor) : _buildProfileList(textColor, accentColor, borderColor),
+                child: _isEditing
+                    ? _buildEditor(textColor, accentColor, borderColor, l10n)
+                    : _buildProfileList(textColor, accentColor, borderColor, l10n),
               ),
             ],
           ),
@@ -263,7 +271,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
     );
   }
 
-  Widget _buildProfileList(Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildProfileList(Color textColor, Color accentColor, Color borderColor, AppLocalizations? l10n) {
     final profiles = EquipmentManager.instance.profiles;
     final activeId = EquipmentManager.instance.activeProfileId;
 
@@ -335,7 +343,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                             ),
                             icon: Icon(Icons.edit_rounded, size: 14, color: accentColor),
                             label: Text(
-                              "Edit",
+                              l10n?.editRig ?? "Edit",
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accentColor),
                             ),
                             onPressed: () => _startEdit(p),
@@ -348,7 +356,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                                 size: 18,
                                 color: textColor.withValues(alpha: 0.6),
                               ),
-                              tooltip: "Delete Rig",
+                              tooltip: l10n?.deleteRigTooltip ?? "Delete Rig",
                               onPressed: () {
                                 EquipmentManager.instance.deleteProfile(p.id);
                                 widget.onSaved();
@@ -364,9 +372,9 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                         spacing: 8,
                         runSpacing: 4,
                         children: [
-                          _buildMiniBadge("Focal: ${p.telescope.effectiveFocalLength.round()}mm (${p.telescope.focalRatioString})", accentColor),
+                          _buildMiniBadge("${l10n?.effectiveFocal ?? "Focal"}: ${p.telescope.effectiveFocalLength.round()}mm (${p.telescope.focalRatioString})", accentColor),
                           _buildMiniBadge("FOV: ${p.sensorFovWidthDeg.toStringAsFixed(1)}° × ${p.sensorFovHeightDeg.toStringAsFixed(1)}°", AstroColors.starGold),
-                          _buildMiniBadge("Scale: ${p.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", AstroColors.nebulaIndigo),
+                          _buildMiniBadge("${l10n?.imageScale ?? "Scale"}: ${p.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", AstroColors.nebulaIndigo),
                           _buildMiniBadge(p.samplingCategory.split(' ').first, AstroColors.deepSkyTeal),
                         ],
                       ),
@@ -383,7 +391,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
           width: double.infinity,
           child: FilledButton.icon(
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text("Create New Rig"),
+            label: Text(l10n?.createNewRig ?? "Create New Rig"),
             style: FilledButton.styleFrom(
               backgroundColor: accentColor,
               foregroundColor: Colors.black,
@@ -396,7 +404,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
     );
   }
 
-  Widget _buildEditor(Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildEditor(Color textColor, Color accentColor, Color borderColor, AppLocalizations? l10n) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +414,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             controller: _rigNameController,
             style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
             decoration: InputDecoration(
-              labelText: "Rig Profile Name",
+              labelText: l10n?.rigProfileName ?? "Rig Profile Name",
               labelStyle: TextStyle(color: accentColor),
               prefixIcon: Icon(Icons.label_rounded, size: 18, color: accentColor),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -416,7 +424,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
           // TELESCOPE SECTION
           Text(
-            "Telescope / Optics",
+            l10n?.telescopeOptics ?? "Telescope / Optics",
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: accentColor),
           ),
           const SizedBox(height: 6),
@@ -431,7 +439,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
               });
             },
             decoration: InputDecoration(
-              hintText: "Search scope: e.g. RedCat, FRA400, 72ED, C8, Seestar...",
+              hintText: l10n?.searchScopeHint ?? "Search scope: e.g. RedCat, FRA400, 72ED, C8, Seestar...",
               hintStyle: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 12),
               prefixIcon: Icon(Icons.search_rounded, size: 18, color: accentColor),
               filled: true,
@@ -469,7 +477,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             controller: _scopeNameController,
             style: TextStyle(color: textColor, fontSize: 13),
             decoration: InputDecoration(
-              labelText: "Telescope Name",
+              labelText: l10n?.telescopeName ?? "Telescope Name",
               isDense: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -484,7 +492,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Focal Length (mm)",
+                    labelText: l10n?.focalLengthMm ?? "Focal Length (mm)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -498,7 +506,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Aperture (mm)",
+                    labelText: l10n?.apertureMm ?? "Aperture (mm)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -512,7 +520,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Reducer (e.g. 0.8)",
+                    labelText: l10n?.reducerFactor ?? "Reducer (e.g. 0.8)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -525,7 +533,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
           // CAMERA SECTION
           Text(
-            "Camera / Sensor",
+            l10n?.cameraSensor ?? "Camera / Sensor",
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: accentColor),
           ),
           const SizedBox(height: 6),
@@ -540,7 +548,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
               });
             },
             decoration: InputDecoration(
-              hintText: "Search camera: e.g. ASI2600, ASI533, IMX571, Sony A7, Canon...",
+              hintText: l10n?.searchCameraHint ?? "Search camera: e.g. ASI2600, ASI533, IMX571, Sony A7, Canon...",
               hintStyle: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 12),
               prefixIcon: Icon(Icons.search_rounded, size: 18, color: accentColor),
               filled: true,
@@ -578,7 +586,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             controller: _camNameController,
             style: TextStyle(color: textColor, fontSize: 13),
             decoration: InputDecoration(
-              labelText: "Camera Name",
+              labelText: l10n?.cameraName ?? "Camera Name",
               isDense: true,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -593,7 +601,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Sensor Width (mm)",
+                    labelText: l10n?.sensorWidthMm ?? "Sensor Width (mm)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -607,7 +615,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Sensor Height (mm)",
+                    labelText: l10n?.sensorHeightMm ?? "Sensor Height (mm)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -621,7 +629,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                   style: TextStyle(color: textColor, fontSize: 13),
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: "Pixel Size (µm)",
+                    labelText: l10n?.pixelSizeMicrons ?? "Pixel Size (µm)",
                     isDense: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -633,7 +641,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
           const SizedBox(height: 16),
 
           // LIVE COMPUTED OPTICS CARD
-          _buildLiveOpticsCard(textColor, accentColor, borderColor),
+          _buildLiveOpticsCard(textColor, accentColor, borderColor, l10n),
 
           const SizedBox(height: 16),
 
@@ -643,12 +651,12 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             children: [
               OutlinedButton(
                 onPressed: () => setState(() => _isEditing = false),
-                child: const Text("Cancel"),
+                child: Text(l10n?.cancel ?? "Cancel"),
               ),
               const SizedBox(width: 10),
               FilledButton.icon(
                 icon: const Icon(Icons.save_rounded, size: 16),
-                label: const Text("Save Rig"),
+                label: Text(l10n?.saveRig ?? "Save Rig"),
                 style: FilledButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.black),
                 onPressed: _saveCurrentProfile,
               ),
@@ -659,7 +667,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
     );
   }
 
-  Widget _buildLiveOpticsCard(Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildLiveOpticsCard(Color textColor, Color accentColor, Color borderColor, AppLocalizations? l10n) {
     final fl = double.tryParse(_scopeFlController.text) ?? 250.0;
     final ap = double.tryParse(_scopeApController.text) ?? 51.0;
     final red = double.tryParse(_scopeRedController.text) ?? 1.0;
@@ -688,23 +696,23 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             children: [
               Icon(Icons.auto_awesome_rounded, size: 14, color: accentColor),
               const SizedBox(width: 6),
-              Text("Computed Optical Specifications", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+              Text(l10n?.computedOpticalSpecs ?? "Computed Optical Specifications", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSpecItem("Effective Focal", "${tempProfile.telescope.effectiveFocalLength.round()}mm", textColor),
-              _buildSpecItem("Focal Ratio", tempProfile.telescope.focalRatioString, textColor),
-              _buildSpecItem("Sensor FOV", "${tempProfile.sensorFovWidthDeg.toStringAsFixed(1)}° × ${tempProfile.sensorFovHeightDeg.toStringAsFixed(1)}°", textColor),
-              _buildSpecItem("Image Scale", "${tempProfile.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", textColor),
+              _buildSpecItem(l10n?.effectiveFocal ?? "Effective Focal", "${tempProfile.telescope.effectiveFocalLength.round()}mm", textColor),
+              _buildSpecItem(l10n?.focalRatio ?? "Focal Ratio", tempProfile.telescope.focalRatioString, textColor),
+              _buildSpecItem(l10n?.sensorFov ?? "Sensor FOV", "${tempProfile.sensorFovWidthDeg.toStringAsFixed(1)}° × ${tempProfile.sensorFovHeightDeg.toStringAsFixed(1)}°", textColor),
+              _buildSpecItem(l10n?.imageScale ?? "Image Scale", "${tempProfile.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", textColor),
             ],
           ),
           const SizedBox(height: 6),
           Center(
             child: Text(
-              "Sampling: ${tempProfile.samplingCategory}",
+              "${l10n?.sampling ?? "Sampling"}: ${tempProfile.samplingCategory}",
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accentColor),
             ),
           ),

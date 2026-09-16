@@ -14,6 +14,8 @@ import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 import 'equipment_dialog.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -139,15 +141,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   void _showAddToListDialog() {
+    final l10n = AppLocalizations.of(context);
     if (widget.availableLists.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No observing lists found. Create a list first!")),
+        SnackBar(content: Text(l10n?.noObservingListsFound ?? "No observing lists found. Create a list first!")),
       );
       return;
     }
 
     int selectedListId = widget.availableLists.first.id;
-    final notesController = TextEditingController(text: "Target for imaging");
+    final notesController = TextEditingController(text: l10n?.defaultListNotes ?? "Target for imaging");
 
     showDialog(
       context: context,
@@ -159,7 +162,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   ? AstroColors.nightVisionSurface
                   : AstroColors.spaceDarkSurface,
               title: Text(
-                "Add ${widget.target.displayName} to List",
+                l10n?.addToListDialogTitle(widget.target.displayName) ?? "Add ${widget.target.displayName} to List",
                 style: TextStyle(
                   color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                   fontSize: 16,
@@ -170,7 +173,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 children: [
                   DropdownButtonFormField<int>(
                     initialValue: selectedListId,
-                    decoration: const InputDecoration(labelText: "Target Observing List"),
+                    decoration: InputDecoration(labelText: l10n?.targetObservingListLabel ?? "Target Observing List"),
                     items: widget.availableLists.map((l) {
                       return DropdownMenuItem(
                         value: l.id,
@@ -184,7 +187,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: notesController,
-                    decoration: const InputDecoration(labelText: "Session Notes / Filters"),
+                    decoration: InputDecoration(labelText: l10n?.sessionNotesLabel ?? "Session Notes / Filters"),
                     style: TextStyle(
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                     ),
@@ -193,16 +196,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               ),
               actions: [
                 TextButton(
-                  child: const Text("Cancel"),
+                  child: Text(l10n?.cancel ?? "Cancel"),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
                 FilledButton(
-                  child: const Text("Add"),
+                  child: Text(l10n?.addBtn ?? "Add"),
                   onPressed: () {
                     widget.onAddToList(selectedListId, widget.target.id, notesController.text);
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Added ${widget.target.displayName} to observing list")),
+                      SnackBar(content: Text(l10n?.addedToObservingListSuccess(widget.target.displayName) ?? "Added ${widget.target.displayName} to observing list")),
                     );
                   },
                 ),
@@ -215,14 +218,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   void _queryOnlineSimbad() async {
-    setState(() => _onlineInfo = "Querying CDS / SIMBAD...");
+    final l10n = AppLocalizations.of(context);
+    setState(() => _onlineInfo = l10n?.simbadQuerying ?? "Querying CDS / SIMBAD...");
     final result = await CatalogManager.queryOnlineObject(widget.target.name);
     if (mounted) {
       setState(() {
         if (result != null) {
-          _onlineInfo = "Verified on SIMBAD: ${result['object_type']}";
+          final objType = result['object_type']?.toString() ?? '';
+          _onlineInfo = l10n?.simbadVerified(objType) ?? "Verified on SIMBAD: $objType";
         } else {
-          _onlineInfo = "No additional online records found.";
+          _onlineInfo = l10n?.simbadNotFound ?? "No additional online records found.";
         }
       });
     }
@@ -230,6 +235,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final effectiveClose = widget.onClose ??
@@ -250,14 +256,14 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
         if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
           _buildBadge(widget.target.herschel!, Colors.amber.shade700),
-        _buildBadge(widget.target.objectType, AstroColors.starlightCyan),
+        _buildBadge(localizeObjectType(widget.target.objectType, l10n), AstroColors.starlightCyan),
         _buildBadge(widget.target.constellation, AstroColors.starGold),
       ],
     );
 
     final addToListBtn = FilledButton.icon(
       icon: const Icon(Icons.playlist_add_rounded, size: 18),
-      label: const Text("Add to List"),
+      label: Text(l10n?.addToObservingList ?? "Add to List"),
       style: FilledButton.styleFrom(
         backgroundColor: accentColor,
         foregroundColor: Colors.black,
@@ -268,7 +274,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final isFav = FavoritesManager.instance.isFavorite(widget.target.id);
 
     final favBtn = Tooltip(
-      message: isFav ? "Remove from Favorites" : "Add to Favorites",
+      message: isFav
+          ? (l10n?.removeFromFavorites ?? "Remove from Favorites")
+          : (l10n?.addToFavorites ?? "Add to Favorites"),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {
@@ -278,8 +286,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             SnackBar(
               content: Text(
                 nowFav
-                    ? "Added ${widget.target.displayName} to Favorites"
-                    : "Removed ${widget.target.displayName} from Favorites",
+                    ? (l10n?.addedToFavorites(widget.target.displayName) ?? "Added ${widget.target.displayName} to Favorites")
+                    : (l10n?.removedFromFavorites(widget.target.displayName) ?? "Removed ${widget.target.displayName} from Favorites"),
               ),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -321,7 +329,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
     final closeBtn = effectiveClose != null
         ? Tooltip(
-            message: "Close details (Esc)",
+            message: l10n?.closeDetailsTooltip ?? "Close details (Esc)",
             child: OutlinedButton.icon(
               icon: Icon(
                 Icons.close_rounded,
@@ -329,7 +337,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
               ),
               label: Text(
-                "Close",
+                l10n?.closeBtn ?? "Close",
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -388,7 +396,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   if (effectiveClose != null)
                     IconButton(
                       icon: Icon(Icons.close_rounded, color: textColor),
-                      tooltip: "Close",
+                      tooltip: l10n?.closeBtn ?? "Close",
                       onPressed: effectiveClose,
                     ),
                 ],
@@ -401,7 +409,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   Expanded(
                     child: FilledButton.icon(
                       icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                      label: const Text("Add to Observing List"),
+                      label: Text(l10n?.addToObservingList ?? "Add to Observing List"),
                       style: FilledButton.styleFrom(
                         backgroundColor: accentColor,
                         foregroundColor: Colors.black,
@@ -470,21 +478,21 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           children: [
                             Expanded(
                               child: _buildMetric(
-                                "Peak Altitude",
+                                l10n?.peakAltitude ?? "Peak Altitude",
                                 "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
                                 Icons.trending_up_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                "Transit Time",
+                                l10n?.transitTimeMetric ?? "Transit Time",
                                 DateFormat('HH:mm').format(widget.target.transitTime),
                                 Icons.schedule_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                "Visible Duration",
+                                l10n?.visibleDurationMetric ?? "Visible Duration",
                                 "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
                                 Icons.timer_outlined,
                               ),
@@ -496,21 +504,21 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           children: [
                             Expanded(
                               child: _buildMetric(
-                                "Moon Distance",
+                                l10n?.moonDistanceMetric ?? "Moon Distance",
                                 "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
                                 Icons.brightness_2_outlined,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                "Magnitude",
+                                l10n?.magnitudeLabel ?? "Magnitude",
                                 widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
                                 Icons.auto_awesome_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                "Apparent Size",
+                                l10n?.apparentSizeMetric ?? "Apparent Size",
                                 widget.target.majorAxisArcmin != null
                                     ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
                                     : "N/A",
@@ -526,42 +534,42 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       children: [
                         Expanded(
                           child: _buildMetric(
-                            "Peak Altitude",
+                            l10n?.peakAltitude ?? "Peak Altitude",
                             "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
                             Icons.trending_up_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            "Transit Time",
+                            l10n?.transitTimeMetric ?? "Transit Time",
                             DateFormat('HH:mm').format(widget.target.transitTime),
                             Icons.schedule_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            "Visible Duration",
+                            l10n?.visibleDurationMetric ?? "Visible Duration",
                             "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
                             Icons.timer_outlined,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            "Moon Distance",
+                            l10n?.moonDistanceMetric ?? "Moon Distance",
                             "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
                             Icons.brightness_2_outlined,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            "Magnitude",
+                            l10n?.magnitudeLabel ?? "Magnitude",
                             widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
                             Icons.auto_awesome_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            "Apparent Size",
+                            l10n?.apparentSizeMetric ?? "Apparent Size",
                             widget.target.majorAxisArcmin != null
                                 ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
                                 : "N/A",
@@ -621,7 +629,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       const SizedBox(height: 4),
                       TextButton.icon(
                         icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                        label: const Text("Verify Online (SIMBAD)"),
+                        label: Text(l10n?.verifyOnlineSimbad ?? "Verify Online (SIMBAD)"),
                         onPressed: _queryOnlineSimbad,
                       ),
                     ],
@@ -640,7 +648,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                        label: const Text("Verify Online (SIMBAD)"),
+                        label: Text(l10n?.verifyOnlineSimbad ?? "Verify Online (SIMBAD)"),
                         onPressed: _queryOnlineSimbad,
                       ),
                     ],
@@ -707,6 +715,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   Widget _buildVisualPreviewCard() {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final isRed = widget.isRedNightMode;
@@ -731,7 +740,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Visual Sky Preview",
+                  l10n?.visualSkyPreview ?? "Visual Sky Preview",
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -766,7 +775,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       Icon(Icons.tune_rounded, size: 12, color: AstroColors.starGold),
                       const SizedBox(width: 3),
                       Text(
-                        "Gear",
+                        l10n?.gearButton ?? "Gear",
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AstroColors.starGold),
                       ),
                     ],
@@ -788,6 +797,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   Widget _buildYearlyVisibilityCard() {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final isRed = widget.isRedNightMode;
@@ -810,7 +820,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                "Simulating 12-month visibility across the year...",
+                l10n?.simulatingYearlyVisibility ?? "Simulating 12-month visibility across the year...",
                 style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
               ),
             ),
@@ -831,13 +841,13 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final currentDay = now.day;
 
     if (isVisibleTonight) {
-      tonightStatusText = "Visible Tonight";
+      tonightStatusText = l10n?.visibleTonight ?? "Visible Tonight";
     } else if (!y.canEverReachMinAlt) {
-      tonightStatusText = "Unreachable";
+      tonightStatusText = l10n?.unreachable ?? "Unreachable";
     } else if (y.totalObservableDays == 0) {
       tonightStatusText = _showFilteredYearly
-          ? "Not observable with active filters"
-          : "Not observable (below limits)";
+          ? (l10n?.notObservableFiltered ?? "Not observable with active filters")
+          : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
     } else {
       final thisYear = now.year;
       DateTime seasonStart = DateTime(thisYear, y.startMonth, y.startDay);
@@ -851,17 +861,19 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
       if (now.isBefore(seasonStart)) {
         final diffDays = seasonStart.difference(DateTime(thisYear, currentMonth, currentDay)).inDays;
+        final startM = localizeMonthAbbr(y.startMonth, l10n);
         if (diffDays == 1) {
-          tonightStatusText = "Starts tomorrow (${y.months[y.startMonth - 1].name} ${y.startDay})";
+          tonightStatusText = l10n?.startsTomorrow("$startM ${y.startDay}") ?? "Starts tomorrow ($startM ${y.startDay})";
         } else if (diffDays <= 60) {
-          tonightStatusText = "Starts in $diffDays days (${y.months[y.startMonth - 1].name} ${y.startDay})";
+          tonightStatusText = l10n?.startsInDays(diffDays, "$startM ${y.startDay}") ?? "Starts in $diffDays days ($startM ${y.startDay})";
         } else {
-          tonightStatusText = "Starts ${y.months[y.startMonth - 1].name} ${y.startDay}";
+          tonightStatusText = l10n?.startsOnDate("$startM ${y.startDay}") ?? "Starts $startM ${y.startDay}";
         }
       } else if (!now.isAfter(seasonEnd)) {
-        tonightStatusText = "In Season · Below limits tonight";
+        tonightStatusText = l10n?.inSeasonBelowLimits ?? "In Season · Below limits tonight";
       } else {
-        tonightStatusText = "Off-Season (Ended ${y.months[y.endMonth - 1].name} ${y.endDay})";
+        final endM = localizeMonthAbbr(y.endMonth, l10n);
+        tonightStatusText = l10n?.offSeasonEnded("$endM ${y.endDay}") ?? "Off-Season (Ended $endM ${y.endDay})";
       }
     }
 
@@ -889,7 +901,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               child: Row(
                 children: [
                   Text(
-                    "SIMULATION MODE:",
+                    l10n?.simulationModeLabel ?? "SIMULATION MODE:",
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
@@ -920,7 +932,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                       ),
                       child: Text(
-                        "Active Filters",
+                        l10n?.activeFiltersMode ?? "Active Filters",
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: _showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
@@ -952,7 +964,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                       ),
                       child: Text(
-                        "Full Sky & Night",
+                        l10n?.fullSkyNightMode ?? "Full Sky & Night",
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: !_showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
@@ -985,7 +997,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "YEARLY OBSERVING WINDOW",
+                          l10n?.yearlyObservingWindow ?? "YEARLY OBSERVING WINDOW",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -995,7 +1007,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          y.bestWindowSummary,
+                          localizeBestWindowSummary(y, l10n),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -1018,7 +1030,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              "${y.totalObservableDays} days observable this year • Peak: ${y.maxHoursInPeak.toStringAsFixed(1)}h on ${y.months[y.peakMonth - 1].name} ${y.peakDay}",
+                              l10n?.yearlyDaysObservablePeak(
+                                y.totalObservableDays,
+                                y.maxHoursInPeak.toStringAsFixed(1),
+                                "${localizeMonthAbbr(y.peakMonth, l10n)} ${y.peakDay}",
+                              ) ?? "${y.totalObservableDays} days observable this year • Peak: ${y.maxHoursInPeak.toStringAsFixed(1)}h on ${y.months[y.peakMonth - 1].name} ${y.peakDay}",
                               style: TextStyle(
                                 fontSize: 10,
                                 color: textColor.withValues(alpha: 0.6),
@@ -1148,7 +1164,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                     child: Column(
                       children: [
                         Text(
-                          m.name.toUpperCase(),
+                          localizeMonthAbbr(m.month, l10n).toUpperCase(),
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
@@ -1206,14 +1222,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             children: [
               Expanded(
                 child: Text(
-                  "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
+                  l10n?.theoreticalMaxAtTransit(
+                    y.theoreticalMaxAltitudeDeg.toStringAsFixed(1),
+                    y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : '',
+                  ) ?? "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
                   style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                "Limits: ≥${widget.filters?.minAltitude.round() ?? 30}° for ≥${widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0'}h",
+                l10n?.limitsSubtitle(
+                  widget.filters?.minAltitude.round().toString() ?? '30',
+                  widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0',
+                ) ?? "Limits: ≥${widget.filters?.minAltitude.round() ?? 30}° for ≥${widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0'}h",
                 style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
               ),
             ],

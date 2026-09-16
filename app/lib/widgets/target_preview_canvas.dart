@@ -11,6 +11,7 @@ import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
 import '../views/equipment_dialog.dart';
 import '../views/equipment_framing_dialog.dart';
+import '../l10n/app_localizations.dart';
 
 enum PreviewDisplayMode {
   photoWithReticle,
@@ -274,6 +275,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
@@ -397,7 +399,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         const Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
                         const SizedBox(width: 6),
                         Text(
-                          "Offline Sky Fallback",
+                          l10n?.offlineSkyFallback ?? "Offline Sky Fallback",
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                         ),
                       ],
@@ -430,7 +432,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     children: [
               // Survey Selector Chip
               PopupMenuButton<String>(
-                tooltip: "Select Sky Survey",
+                tooltip: l10n?.selectSkySurveyTooltip ?? "Select Sky Survey",
                 color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -493,7 +495,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               if (widget.enableExpandDialog) ...[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: "Open Full Framing Simulator",
+                  message: l10n?.openFramingSimulatorTooltip ?? "Open Full Framing Simulator",
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -522,7 +524,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              "Simulator",
+                              l10n?.framingSimulatorShort ?? "Simulator",
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -541,7 +543,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
               // Framing Simulator Mode Toggle
               Tooltip(
-                message: "Toggle Sensor Framing Box",
+                message: l10n?.toggleFramingBoxTooltip ?? "Toggle Sensor Framing Box",
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -583,7 +585,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            "Framing",
+                            l10n?.framingModeShort ?? "Framing",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -643,7 +645,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   children: [
                     _buildModeBtn(
                       icon: Icons.filter_center_focus_rounded,
-                      tooltip: "Photo + Reticle",
+                      tooltip: l10n?.photoReticleTooltip ?? "Photo + Reticle",
                       isSelected: _displayMode == PreviewDisplayMode.photoWithReticle,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoWithReticle),
@@ -651,7 +653,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     const SizedBox(width: 2),
                     _buildModeBtn(
                       icon: Icons.image_rounded,
-                      tooltip: "Photo Mode (Clean Image)",
+                      tooltip: l10n?.photoCleanTooltip ?? "Photo Mode (Clean Image)",
                       isSelected: _displayMode == PreviewDisplayMode.photoOnly,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoOnly),
@@ -659,7 +661,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     const SizedBox(width: 2),
                     _buildModeBtn(
                       icon: Icons.draw_rounded,
-                      tooltip: "Vector Apparent Size",
+                      tooltip: l10n?.vectorSizeTooltip ?? "Vector Apparent Size",
                       isSelected: _displayMode == PreviewDisplayMode.vectorOnly,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.vectorOnly),
@@ -691,7 +693,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     children: [
                       _buildLargeActionButton(
                         icon: Icons.remove_rounded,
-                        tooltip: "Zoom Out (Wider FOV)",
+                        tooltip: l10n?.zoomOutTooltip ?? "Zoom Out (Wider FOV)",
                         onTap: _zoomOut,
                         color: textColor,
                         borderColor: borderColor,
@@ -699,7 +701,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       const SizedBox(width: 8),
                       _buildLargeActionButton(
                         icon: Icons.add_rounded,
-                        tooltip: "Zoom In (Closer FOV)",
+                        tooltip: l10n?.zoomInTooltip ?? "Zoom In (Closer FOV)",
                         onTap: _zoomIn,
                         color: textColor,
                         borderColor: borderColor,
@@ -707,7 +709,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       const SizedBox(width: 8),
                       _buildLargeActionButton(
                         icon: Icons.restart_alt_rounded,
-                        tooltip: "Reset Framing FOV",
+                        tooltip: l10n?.resetFovTooltip ?? "Reset Framing FOV",
                         onTap: _resetFov,
                         color: textColor,
                         borderColor: borderColor,
@@ -774,7 +776,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         children: [
                           _buildRotatorButton(
                             icon: Icons.rotate_left_rounded,
-                            tooltip: "Rotate -15°",
+                            tooltip: l10n?.rotateMinus15 ?? "Rotate -15°",
                             onTap: () => EquipmentManager.instance.rotateBy(-15),
                             color: textColor,
                           ),
@@ -813,7 +815,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           const SizedBox(width: 6),
                           _buildRotatorButton(
                             icon: Icons.rotate_right_rounded,
-                            tooltip: "Rotate +15°",
+                            tooltip: l10n?.rotatePlus15 ?? "Rotate +15°",
                             onTap: () => EquipmentManager.instance.rotateBy(15),
                             color: textColor,
                           ),
@@ -826,8 +828,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           const SizedBox(width: 10),
                           _buildTextActionButton(
                             icon: Icons.fit_screen_rounded,
-                            label: "Fit",
-                            tooltip: "Fit FOV to Sensor Size",
+                            label: l10n?.fitToSensor ?? "Fit",
+                            tooltip: l10n?.fitFovToSensorTooltip ?? "Fit FOV to Sensor Size",
                             onTap: _fitToSensor,
                             accentColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                           ),

@@ -9,6 +9,8 @@ import '../models/period_target_item.dart';
 import '../theme/astro_theme.dart';
 import 'filter_dialog.dart';
 import 'target_details_sheet.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 
 enum PeriodSortBy {
   days,
@@ -572,6 +574,7 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   Widget _buildPeriodTargetCard(PeriodTargetItem target, bool isSelected) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final isObservable = target.isObservable && target.observableDaysCount > 0;
@@ -644,7 +647,7 @@ class _PlannerViewState extends State<PlannerView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${target.objectType} in ${target.constellation}${target.magnitude != null ? ' • Mag ${target.magnitude!.toStringAsFixed(1)}' : ''}",
+                          "${localizeObjectType(target.objectType, l10n)} in ${target.constellation}${target.magnitude != null ? ' • Mag ${target.magnitude!.toStringAsFixed(1)}' : ''}",
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withValues(alpha: 0.6),
@@ -657,7 +660,7 @@ class _PlannerViewState extends State<PlannerView> {
                   // Add to Observing List action button
                   IconButton(
                     icon: Icon(Icons.playlist_add_rounded, size: 20, color: accentColor),
-                    tooltip: "Add to Observing List",
+                    tooltip: l10n?.addToObservingList ?? "Add to Observing List",
                     onPressed: () => _showAddToListDialog(target),
                   ),
                 ],

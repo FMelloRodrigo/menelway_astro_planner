@@ -195,7 +195,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.clear, size: 18),
-                              tooltip: "Clear search",
+                              tooltip: l10n?.clearSearchTooltip ?? "Clear search",
                               onPressed: () {
                                 _debounceTimer?.cancel();
                                 _searchController.clear();
@@ -205,7 +205,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             ),
                             IconButton(
                               icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
-                              tooltip: "Search target",
+                              tooltip: l10n?.searchTargetTooltip ?? "Search target",
                               onPressed: () {
                                 _debounceTimer?.cancel();
                                 widget.onFilterChanged(
@@ -347,14 +347,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       ),
                       const SizedBox(width: 6),
                     ] else ...[
-                      _buildSummaryChip("Window: Darkness (Full Night)", Icons.nights_stay_rounded),
+                      _buildSummaryChip(l10n?.windowFullDarkness ?? "Window: Darkness (Full Night)", Icons.nights_stay_rounded),
                       const SizedBox(width: 6),
                     ],
                     _buildSummaryChip("Moon ≥ ${widget.filters.minMoonSeparation.round()}°", Icons.brightness_2_rounded),
                     const SizedBox(width: 6),
                     _buildSummaryChip("Catalogs: ${widget.filters.selectedCatalogs.join(', ')}", Icons.auto_stories_rounded),
                     const SizedBox(width: 6),
-                    _buildSummaryChip("${displayTargets.length} targets found", Icons.radar_rounded),
+                    _buildSummaryChip(l10n?.targetsFoundCount(displayTargets.length) ?? "${displayTargets.length} targets found", Icons.radar_rounded),
                   ],
                 ),
               ),
@@ -431,6 +431,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildTargetList(List<TargetItem> targets) {
+    final l10n = AppLocalizations.of(context);
     final hasOffSeason = widget.filters.searchQuery.isNotEmpty && widget.targets.any((t) => !t.meetsCriteria);
 
     return ListView.builder(
@@ -453,8 +454,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 Expanded(
                   child: Text(
                     _hideOutsideFilters
-                        ? "Showing only targets matching active filters tonight."
-                        : "Search includes targets outside active filters tonight. Click any target to view its yearly window.",
+                        ? (l10n?.showingMatchingOnly ?? "Showing only targets matching active filters tonight.")
+                        : (l10n?.searchIncludesOutsideFilters ?? "Search includes targets outside active filters tonight. Click any target to view its yearly window."),
                     style: TextStyle(
                       fontSize: 11,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
@@ -474,7 +475,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
-                    _hideOutsideFilters ? "Show All" : "Hide Non-Matching",
+                    _hideOutsideFilters
+                        ? (l10n?.showAll ?? "Show All")
+                        : (l10n?.hideNonMatching ?? "Hide Non-Matching"),
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber),
                   ),
                 ),
@@ -611,8 +614,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     ),
                     child: Text(
                       isNarrow
-                          ? "${target.visibleDurationHours.toStringAsFixed(1)}h visible"
-                          : "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°",
+                          ? (l10n?.visibleDurationShort(target.visibleDurationHours.toStringAsFixed(1)) ?? "${target.visibleDurationHours.toStringAsFixed(1)}h visible")
+                          : (l10n?.visibleDurationAbove(target.visibleDurationHours.toStringAsFixed(1), widget.filters.minAltitude.round().toString()) ?? "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°"),
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -628,7 +631,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
                     ),
                     child: Text(
-                      isNarrow ? "Outside Filters" : "Outside Active Filters",
+                      isNarrow
+                          ? (l10n?.outsideFilters ?? "Outside Filters")
+                          : (l10n?.outsideActiveFilters ?? "Outside Active Filters"),
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -666,7 +671,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             Text(
                               target.peakAltitudeDeg > 0
                                   ? "${target.peakAltitudeDeg.toStringAsFixed(0)}°"
-                                  : "Below 0°",
+                                  : (l10n?.belowZero ?? "Below 0°"),
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -723,8 +728,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             const SizedBox(width: 4),
                             Text(
                               target.peakAltitudeDeg > 0
-                                  ? "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°"
-                                  : "Below Horizon",
+                                  ? (l10n?.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0)) ?? "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°")
+                                  : (l10n?.belowHorizon ?? "Below Horizon"),
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -753,7 +758,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                         durationPill,
                         const SizedBox(height: 4),
                         Text(
-                          "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
+                          l10n?.moonSeparationShort(target.minMoonSepDeg.toStringAsFixed(0)) ?? "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
                           style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
                         ),
                       ],
