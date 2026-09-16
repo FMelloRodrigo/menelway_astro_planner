@@ -7,6 +7,7 @@ import '../core/equipment_manager.dart';
 import '../core/geocoding_service.dart';
 import '../core/settings_service.dart';
 import '../core/favorites_manager.dart';
+import '../l10n/app_localizations.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -23,6 +24,8 @@ class MainScaffold extends StatefulWidget {
   final VoidCallback onToggleNightMode;
   final VoidCallback? onResetNightMode;
   final AppSettingsData? initialSettings;
+  final String? currentLanguageCode;
+  final ValueChanged<String?>? onChangeLanguage;
 
   const MainScaffold({
     super.key,
@@ -30,6 +33,8 @@ class MainScaffold extends StatefulWidget {
     required this.onToggleNightMode,
     this.onResetNightMode,
     this.initialSettings,
+    this.currentLanguageCode,
+    this.onChangeLanguage,
   });
 
   @override
@@ -160,6 +165,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       equipmentProfiles: EquipmentManager.instance.profiles,
       activeEquipmentProfileId: EquipmentManager.instance.activeProfileId,
       favorites: FavoritesManager.instance.favorites,
+      languageCode: widget.currentLanguageCode,
     );
   }
 
@@ -201,6 +207,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _showCleanDataDialog() {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final isRed = widget.isRedNightMode;
 
@@ -225,7 +232,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                "Clear All Saved Data?",
+                l10n?.cleanDataConfirmTitle ?? "Clear All Saved Data?",
                 style: TextStyle(
                   color: textColor,
                   fontSize: 18,
@@ -240,7 +247,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "This will permanently erase your local configuration and reset everything back to factory defaults:",
+              l10n?.cleanDataWarning ?? "This will permanently erase your local configuration and reset everything back to factory defaults:",
               style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
@@ -254,10 +261,10 @@ class _MainScaffoldState extends State<MainScaffold> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCleanItem("• Reset observer location and coordinates to default (New York, USA)", textColor),
-                  _buildCleanItem("• Reset all target filters, altitude, and observing time limits", textColor),
-                  _buildCleanItem("• Delete all custom observing lists and planned session targets", textColor),
-                  _buildCleanItem("• Delete local portable settings file (user_settings.json)", textColor),
+                  _buildCleanItem(l10n?.cleanDataPoint1 ?? "• Custom observer geographic location & coordinates", textColor),
+                  _buildCleanItem(l10n?.cleanDataPoint2 ?? "• All custom Target Filters & Horizon masks", textColor),
+                  _buildCleanItem(l10n?.cleanDataPoint3 ?? "• Equipment optics & camera sensor profiles", textColor),
+                  _buildCleanItem(l10n?.cleanDataPoint4 ?? "• Favorite targets and custom observing lists", textColor),
                 ],
               ),
             ),
@@ -275,7 +282,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+            child: Text(l10n?.cleanDataCancel ?? "Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
           ),
           FilledButton.icon(
             style: FilledButton.styleFrom(
@@ -283,7 +290,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.delete_forever_rounded, size: 16),
-            label: const Text("Clear All Data"),
+            label: Text(l10n?.cleanDataConfirm ?? "Clear All Data"),
             onPressed: () async {
               Navigator.of(ctx).pop();
               await _performCleanAllData();
@@ -763,6 +770,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
@@ -840,7 +848,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   ),
                 ),
                 Text(
-                  "Astro Target & Session Planner",
+                  l10n?.appSubtitle ?? "Astro Target & Session Planner",
                   style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                 ),
               ],
@@ -900,7 +908,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.dark_mode_outlined, size: 14, color: AstroColors.nebulaIndigo),
                     const SizedBox(width: 4),
                     Text(
-                      "Darkness: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      "${l10n?.darkness ?? "Darkness"}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(width: 8),
@@ -945,7 +953,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
           // Red Night-Vision Mode Toggle
           IconButton(
-            tooltip: widget.isRedNightMode ? "Switch to Deep Space Obsidian" : "Switch to Telescope Red Mode",
+            tooltip: widget.isRedNightMode ? (l10n?.nightModeStandard ?? "Deep Space Obsidian") : (l10n?.nightModeRed ?? "Telescope Red Mode"),
             style: IconButton.styleFrom(
               backgroundColor: widget.isRedNightMode
                   ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
@@ -966,6 +974,137 @@ class _MainScaffoldState extends State<MainScaffold> {
               color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
             ),
             onPressed: _handleToggleNightMode,
+          ),
+          const SizedBox(width: 8),
+
+          // Language Switcher Pill (Quick toggle / selection)
+          PopupMenuButton<String>(
+            tooltip: l10n?.language ?? "Language",
+            color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
+            elevation: 10,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                    : AstroColors.starlightCyan.withValues(alpha: 0.45),
+                width: 1.2,
+              ),
+            ),
+            onSelected: (code) {
+              widget.onChangeLanguage?.call(code.isEmpty ? null : code);
+            },
+            itemBuilder: (ctx) => [
+              PopupMenuItem(
+                value: 'en',
+                child: Row(
+                  children: [
+                    const Text("🇺🇸", style: TextStyle(fontSize: 15)),
+                    const SizedBox(width: 8),
+                    Text(
+                      "English",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: widget.currentLanguageCode == 'en' ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    if (widget.currentLanguageCode == 'en') ...[
+                      const Spacer(),
+                      Icon(Icons.check_rounded, size: 16, color: accentColor),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'pt',
+                child: Row(
+                  children: [
+                    const Text("🇧🇷", style: TextStyle(fontSize: 15)),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Português (Brasil)",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: widget.currentLanguageCode == 'pt' ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    if (widget.currentLanguageCode == 'pt') ...[
+                      const Spacer(),
+                      Icon(Icons.check_rounded, size: 16, color: accentColor),
+                    ],
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: '',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_system_daydream_rounded, size: 16, color: textColor.withValues(alpha: 0.7)),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n?.languageSystem ?? "System Default",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: (widget.currentLanguageCode == null || widget.currentLanguageCode!.isEmpty)
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    if (widget.currentLanguageCode == null || widget.currentLanguageCode!.isEmpty) ...[
+                      const Spacer(),
+                      Icon(Icons.check_rounded, size: 16, color: accentColor),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                      : AstroColors.starlightCyan.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                        : AstroColors.starlightCyan.withValues(alpha: 0.35),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.translate_rounded,
+                      size: 15,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      widget.currentLanguageCode == 'pt' ? "PT" : (widget.currentLanguageCode == 'en' ? "EN" : "AUTO"),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      size: 14,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 8),
 
@@ -1269,7 +1408,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
                   selectedIcon: Icon(Icons.radar_rounded, color: accentColor),
-                  label: const Text("Targets"),
+                  label: Text(l10n?.tabTargets ?? "Targets"),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
@@ -1279,7 +1418,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
                   selectedIcon: Icon(Icons.calendar_month_rounded, color: accentColor),
-                  label: const Text("Planner"),
+                  label: Text(l10n?.tabPlanner ?? "Planner"),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
@@ -1289,7 +1428,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
                   selectedIcon: Icon(Icons.playlist_play_rounded, color: accentColor),
-                  label: const Text("Observing Lists"),
+                  label: Text(l10n?.tabObservingLists ?? "Observing Lists"),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
@@ -1302,7 +1441,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icons.favorite_rounded,
                     color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
                   ),
-                  label: const Text("Favorites"),
+                  label: Text(l10n?.tabFavorites ?? "Favorites"),
                 ),
               ],
             ),
@@ -1399,22 +1538,22 @@ class _MainScaffoldState extends State<MainScaffold> {
               unselectedItemColor: textColor.withValues(alpha: 0.5),
               currentIndex: _selectedTabIndex,
               onTap: (idx) => setState(() => _selectedTabIndex = idx),
-              items: const [
+              items: [
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.radar_rounded),
-                  label: "Targets",
+                  icon: const Icon(Icons.radar_rounded),
+                  label: l10n?.tabTargets ?? "Targets",
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.calendar_month_rounded),
-                  label: "Planner",
+                  icon: const Icon(Icons.calendar_month_rounded),
+                  label: l10n?.tabPlanner ?? "Planner",
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.playlist_play_rounded),
-                  label: "Observing Lists",
+                  icon: const Icon(Icons.playlist_play_rounded),
+                  label: l10n?.tabObservingLists ?? "Observing Lists",
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.favorite_rounded),
-                  label: "Favorites",
+                  icon: const Icon(Icons.favorite_rounded),
+                  label: l10n?.tabFavorites ?? "Favorites",
                 ),
               ],
             )

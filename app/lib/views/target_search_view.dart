@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -150,6 +152,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
@@ -181,9 +184,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
               final searchField = TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: isNarrow
+                  hintText: l10n?.searchTargetsHint ?? (isNarrow
                       ? "Search DSO (e.g. M42, NGC 7000, Arp 220)..."
-                      : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)...",
+                      : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)..."),
                   prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   suffixIcon: _searchController.text.isNotEmpty
@@ -226,7 +229,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
               final filterButton = FilledButton.tonalIcon(
                 icon: const Icon(Icons.tune_rounded, size: 18),
-                label: const Text("Filters"),
+                label: Text(l10n?.filtersButton ?? "Filters"),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   backgroundColor: widget.isRedNightMode
@@ -271,22 +274,22 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: SortMode.peakAltitude,
-                        child: Text("Peak Altitude", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n?.sortPeakAltitude ?? "Peak Altitude", overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.visibleDuration,
-                        child: Text("Visible Duration", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n?.sortVisibleDuration ?? "Visible Duration", overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.brightness,
-                        child: Text("Brightness (Mag)", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n?.sortMagnitude ?? "Brightness (Mag)", overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.transitTime,
-                        child: Text("Transit Time", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n?.sortTransitTime ?? "Transit Time", overflow: TextOverflow.ellipsis),
                       ),
                     ],
                     onChanged: (v) {
@@ -371,13 +374,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                           Icon(Icons.auto_awesome_rounded, size: 48, color: textColor.withValues(alpha: 0.3)),
                           const SizedBox(height: 12),
                           Text(
-                            "No targets match the current filter criteria",
+                            l10n?.noTargetsFound ?? "No targets match the current filter criteria",
                             style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.6)),
                           ),
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: _openFilterDialog,
-                            child: const Text("Adjust Filter Settings"),
+                            child: Text(l10n?.filtersButton ?? "Adjust Filter Settings"),
                           ),
                         ],
                       ),
@@ -489,6 +492,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildTargetCard(TargetItem target, bool isSelected) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
@@ -576,7 +580,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       _buildSmallChip(target.arp!, Colors.deepOrangeAccent),
                     if (target.herschel != null && target.herschel!.isNotEmpty)
                       _buildSmallChip(target.herschel!, Colors.amber.shade700),
-                    _buildSmallChip(target.objectType, AstroColors.starlightCyan),
+                    _buildSmallChip(localizeObjectType(target.objectType, l10n), AstroColors.starlightCyan),
                     Text(
                       target.constellation,
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),

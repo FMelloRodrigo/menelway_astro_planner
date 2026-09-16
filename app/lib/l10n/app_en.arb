@@ -1,0 +1,166 @@
+{
+  "@@locale": "en",
+  "appTitle": "Menelway Astro Planner",
+  "appSubtitle": "Astro Target & Session Planner",
+
+  "tabTargets": "Targets",
+  "tabPlanner": "Planner",
+  "tabObservingLists": "Observing Lists",
+  "tabFavorites": "Favorites",
+
+  "observerLocation": "Observer Location",
+  "darkness": "Darkness",
+  "moon": "Moon",
+  "databaseSize": "Database",
+  "nightModeRed": "Telescope Red Mode",
+  "nightModeStandard": "Deep Space Obsidian",
+  "equipmentRigs": "Equipment Rigs",
+  "settingsAndData": "Settings & Data",
+
+  "language": "Language",
+  "languageEnglish": "English",
+  "languagePortuguese": "Português (Brasil)",
+  "languageSystem": "System Default",
+
+  "resetFilters": "Reset Target Filters",
+  "resetFiltersDesc": "Clear filter limits & keep observer location",
+  "cleanData": "Clean All Saved Data...",
+  "cleanDataDesc": "Wipe lists, custom location, & local settings",
+  "cleanDataConfirmTitle": "Clear All Saved Data?",
+  "cleanDataWarning": "This will permanently erase your local configuration and reset everything back to factory defaults:",
+  "cleanDataPoint1": "• Custom observer geographic location & coordinates",
+  "cleanDataPoint2": "• All custom Target Filters & Horizon masks",
+  "cleanDataPoint3": "• Equipment optics & camera sensor profiles",
+  "cleanDataPoint4": "• Favorite targets and custom observing lists",
+  "cleanDataCancel": "Cancel",
+  "cleanDataConfirm": "Yes, Reset Everything",
+  "cleanDataSuccess": "All local data reset. App restored to default.",
+  "filtersResetSuccess": "Target filters reset to default (location preserved).",
+
+  "locationEditTitle": "Observer Location",
+  "searchCityOnline": "Search City & Country (Online)",
+  "searchCityHint": "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
+  "searchOnlineTooltip": "Search online",
+  "manualCoordinates": "Manual Coordinates",
+  "latitude": "Latitude (°)",
+  "longitude": "Longitude (°)",
+  "elevation": "Elevation (m)",
+  "locationNameLabel": "Location Name",
+  "saveLocation": "Save Location",
+  "locationNotFound": "No matching cities found for '{query}'.",
+  "@locationNotFound": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "connectionError": "Connection error. Check internet connection.",
+
+  "searchTargetsHint": "Search target (e.g. M31, NGC 7000, Orion, Dumbbell)...",
+  "filtersButton": "Filters",
+  "sortBy": "Sort by",
+  "sortPeakAltitude": "Peak Altitude",
+  "sortMagnitude": "Magnitude (Brightest)",
+  "sortTransitTime": "Transit Time",
+  "sortVisibleDuration": "Visible Duration",
+  "sortSize": "Size (Largest)",
+  "noTargetsFound": "No targets match your filter criteria.",
+  "noTargetsSubtitle": "Try relaxing altitude limits, magnitude, or clearing search keywords.",
+
+  "altitude": "Altitude",
+  "peakAltitude": "Peak Alt",
+  "transit": "Transit",
+  "visibleDuration": "Visible",
+  "moonSeparation": "Moon Sep",
+  "magnitudeLabel": "Mag",
+  "sizeLabel": "Size",
+  "surfaceBrightnessLabel": "Surf. Brightness",
+  "addToObservingList": "Add to List",
+  "addedToObservingList": "Added to list: {listName}",
+  "@addedToObservingList": {
+    "placeholders": {
+      "listName": { "type": "String" }
+    }
+  },
+  "targetDetails": "Target Details",
+  "constellationLabel": "Constellation",
+  "coordinatesLabel": "Coordinates",
+  "visibilityWindow": "Visibility Window",
+
+  "filterDialogTitle": "Filter Targets",
+  "tabGeneral": "General & Altitude",
+  "tabAreaHorizon": "Area & Horizon",
+  "tabObjectTypes": "Object Types",
+  "tabCatalogs": "Catalogs",
+  "tabWindow": "Time Window",
+  "minAltitudeLabel": "Min Altitude: {degrees}°",
+  "@minAltitudeLabel": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "maxAltitudeLabel": "Max Altitude: {degrees}°",
+  "@maxAltitudeLabel": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "minDurationLabel": "Min Duration: {hours}h",
+  "@minDurationLabel": {
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "minMoonSeparationLabel": "Min Moon Separation: {degrees}°",
+  "@minMoonSeparationLabel": {
+    "placeholders": {
+      "degrees": { "type": "String" }
+    }
+  },
+  "magnitudeRangeLabel": "Magnitude Range: {minMag} to {maxMag}",
+  "@magnitudeRangeLabel": {
+    "placeholders": {
+      "minMag": { "type": "String" },
+      "maxMag": { "type": "String" }
+    }
+  },
+  "sizeRangeLabel": "Angular Size: {minSize}' to {maxSize}'",
+  "@sizeRangeLabel": {
+    "placeholders": {
+      "minSize": { "type": "String" },
+      "maxSize": { "type": "String" }
+    }
+  },
+  "resetAllFilters": "Reset Filters",
+  "applyFilters": "Apply Filters",
+  "selectAll": "Select All",
+  "deselectAll": "Deselect All",
+
+  "objGalaxy": "Galaxy",
+  "objPlanetaryNebula": "Planetary Nebula",
+  "objBrightNebula": "Bright Nebula",
+  "objDarkNebula": "Dark Nebula",
+  "objOpenCluster": "Open Cluster",
+  "objGlobularCluster": "Globular Cluster",
+  "objSupernovaRemnant": "Supernova Remnant",
+  "objStar": "Star",
+  "objDoubleStar": "Double Star",
+  "objAsterism": "Asterism",
+  "objOther": "Other",
+
+  "createNewList": "Create New List",
+  "listName": "List Name",
+  "listDescription": "Description (optional)",
+  "targetCount": "{count, plural, =1{1 target} other{{count} targets}}",
+  "@targetCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "deleteList": "Delete List",
+  "deleteListConfirm": "Are you sure you want to delete this observing list?",
+  "emptyObservingLists": "No observing lists yet. Create one to organize your session!",
+
+  "noFavoritesYet": "No favorite targets yet",
+  "noFavoritesDesc": "Click the star icon on any target card or details sheet to pin favorites here.",
+  "exploreTargets": "Explore Targets"
+}

@@ -17,6 +17,7 @@ class AppSettingsData {
   final List<EquipmentProfile>? equipmentProfiles;
   final String? activeEquipmentProfileId;
   final List<TargetItem>? favorites;
+  final String? languageCode;
 
   AppSettingsData({
     required this.filters,
@@ -27,6 +28,7 @@ class AppSettingsData {
     this.equipmentProfiles,
     this.activeEquipmentProfileId,
     this.favorites,
+    this.languageCode,
   });
 }
 
@@ -94,6 +96,7 @@ class SettingsService {
             .toList();
       }
       final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
+      final languageCode = data['languageCode'] as String?;
 
       List<TargetItem>? favorites;
       if (data.containsKey('favorites') && data['favorites'] is List) {
@@ -111,6 +114,7 @@ class SettingsService {
         equipmentProfiles: equipmentProfiles,
         activeEquipmentProfileId: activeEquipmentProfileId,
         favorites: favorites,
+        languageCode: languageCode,
       );
     } catch (_) {
       return AppSettingsData(filters: FilterState());
@@ -127,15 +131,24 @@ class SettingsService {
     List<EquipmentProfile>? equipmentProfiles,
     String? activeEquipmentProfileId,
     List<TargetItem>? favorites,
+    String? languageCode,
   }) async {
     try {
       final file = await getSettingsFile();
-      final data = <String, dynamic>{
-        'version': 1,
-        'savedAt': DateTime.now().toIso8601String(),
-        'isRedNightMode': isRedNightMode,
-        'filters': filters.toJson(),
-      };
+      Map<String, dynamic> data = {};
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        if (content.trim().isNotEmpty && content.trim() != '{}') {
+          try {
+            data = jsonDecode(content) as Map<String, dynamic>;
+          } catch (_) {}
+        }
+      }
+
+      data['version'] = 1;
+      data['savedAt'] = DateTime.now().toIso8601String();
+      data['isRedNightMode'] = isRedNightMode;
+      data['filters'] = filters.toJson();
 
       if (sortMode != null) {
         data['sortMode'] = sortMode;
@@ -155,11 +168,36 @@ class SettingsService {
       if (favorites != null) {
         data['favorites'] = favorites.map((t) => t.toJson()).toList();
       }
+      if (languageCode != null) {
+        data['languageCode'] = languageCode;
+      }
 
       await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
     } catch (_) {
       // Non-fatal persistence failure
     }
+  }
+
+  /// Quick helper to update just the user's preferred language code ('en', 'pt', etc.).
+  static Future<void> saveLanguage(String? languageCode) async {
+    try {
+      final file = await getSettingsFile();
+      Map<String, dynamic> data = {};
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        if (content.trim().isNotEmpty && content.trim() != '{}') {
+          try {
+            data = jsonDecode(content) as Map<String, dynamic>;
+          } catch (_) {}
+        }
+      }
+      if (languageCode != null) {
+        data['languageCode'] = languageCode;
+      } else {
+        data.remove('languageCode');
+      }
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+    } catch (_) {}
   }
 
   /// Clears user configuration, resetting settings file to empty defaults.

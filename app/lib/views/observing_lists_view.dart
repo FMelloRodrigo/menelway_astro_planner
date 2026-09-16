@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/observing_list.dart';
 import '../theme/astro_theme.dart';
 
@@ -28,6 +29,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
   int? _expandedListId;
 
   void _showCreateDialog() {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController();
     final descController = TextEditingController();
     final dateController = TextEditingController(
@@ -42,7 +44,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
               ? AstroColors.nightVisionSurface
               : AstroColors.spaceDarkSurface,
           title: Text(
-            "Create New Observing List",
+            l10n?.createNewList ?? "Create New Observing List",
             style: TextStyle(
               color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
               fontSize: 16,
@@ -53,7 +55,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: "List Name (e.g. Bortle 4 Trip)"),
+                decoration: InputDecoration(labelText: "${l10n?.listName ?? "List Name"} (e.g. Bortle 4 Trip)"),
                 style: TextStyle(
                   color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                 ),
@@ -61,7 +63,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                decoration: const InputDecoration(labelText: "Description / Gear Notes"),
+                decoration: InputDecoration(labelText: "${l10n?.listDescription ?? "Description"} / Notes"),
                 style: TextStyle(
                   color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                 ),
@@ -78,11 +80,11 @@ class _ObservingListsViewState extends State<ObservingListsView> {
           ),
           actions: [
             TextButton(
-              child: const Text("Cancel"),
+              child: Text(l10n?.cleanDataCancel ?? "Cancel"),
               onPressed: () => Navigator.of(ctx).pop(),
             ),
             FilledButton(
-              child: const Text("Create"),
+              child: Text(l10n?.createNewList ?? "Create"),
               onPressed: () {
                 if (nameController.text.trim().isNotEmpty) {
                   widget.onCreateList(
@@ -138,6 +140,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
@@ -147,7 +150,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
         backgroundColor: accentColor,
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add_rounded),
-        label: const Text("New Observing List"),
+        label: Text(l10n?.createNewList ?? "New Observing List"),
         onPressed: _showCreateDialog,
       ),
       body: widget.lists.isEmpty
@@ -158,18 +161,13 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                   Icon(Icons.playlist_play_rounded, size: 56, color: textColor.withValues(alpha: 0.3)),
                   const SizedBox(height: 12),
                   Text(
-                    "No custom observing lists yet",
+                    l10n?.emptyObservingLists ?? "No custom observing lists yet",
                     style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.7)),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Create a list to organize targets for specific observation dates",
-                    style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.5)),
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text("Create List"),
+                    label: Text(l10n?.createNewList ?? "Create List"),
                     style: FilledButton.styleFrom(backgroundColor: accentColor),
                     onPressed: _showCreateDialog,
                   ),

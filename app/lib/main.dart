@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/equipment_manager.dart';
 import 'core/settings_service.dart';
+import 'l10n/app_localizations.dart';
 import 'theme/astro_theme.dart';
 import 'views/main_scaffold.dart';
 
@@ -25,11 +26,16 @@ class AstroTargetsApp extends StatefulWidget {
 
 class _AstroTargetsAppState extends State<AstroTargetsApp> {
   late bool _isRedNightMode;
+  Locale? _locale;
 
   @override
   void initState() {
     super.initState();
     _isRedNightMode = widget.initialSettings?.isRedNightMode ?? false;
+    final lang = widget.initialSettings?.languageCode;
+    if (lang != null && lang.isNotEmpty) {
+      _locale = Locale(lang);
+    }
   }
 
   void _toggleNightMode() {
@@ -44,18 +50,33 @@ class _AstroTargetsAppState extends State<AstroTargetsApp> {
     });
   }
 
+  void _changeLanguage(String? languageCode) {
+    setState(() {
+      _locale = (languageCode != null && languageCode.isNotEmpty)
+          ? Locale(languageCode)
+          : null;
+    });
+    SettingsService.saveLanguage(languageCode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Menelway Astro Planner',
       debugShowCheckedModeBanner: false,
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: _isRedNightMode ? AstroTheme.redNightVisionTheme() : AstroTheme.darkTheme(),
       home: MainScaffold(
         isRedNightMode: _isRedNightMode,
         onToggleNightMode: _toggleNightMode,
         onResetNightMode: _resetNightMode,
         initialSettings: widget.initialSettings,
+        currentLanguageCode: _locale?.languageCode,
+        onChangeLanguage: _changeLanguage,
       ),
     );
   }
 }
+

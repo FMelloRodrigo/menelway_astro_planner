@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/favorites_manager.dart';
+import '../l10n/app_localizations.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -304,6 +305,7 @@ class _FavoritesViewState extends State<FavoritesView> {
   }
 
   Widget _buildEmptyState(Color textColor, Color accentColor) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -329,7 +331,7 @@ class _FavoritesViewState extends State<FavoritesView> {
             ),
             const SizedBox(height: 20),
             Text(
-              "No Favorite Targets Yet",
+              l10n?.noFavoritesYet ?? "No Favorite Targets Yet",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -340,7 +342,7 @@ class _FavoritesViewState extends State<FavoritesView> {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Text(
-                "Save your favorite deep-sky targets by clicking the heart button next to 'Add to List' on any target's details card for fast planning and framing.",
+                l10n?.noFavoritesDesc ?? "Save your favorite deep-sky targets by clicking the heart button next to 'Add to List' on any target's details card for fast planning and framing.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -352,7 +354,7 @@ class _FavoritesViewState extends State<FavoritesView> {
             const SizedBox(height: 24),
             FilledButton.icon(
               icon: const Icon(Icons.radar_rounded, size: 18),
-              label: const Text("Explore Night Targets"),
+              label: Text(l10n?.exploreTargets ?? "Explore Night Targets"),
               style: FilledButton.styleFrom(
                 backgroundColor: accentColor,
                 foregroundColor: Colors.black,

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../theme/astro_theme.dart';
@@ -149,6 +151,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final isNarrow = MediaQuery.of(context).size.width < 600;
@@ -178,7 +181,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Target Filter Parameters",
+                    l10n?.filterDialogTitle ?? "Target Filter Parameters",
                     style: TextStyle(
                       fontSize: isNarrow ? 16 : 18,
                       fontWeight: FontWeight.w700,
@@ -1029,7 +1032,7 @@ class _FilterDialogState extends State<FilterDialog> {
                       children: allTypes.map((type) {
                         final selected = _state.selectedObjectTypes.contains(type);
                         return FilterChip(
-                          label: Text(type),
+                          label: Text(localizeObjectType(type, l10n)),
                           selected: selected,
                           onSelected: (val) {
                             setState(() {
@@ -1159,7 +1162,7 @@ class _FilterDialogState extends State<FilterDialog> {
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              child: const Text("Cancel"),
+                              child: Text(l10n?.cleanDataCancel ?? "Cancel"),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
                           ),
@@ -1167,7 +1170,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           Expanded(
                             child: FilledButton.icon(
                               icon: const Icon(Icons.check_rounded, size: 16),
-                              label: const Text("Apply Filters"),
+                              label: Text(l10n?.applyFilters ?? "Apply Filters"),
                               style: FilledButton.styleFrom(backgroundColor: accentColor),
                               onPressed: () {
                                 widget.onApply(_state);
@@ -1181,7 +1184,7 @@ class _FilterDialogState extends State<FilterDialog> {
                       Center(
                         child: TextButton.icon(
                           icon: const Icon(Icons.refresh_rounded, size: 16),
-                          label: const Text("Reset Filters"),
+                          label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
                           style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
                           onPressed: () {
                             setState(() {
@@ -1202,7 +1205,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     children: [
                       TextButton.icon(
                         icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: const Text("Reset Filters"),
+                        label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
                         style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
                         onPressed: () {
                           setState(() {
@@ -1218,13 +1221,13 @@ class _FilterDialogState extends State<FilterDialog> {
                       Row(
                         children: [
                           OutlinedButton(
-                            child: const Text("Cancel"),
+                            child: Text(l10n?.cleanDataCancel ?? "Cancel"),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                           const SizedBox(width: 12),
                           FilledButton.icon(
                             icon: const Icon(Icons.check_rounded, size: 16),
-                            label: const Text("Apply Filters"),
+                            label: Text(l10n?.applyFilters ?? "Apply Filters"),
                             style: FilledButton.styleFrom(backgroundColor: accentColor),
                             onPressed: () {
                               widget.onApply(_state);
