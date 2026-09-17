@@ -1034,6 +1034,30 @@ abstract class AppLocalizations {
   /// **'Settings & Data'**
   String get settingsAndDataTooltip;
 
+  /// No description provided for @settingsDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings & Data'**
+  String get settingsDialogTitle;
+
+  /// No description provided for @settingsDialogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage filter presets and application data storage.'**
+  String get settingsDialogSubtitle;
+
+  /// No description provided for @settingsSectionFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Filters'**
+  String get settingsSectionFilters;
+
+  /// No description provided for @settingsSectionData.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage & Local Data'**
+  String get settingsSectionData;
+
   /// No description provided for @settingsLocation.
   ///
   /// In en, this message translates to:

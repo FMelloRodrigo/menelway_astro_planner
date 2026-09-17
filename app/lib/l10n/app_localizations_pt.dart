@@ -546,6 +546,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsAndDataTooltip => 'Configurações e Dados';
 
   @override
+  String get settingsDialogTitle => 'Configurações e Dados';
+
+  @override
+  String get settingsDialogSubtitle =>
+      'Gerencie predefinições de filtros e armazenamento de dados do aplicativo.';
+
+  @override
+  String get settingsSectionFilters => 'Filtros de Alvos';
+
+  @override
+  String get settingsSectionData => 'Armazenamento e Dados Locais';
+
+  @override
   String get settingsLocation => 'Local do Observador...';
 
   @override

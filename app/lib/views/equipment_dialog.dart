@@ -700,14 +700,35 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSpecItem(l10n?.effectiveFocal ?? "Effective Focal", "${tempProfile.telescope.effectiveFocalLength.round()}mm", textColor),
-              _buildSpecItem(l10n?.focalRatio ?? "Focal Ratio", tempProfile.telescope.focalRatioString, textColor),
-              _buildSpecItem(l10n?.sensorFov ?? "Sensor FOV", "${tempProfile.sensorFovWidthDeg.toStringAsFixed(1)}° × ${tempProfile.sensorFovHeightDeg.toStringAsFixed(1)}°", textColor),
-              _buildSpecItem(l10n?.imageScale ?? "Image Scale", "${tempProfile.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", textColor),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 460;
+              final items = [
+                _buildSpecItem(l10n?.effectiveFocal ?? "Effective Focal", "${tempProfile.telescope.effectiveFocalLength.round()}mm", textColor),
+                _buildSpecItem(l10n?.focalRatio ?? "Focal Ratio", tempProfile.telescope.focalRatioString, textColor),
+                _buildSpecItem(l10n?.sensorFov ?? "Sensor FOV", "${tempProfile.sensorFovWidthDeg.toStringAsFixed(1)}° × ${tempProfile.sensorFovHeightDeg.toStringAsFixed(1)}°", textColor),
+                _buildSpecItem(l10n?.imageScale ?? "Image Scale", "${tempProfile.imageScaleArcsecPerPixel.toStringAsFixed(2)}\"/px", textColor),
+              ];
+
+              if (isNarrow) {
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.spaceAround,
+                  children: items
+                      .map((w) => SizedBox(
+                            width: (constraints.maxWidth - 20) / 2,
+                            child: Center(child: w),
+                          ))
+                      .toList(),
+                );
+              }
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: items,
+              );
+            },
           ),
           const SizedBox(height: 6),
           Center(

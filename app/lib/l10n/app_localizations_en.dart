@@ -541,6 +541,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAndDataTooltip => 'Settings & Data';
 
   @override
+  String get settingsDialogTitle => 'Settings & Data';
+
+  @override
+  String get settingsDialogSubtitle =>
+      'Manage filter presets and application data storage.';
+
+  @override
+  String get settingsSectionFilters => 'Target Filters';
+
+  @override
+  String get settingsSectionData => 'Storage & Local Data';
+
+  @override
   String get settingsLocation => 'Observer Location...';
 
   @override

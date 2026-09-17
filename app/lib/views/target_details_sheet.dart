@@ -898,7 +898,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           if (widget.filters != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     l10n?.simulationModeLabel ?? "SIMULATION MODE:",
@@ -909,7 +912,6 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       color: textColor.withValues(alpha: 0.5),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   InkWell(
                     onTap: () {
                       if (!_showFilteredYearly) {
@@ -941,7 +943,6 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 6),
                   InkWell(
                     onTap: () {
                       if (_showFilteredYearly) {
@@ -1173,28 +1174,34 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                         const SizedBox(height: 2),
                         if (isPeak)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "${m.observableDaysCount}d",
-                                style: TextStyle(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: monthTextColor,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "${m.observableDaysCount}d",
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: monthTextColor,
+                                  ),
                                 ),
-                              ),
-                              Icon(Icons.star_rounded, size: 9, color: monthTextColor),
-                            ],
+                                Icon(Icons.star_rounded, size: 9, color: monthTextColor),
+                              ],
+                            ),
                           )
                         else if (isObservable)
-                          Text(
-                            "${m.observableDaysCount}d",
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: monthTextColor.withValues(alpha: 0.9),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              "${m.observableDaysCount}d",
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: monthTextColor.withValues(alpha: 0.9),
+                              ),
                             ),
                           )
                         else
@@ -1217,20 +1224,18 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           const SizedBox(height: 10),
 
           // Footnote: Max theoretical altitude & filter criteria info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  l10n?.theoreticalMaxAtTransit(
-                    y.theoreticalMaxAltitudeDeg.toStringAsFixed(1),
-                    y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : '',
-                  ) ?? "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
-                  style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Text(
+                l10n?.theoreticalMaxAtTransit(
+                  y.theoreticalMaxAltitudeDeg.toStringAsFixed(1),
+                  y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : '',
+                ) ?? "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
+                style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
               ),
-              const SizedBox(width: 8),
               Text(
                 l10n?.limitsSubtitle(
                   widget.filters?.minAltitude.round().toString() ?? '30',

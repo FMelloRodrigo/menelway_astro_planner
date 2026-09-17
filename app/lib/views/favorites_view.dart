@@ -591,74 +591,111 @@ class _FavoritesViewState extends State<FavoritesView> {
                 // Top Header Bar
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.favorite_rounded,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 480;
+                      final titleRow = Row(
+                        children: [
+                          Icon(
+                            Icons.favorite_rounded,
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "Favorite Targets",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: textColor,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
-                                        .withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    "${allFavorites.length}",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        "Favorite Targets",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: textColor,
+                                        ),
+                                      ),
                                     ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
+                                            .withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        "${allFavorites.length}",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  "Quick access for observing and camera framing",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: textColor.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
                             ),
-                            Text(
-                              "Quick access for observing and camera framing",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: textColor.withValues(alpha: 0.6),
-                              ),
+                          ),
+                        ],
+                      );
+
+                      final actionButtons = Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.file_download_outlined, size: 20),
+                            tooltip: "Export Favorites CSV",
+                            onPressed: () => _exportFavoritesCsv(allFavorites),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.playlist_add_rounded, size: 20),
+                            tooltip: "Add All to Observing List",
+                            onPressed: () => _showAddAllToListDialog(allFavorites),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_sweep_outlined, size: 20),
+                            tooltip: "Clear All Favorites",
+                            onPressed: _confirmClearFavorites,
+                          ),
+                        ],
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            titleRow,
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: actionButtons,
                             ),
                           ],
-                        ),
-                      ),
-                      // Top Actions
-                      IconButton(
-                        icon: const Icon(Icons.file_download_outlined, size: 20),
-                        tooltip: "Export Favorites CSV",
-                        onPressed: () => _exportFavoritesCsv(allFavorites),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.playlist_add_rounded, size: 20),
-                        tooltip: "Add All to Observing List",
-                        onPressed: () => _showAddAllToListDialog(allFavorites),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_sweep_outlined, size: 20),
-                        tooltip: "Clear All Favorites",
-                        onPressed: _confirmClearFavorites,
-                      ),
-                    ],
+                        );
+                      }
+
+                      return Row(
+                        children: [
+                          Expanded(child: titleRow),
+                          actionButtons,
+                        ],
+                      );
+                    },
                   ),
                 ),
 

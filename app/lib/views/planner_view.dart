@@ -264,22 +264,30 @@ class _PlannerViewState extends State<PlannerView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title & Period Selector
-              Row(
-                children: [
-                  Icon(Icons.calendar_month_rounded, size: 20, color: accentColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    "FUTURE OBSERVATION PLANNER",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      color: textColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const Spacer(),
-                  // Custom Date Range Picker Button
-                  InkWell(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrowHeader = constraints.maxWidth < 600;
+                  final titleWidget = Row(
+                    children: [
+                      Icon(Icons.calendar_month_rounded, size: 20, color: accentColor),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          "FUTURE OBSERVATION PLANNER",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                            color: textColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+
+                  final rangeButton = InkWell(
                     onTap: _pickCustomRange,
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
@@ -294,12 +302,16 @@ class _PlannerViewState extends State<PlannerView> {
                         children: [
                           Icon(Icons.date_range_rounded, size: 14, color: accentColor),
                           const SizedBox(width: 6),
-                          Text(
-                            "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ($totalDays d)",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: textColor,
+                          Flexible(
+                            child: Text(
+                              "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ($totalDays d)",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: textColor,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -307,8 +319,27 @@ class _PlannerViewState extends State<PlannerView> {
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  );
+
+                  if (isNarrowHeader) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleWidget,
+                        const SizedBox(height: 8),
+                        rangeButton,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      titleWidget,
+                      const Spacer(),
+                      rangeButton,
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 10),
@@ -407,69 +438,96 @@ class _PlannerViewState extends State<PlannerView> {
               ),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 36,
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                    style: TextStyle(fontSize: 13, color: textColor),
-                    decoration: InputDecoration(
-                      hintText: "Search period targets (e.g. M42, Rosette, Nebula)...",
-                      hintStyle: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.4)),
-                      prefixIcon: Icon(Icons.search_rounded, size: 16, color: accentColor),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: accentColor),
-                      ),
-                      filled: true,
-                      fillColor: Colors.black.withValues(alpha: 0.2),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrowSearch = constraints.maxWidth < 600;
+              final searchField = SizedBox(
+                height: 36,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: TextStyle(fontSize: 13, color: textColor),
+                  decoration: InputDecoration(
+                    hintText: isNarrowSearch ? "Search period targets..." : "Search period targets (e.g. M42, Rosette, Nebula)...",
+                    hintStyle: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.4)),
+                    prefixIcon: Icon(Icons.search_rounded, size: 16, color: accentColor),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: accentColor),
+                    ),
+                    filled: true,
+                    fillColor: Colors.black.withValues(alpha: 0.2),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Sort dropdown
-              DropdownButtonHideUnderline(
-                child: DropdownButton<PeriodSortBy>(
-                  value: _sortBy,
-                  dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-                  icon: Icon(Icons.sort_rounded, size: 16, color: accentColor),
-                  onChanged: (newSort) {
-                    if (newSort != null) setState(() => _sortBy = newSort);
-                  },
-                  items: const [
-                    DropdownMenuItem(
-                      value: PeriodSortBy.days,
-                      child: Text("Most Observable Days", style: TextStyle(fontSize: 12)),
-                    ),
-                    DropdownMenuItem(
-                      value: PeriodSortBy.peakDate,
-                      child: Text("Peak Date", style: TextStyle(fontSize: 12)),
-                    ),
-                    DropdownMenuItem(
-                      value: PeriodSortBy.peakAltitude,
-                      child: Text("Highest Altitude", style: TextStyle(fontSize: 12)),
-                    ),
-                    DropdownMenuItem(
-                      value: PeriodSortBy.magnitude,
-                      child: Text("Brightest First", style: TextStyle(fontSize: 12)),
-                    ),
-                  ],
+              );
+
+              final sortDropdown = Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: isNarrowSearch
+                    ? BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      )
+                    : null,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<PeriodSortBy>(
+                    value: _sortBy,
+                    isExpanded: isNarrowSearch,
+                    dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+                    icon: Icon(Icons.sort_rounded, size: 16, color: accentColor),
+                    onChanged: (newSort) {
+                      if (newSort != null) setState(() => _sortBy = newSort);
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: PeriodSortBy.days,
+                        child: Text("Most Observable Days", style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: PeriodSortBy.peakDate,
+                        child: Text("Peak Date", style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: PeriodSortBy.peakAltitude,
+                        child: Text("Highest Altitude", style: TextStyle(fontSize: 12)),
+                      ),
+                      DropdownMenuItem(
+                        value: PeriodSortBy.magnitude,
+                        child: Text("Brightest First", style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              );
+
+              if (isNarrowSearch) {
+                return Column(
+                  children: [
+                    searchField,
+                    const SizedBox(height: 8),
+                    sortDropdown,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: searchField),
+                  const SizedBox(width: 12),
+                  sortDropdown,
+                ],
+              );
+            },
           ),
         ),
 
@@ -527,8 +585,8 @@ class _PlannerViewState extends State<PlannerView> {
 
   Widget _buildEmptyState(Color textColor, Color accentColor) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -536,6 +594,7 @@ class _PlannerViewState extends State<PlannerView> {
             const SizedBox(height: 16),
             Text(
               "No Targets Match This Period",
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
             ),
             const SizedBox(height: 8),
@@ -697,17 +756,22 @@ class _PlannerViewState extends State<PlannerView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                isObservable
-                                    ? "${target.observableDaysCount} of ${target.totalPeriodDays} days observable"
-                                    : "Outside active filters in this period",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: isObservable ? AstroColors.visibleGreen : Colors.orange,
+                              Expanded(
+                                child: Text(
+                                  isObservable
+                                      ? "${target.observableDaysCount} of ${target.totalPeriodDays} days observable"
+                                      : "Outside active filters in this period",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isObservable ? AstroColors.visibleGreen : Colors.orange,
+                                  ),
                                 ),
                               ),
-                              if (target.peakDate != null && isObservable)
+                              if (target.peakDate != null && isObservable) ...[
+                                const SizedBox(width: 6),
                                 Text(
                                   "Peak: ${DateFormat('MMM d').format(target.peakDate!)}",
                                   style: TextStyle(
@@ -716,6 +780,7 @@ class _PlannerViewState extends State<PlannerView> {
                                     color: textColor.withValues(alpha: 0.8),
                                   ),
                                 ),
+                              ],
                             ],
                           ),
                           if (isObservable) ...[
@@ -742,8 +807,10 @@ class _PlannerViewState extends State<PlannerView> {
               const SizedBox(height: 6),
 
               // Bottom Stats: Transit altitude, continuous hours, span
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 8,
+                runSpacing: 2,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
                   Text(
                     target.isObservable

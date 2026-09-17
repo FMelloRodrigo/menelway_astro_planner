@@ -74,25 +74,34 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
             // Header with stats and scrubber info
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.show_chart_rounded,
-                    size: 18,
-                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (hoveredPoint != null)
-                    Container(
+              child: Builder(
+                builder: (context) {
+                  final titleWidget = Row(
+                    children: [
+                      Icon(
+                        Icons.show_chart_rounded,
+                        size: 18,
+                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+
+                  Widget? hoveredWidget;
+                  if (hoveredPoint != null) {
+                    hoveredWidget = Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: widget.isRedNightMode
@@ -115,9 +124,33 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           fontFamily: 'monospace',
                           color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                ],
+                    );
+                  }
+
+                  if (constraints.maxWidth < 480 && hoveredWidget != null) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        titleWidget,
+                        const SizedBox(height: 4),
+                        hoveredWidget,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(child: titleWidget),
+                      if (hoveredWidget != null) ...[
+                        const SizedBox(width: 8),
+                        hoveredWidget,
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 4),

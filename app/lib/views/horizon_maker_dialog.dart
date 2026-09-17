@@ -226,7 +226,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
     final dialogContent = Container(
-      width: 880,
+      width: isNarrow ? null : 880,
       padding: EdgeInsets.all(isNarrow ? 12 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -348,36 +348,85 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           const SizedBox(height: 8),
 
           // Bottom Action Bar
-          Row(
-            children: [
-              Text(
-                "${_points.length} points defined${_points.isNotEmpty ? ' • Profile Active' : ' • Flat default'}",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _points.isNotEmpty
-                      ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
-                      : textColor.withValues(alpha: 0.5),
+          if (isNarrow)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "${_points.length} points defined${_points.isNotEmpty ? ' • Profile Active' : ' • Flat default'}",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _points.isNotEmpty
+                        ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
+                        : textColor.withValues(alpha: 0.5),
+                  ),
                 ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        icon: const Icon(Icons.check_rounded, size: 16),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text("Apply Horizon", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ),
+                        onPressed: _saveAndClose,
+                      ),
+                    ),
+                  ],
                 ),
-                icon: const Icon(Icons.check_rounded, size: 18),
-                label: const Text("Apply Horizon", style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: _saveAndClose,
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Text(
+                  "${_points.length} points defined${_points.isNotEmpty ? ' • Profile Active' : ' • Flat default'}",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _points.isNotEmpty
+                        ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
+                        : textColor.withValues(alpha: 0.5),
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  ),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text("Apply Horizon", style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: _saveAndClose,
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -502,63 +551,131 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
             children: [
               Icon(Icons.tune_rounded, size: 14, color: accentColor),
               const SizedBox(width: 6),
-              Text(
-                "Panorama Alignment & Calibration",
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
+              Flexible(
+                child: Text(
+                  "Panorama Alignment & Calibration",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
+                ),
               ),
-              const Spacer(),
-              Text(
-                "North Offset: ${_azimuthOffset.round()}°  |  Level: ${_altitudeOffset.round()}°  |  Opacity: ${(_imageOpacity * 100).round()}%",
+              if (!isNarrow) ...[
+                const Spacer(),
+                Text(
+                  "North: ${_azimuthOffset.round()}° | Level: ${_altitudeOffset.round()}° | Opacity: ${(_imageOpacity * 100).round()}%",
+                  style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: textColor.withValues(alpha: 0.7)),
+                ),
+              ],
+            ],
+          ),
+          if (isNarrow)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 2),
+              child: Text(
+                "North: ${_azimuthOffset.round()}° | Level: ${_altitudeOffset.round()}° | Opacity: ${(_imageOpacity * 100).round()}%",
                 style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: textColor.withValues(alpha: 0.7)),
               ),
-            ],
-          ),
-          Row(
-            children: [
-              SizedBox(
-                width: 80,
-                child: Text("Pan (North):", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
-              ),
-              Expanded(
-                child: Slider(
-                  value: _azimuthOffset,
-                  min: 0,
-                  max: 360,
-                  activeColor: accentColor,
-                  onChanged: (v) => setState(() => _azimuthOffset = v),
+            ),
+          if (isNarrow) ...[
+            Row(
+              children: [
+                SizedBox(
+                  width: 70,
+                  child: Text("Pan (N):", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
                 ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 70,
-                child: Text("Alt Base:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
-              ),
-              Expanded(
-                child: Slider(
-                  value: _altitudeOffset,
-                  min: -20,
-                  max: 30,
-                  activeColor: accentColor,
-                  onChanged: (v) => setState(() => _altitudeOffset = v),
+                Expanded(
+                  child: Slider(
+                    value: _azimuthOffset,
+                    min: 0,
+                    max: 360,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _azimuthOffset = v),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 50,
-                child: Text("Opacity:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
-              ),
-              SizedBox(
-                width: 100,
-                child: Slider(
-                  value: _imageOpacity,
-                  min: 0.1,
-                  max: 1.0,
-                  activeColor: accentColor,
-                  onChanged: (v) => setState(() => _imageOpacity = v),
+              ],
+            ),
+            Row(
+              children: [
+                SizedBox(
+                  width: 70,
+                  child: Text("Alt Base:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
                 ),
-              ),
-            ],
-          ),
+                Expanded(
+                  child: Slider(
+                    value: _altitudeOffset,
+                    min: -20,
+                    max: 30,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _altitudeOffset = v),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                SizedBox(
+                  width: 70,
+                  child: Text("Opacity:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _imageOpacity,
+                    min: 0.1,
+                    max: 1.0,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _imageOpacity = v),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                SizedBox(
+                  width: 80,
+                  child: Text("Pan (North):", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _azimuthOffset,
+                    min: 0,
+                    max: 360,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _azimuthOffset = v),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 70,
+                  child: Text("Alt Base:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _altitudeOffset,
+                    min: -20,
+                    max: 30,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _altitudeOffset = v),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 50,
+                  child: Text("Opacity:", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.8))),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Slider(
+                    value: _imageOpacity,
+                    min: 0.1,
+                    max: 1.0,
+                    activeColor: accentColor,
+                    onChanged: (v) => setState(() => _imageOpacity = v),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -566,6 +683,43 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
   Widget _buildPointInspector(Color textColor, Color accentColor, bool isNarrow) {
     final p = _points[_selectedPointIndex!];
+    final steppers = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: "-1° Azimuth",
+          icon: const Icon(Icons.arrow_left_rounded, size: 20),
+          onPressed: () => _adjustSelectedPoint(-1.0, 0.0),
+        ),
+        IconButton(
+          tooltip: "+1° Azimuth",
+          icon: const Icon(Icons.arrow_right_rounded, size: 20),
+          onPressed: () => _adjustSelectedPoint(1.0, 0.0),
+        ),
+        IconButton(
+          tooltip: "-1° Altitude",
+          icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
+          onPressed: () => _adjustSelectedPoint(0.0, -1.0),
+        ),
+        IconButton(
+          tooltip: "+1° Altitude",
+          icon: const Icon(Icons.arrow_drop_up_rounded, size: 20),
+          onPressed: () => _adjustSelectedPoint(0.0, 1.0),
+        ),
+        const SizedBox(width: 4),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.redAccent.withValues(alpha: 0.25),
+            foregroundColor: Colors.redAccent,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
+          icon: const Icon(Icons.delete_rounded, size: 14),
+          label: const Text("Delete", style: TextStyle(fontSize: 11)),
+          onPressed: _deleteSelectedPoint,
+        ),
+      ],
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -574,53 +728,52 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: accentColor.withValues(alpha: 0.4)),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.adjust_rounded, size: 15, color: accentColor),
-          const SizedBox(width: 6),
-          Text(
-            "Point #${_selectedPointIndex! + 1}: ",
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
-          ),
-          Text(
-            "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)})  |  Alt: ${p.altitude.toStringAsFixed(1)}°",
-            style: TextStyle(fontSize: 12, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: accentColor),
-          ),
-          const Spacer(),
-          // Mobile precision stepper buttons
-          IconButton(
-            tooltip: "-1° Azimuth",
-            icon: const Icon(Icons.arrow_left_rounded, size: 20),
-            onPressed: () => _adjustSelectedPoint(-1.0, 0.0),
-          ),
-          IconButton(
-            tooltip: "+1° Azimuth",
-            icon: const Icon(Icons.arrow_right_rounded, size: 20),
-            onPressed: () => _adjustSelectedPoint(1.0, 0.0),
-          ),
-          IconButton(
-            tooltip: "-1° Altitude",
-            icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
-            onPressed: () => _adjustSelectedPoint(0.0, -1.0),
-          ),
-          IconButton(
-            tooltip: "+1° Altitude",
-            icon: const Icon(Icons.arrow_drop_up_rounded, size: 20),
-            onPressed: () => _adjustSelectedPoint(0.0, 1.0),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent.withValues(alpha: 0.25),
-              foregroundColor: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: isNarrow
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.adjust_rounded, size: 15, color: accentColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Point #${_selectedPointIndex! + 1}: ",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)}) | Alt: ${p.altitude.toStringAsFixed(1)}°",
+                        style: TextStyle(
+                            fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: accentColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: steppers,
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Icon(Icons.adjust_rounded, size: 15, color: accentColor),
+                const SizedBox(width: 6),
+                Text(
+                  "Point #${_selectedPointIndex! + 1}: ",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                ),
+                Text(
+                  "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)})  |  Alt: ${p.altitude.toStringAsFixed(1)}°",
+                  style: TextStyle(
+                      fontSize: 12, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: accentColor),
+                ),
+                const Spacer(),
+                steppers,
+              ],
             ),
-            icon: const Icon(Icons.delete_rounded, size: 14),
-            label: const Text("Delete Point", style: TextStyle(fontSize: 11)),
-            onPressed: _deleteSelectedPoint,
-          ),
-        ],
-      ),
     );
   }
 

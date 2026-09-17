@@ -18,6 +18,7 @@ import 'equipment_dialog.dart';
 import 'favorites_view.dart';
 import 'observing_lists_view.dart';
 import 'planner_view.dart';
+import 'settings_dialog.dart';
 import 'target_search_view.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -411,8 +412,8 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
               ],
             ),
-            content: SizedBox(
-              width: 520,
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -844,23 +845,30 @@ class _MainScaffoldState extends State<MainScaffold> {
               child: Icon(Icons.blur_on_rounded, color: accentColor, size: 20),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "MENELWAY",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: textColor,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "MENELWAY",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  l10n?.appSubtitle ?? "Astro Target & Session Planner",
-                  style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
-                ),
-              ],
+                  Text(
+                    l10n?.appSubtitle ?? "Astro Target & Session Planner",
+                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1202,120 +1210,25 @@ class _MainScaffoldState extends State<MainScaffold> {
             ),
           const SizedBox(width: 8),
 
-          // Settings & Clean Data Menu Pill
-          PopupMenuButton<String>(
-            tooltip: l10n?.settingsAndDataTooltip ?? "Settings & Data",
-            color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
-            elevation: 10,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: BorderSide(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.45),
-                width: 1.2,
-              ),
-            ),
-            onSelected: (value) {
-              if (value == 'location') {
-                _editLocationDialog();
-              } else if (value == 'reset_filters') {
-                _resetFiltersOnly();
-              } else if (value == 'clean_data') {
-                _showCleanDataDialog();
-              }
-            },
-            itemBuilder: (ctx) => [
-              if (!isWide) ...[
-                PopupMenuItem(
-                  value: 'location',
-                  child: Row(
-                    children: [
-                      Icon(Icons.location_on_outlined, size: 18, color: accentColor),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n?.settingsLocation ?? "Observer Location...",
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            _filters.observerLocationName,
-                            style: TextStyle(color: textColor.withValues(alpha: 0.75), fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ],
+          // Settings & Clean Data Window Pill
+          Tooltip(
+            message: l10n?.settingsAndDataTooltip ?? "Settings & Data",
+            child: InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => SettingsDialog(
+                    isRedNightMode: widget.isRedNightMode,
+                    onResetFilters: () {
+                      _resetFiltersOnly();
+                    },
+                    onCleanAllData: () {
+                      _showCleanDataDialog();
+                    },
                   ),
-                ),
-                const PopupMenuDivider(),
-              ],
-              PopupMenuItem(
-                value: 'reset_filters',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.tune_rounded,
-                      size: 18,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n?.resetFilters ?? "Reset Target Filters",
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          l10n?.resetFiltersDesc ?? "Clear filter limits & keep observer location",
-                          style: TextStyle(color: textColor.withValues(alpha: 0.75), fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'clean_data',
-                child: Row(
-                  children: [
-                    const Icon(Icons.delete_forever_rounded, size: 18, color: Colors.redAccent),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n?.cleanData ?? "Clean All Saved Data...",
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          l10n?.cleanDataDesc ?? "Wipe lists, custom location, & local settings",
-                          style: TextStyle(
-                            color: widget.isRedNightMode
-                                ? textColor.withValues(alpha: 0.8)
-                                : Colors.redAccent.withValues(alpha: 0.85),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: isWide ? 10 : 8, vertical: 6),
                 decoration: BoxDecoration(
@@ -1325,8 +1238,8 @@ class _MainScaffoldState extends State<MainScaffold> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
-                      : AstroColors.starlightCyan.withValues(alpha: 0.55),
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
+                        : AstroColors.starlightCyan.withValues(alpha: 0.55),
                     width: 1.4,
                   ),
                   boxShadow: [
@@ -1357,12 +1270,6 @@ class _MainScaffoldState extends State<MainScaffold> {
                           letterSpacing: 0.3,
                           color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                         ),
-                      ),
-                      const SizedBox(width: 3),
-                      Icon(
-                        Icons.arrow_drop_down_rounded,
-                        size: 17,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                       ),
                     ],
                   ],
