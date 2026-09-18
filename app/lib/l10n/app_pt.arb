@@ -331,5 +331,13 @@
   "noAltitudeData": "Nenhum dado de altitude disponível para a janela",
   "altitudeVsTimeTarget": "Altitude vs. Tempo: {targetName}",
   "astronomicalDarknessLabel": "ESCURIDÃO ASTRONÔMICA",
-  "observingWindowLabel": "JANELA DE OBSERVAÇÃO"
+  "observingWindowLabel": "JANELA DE OBSERVAÇÃO",
+
+  "settingsSectionAbout": "Sobre o Menelway",
+  "aboutBtn": "Sobre o Menelway",
+  "aboutDialogTitle": "Sobre o Menelway",
+  "aboutCloseBtn": "Fechar",
+  "aboutCreatedBy": "Criado por Rodrigo F. Mello",
+  "aboutAppName": "Menelway Astro Planner",
+  "aboutNameOrigin": "“Menelway” = “Menel” (palavra em élfico de Tolkien para Céus/Firmamento) + Arroway (do livro/filme Contato)"
 }

@@ -1069,4 +1069,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get observingWindowLabel => 'OBSERVING WINDOW';
+
+  @override
+  String get settingsSectionAbout => 'About Menelway';
+
+  @override
+  String get aboutBtn => 'About Menelway';
+
+  @override
+  String get aboutDialogTitle => 'About Menelway';
+
+  @override
+  String get aboutCloseBtn => 'Close';
+
+  @override
+  String get aboutCreatedBy => 'Created by Rodrigo F. Mello';
+
+  @override
+  String get aboutAppName => 'Menelway Astro Planner';
+
+  @override
+  String get aboutNameOrigin =>
+      '“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)';
 }

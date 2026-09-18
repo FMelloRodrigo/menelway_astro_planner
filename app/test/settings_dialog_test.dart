@@ -57,8 +57,12 @@ void main() {
     expect(find.text('Settings & Data'), findsOneWidget);
     expect(find.text('Target Filters'), findsOneWidget);
     expect(find.text('Storage & Local Data'), findsOneWidget);
+    expect(find.text('About Menelway'), findsWidgets);
     expect(find.text('Reset Target Filters'), findsOneWidget);
     expect(find.text('Clean All Saved Data...'), findsOneWidget);
+
+    // Verify description above About button is removed
+    expect(find.text('Project story, background, and design philosophy.'), findsNothing);
 
     // Tap reset filters
     await tester.tap(find.text('Reset Target Filters'));
@@ -69,6 +73,43 @@ void main() {
     await tester.tap(find.text('Clean All Saved Data...'));
     await tester.pumpAndSettle();
     expect(cleanCalled, isTrue);
+  });
+
+  testWidgets('SettingsDialog opens About window and displays project story', (tester) async {
+    await tester.pumpWidget(
+      buildTestWidget(
+        isRedNightMode: false,
+        onResetFilters: () {},
+        onCleanAllData: () {},
+      ),
+    );
+
+    // Open settings window
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    // Scroll and tap About button in card (single About button in settings)
+    final aboutBtn = find.byIcon(Icons.menu_book_rounded);
+    await tester.ensureVisible(aboutBtn);
+    await tester.tap(aboutBtn);
+    await tester.pumpAndSettle();
+
+    // Verify About window elements
+    expect(find.text('MENELWAY'), findsOneWidget);
+    expect(find.text('Story & Design Philosophy'), findsNothing); // Removed from title
+    expect(find.text('Project Motivation and Goal'), findsOneWidget); // Renamed
+    expect(find.text('Created by Rodrigo F. Mello'), findsOneWidget);
+    expect(find.textContaining('This project was born out of personal necessity'), findsOneWidget);
+    expect(find.text('Work 100% Offline'), findsOneWidget);
+    expect(find.text('Easy Equipment Preview'), findsOneWidget);
+    expect(find.textContaining('Skies/Heavens'), findsOneWidget);
+
+    // Close About window via top-right close icon
+    await tester.tap(find.byIcon(Icons.close_rounded).last);
+    await tester.pumpAndSettle();
+
+    // Still in Settings dialog
+    expect(find.text('Settings & Data'), findsOneWidget);
   });
 
   testWidgets('SettingsDialog renders in red night mode without error', (tester) async {
@@ -87,7 +128,20 @@ void main() {
     expect(find.byIcon(Icons.settings_suggest_rounded), findsOneWidget);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
-    // Close dialog
+    // Open About in red night mode
+    final aboutBtn = find.byIcon(Icons.menu_book_rounded);
+    await tester.ensureVisible(aboutBtn);
+    await tester.tap(aboutBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('MENELWAY'), findsOneWidget);
+    expect(find.text('Created by Rodrigo F. Mello'), findsOneWidget);
+
+    // Close About window
+    await tester.tap(find.byIcon(Icons.close_rounded).last);
+    await tester.pumpAndSettle();
+
+    // Close settings dialog via top-right close icon
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
     expect(find.text('Target Filters'), findsNothing);

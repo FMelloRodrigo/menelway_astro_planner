@@ -1079,4 +1079,26 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get observingWindowLabel => 'JANELA DE OBSERVAÇÃO';
+
+  @override
+  String get settingsSectionAbout => 'Sobre o Menelway';
+
+  @override
+  String get aboutBtn => 'Sobre o Menelway';
+
+  @override
+  String get aboutDialogTitle => 'Sobre o Menelway';
+
+  @override
+  String get aboutCloseBtn => 'Fechar';
+
+  @override
+  String get aboutCreatedBy => 'Criado por Rodrigo F. Mello';
+
+  @override
+  String get aboutAppName => 'Menelway Astro Planner';
+
+  @override
+  String get aboutNameOrigin =>
+      '“Menelway” = “Menel” (palavra em élfico de Tolkien para Céus/Firmamento) + Arroway (do livro/filme Contato)';
 }

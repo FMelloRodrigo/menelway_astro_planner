@@ -554,5 +554,13 @@
     }
   },
   "astronomicalDarknessLabel": "ASTRONOMICAL DARKNESS",
-  "observingWindowLabel": "OBSERVING WINDOW"
+  "observingWindowLabel": "OBSERVING WINDOW",
+
+  "settingsSectionAbout": "About Menelway",
+  "aboutBtn": "About Menelway",
+  "aboutDialogTitle": "About Menelway",
+  "aboutCloseBtn": "Close",
+  "aboutCreatedBy": "Created by Rodrigo F. Mello",
+  "aboutAppName": "Menelway Astro Planner",
+  "aboutNameOrigin": "“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)"
 }

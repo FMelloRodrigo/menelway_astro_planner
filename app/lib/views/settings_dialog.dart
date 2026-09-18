@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../theme/astro_theme.dart';
+import 'about_dialog.dart';
 
 /// A dedicated Settings & Data window dialog that houses target filter
 /// resets, storage maintenance, and provides an extensible foundation for future settings.
@@ -178,28 +179,41 @@ class SettingsDialog extends StatelessWidget {
                         ),
                       ),
 
-                      // Future settings sections can easily be appended here
+                      const SizedBox(height: 14),
+
+                      // Section 3: About Menelway
+                      _buildSectionCard(
+                        context: context,
+                        cardBgColor: cardBgColor,
+                        borderColor: borderColor,
+                        textColor: textColor,
+                        textSubColor: textSubColor,
+                        icon: Icons.info_outline_rounded,
+                        iconColor: accentColor,
+                        title: l10n?.settingsSectionAbout ?? "About Menelway",
+                        actionWidget: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: accentColor,
+                            side: BorderSide(color: accentColor.withValues(alpha: 0.6)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          icon: const Icon(Icons.menu_book_rounded, size: 16),
+                          label: Text(
+                            l10n?.aboutBtn ?? "About Menelway",
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AboutDialogView(
+                                isRedNightMode: isRedNightMode,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              Divider(height: 1, color: borderColor),
-              const SizedBox(height: 12),
-
-              // Window Footer
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: textColor.withValues(alpha: 0.8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    l10n?.closeBtn ?? "Close",
-                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -219,7 +233,7 @@ class SettingsDialog extends StatelessWidget {
     required IconData icon,
     required Color iconColor,
     required String title,
-    required String description,
+    String? description,
     required Widget actionWidget,
   }) {
     final isNarrow = MediaQuery.of(context).size.width < 450;
@@ -251,11 +265,13 @@ class SettingsDialog extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: TextStyle(fontSize: 12, color: textSubColor, height: 1.3),
-          ),
+          if (description != null && description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              description,
+              style: TextStyle(fontSize: 12, color: textSubColor, height: 1.3),
+            ),
+          ],
           const SizedBox(height: 12),
           if (isNarrow)
             SizedBox(width: double.infinity, child: actionWidget)

@@ -1981,6 +1981,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'OBSERVING WINDOW'**
   String get observingWindowLabel;
+
+  /// No description provided for @settingsSectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About Menelway'**
+  String get settingsSectionAbout;
+
+  /// No description provided for @aboutBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'About Menelway'**
+  String get aboutBtn;
+
+  /// No description provided for @aboutDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About Menelway'**
+  String get aboutDialogTitle;
+
+  /// No description provided for @aboutCloseBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get aboutCloseBtn;
+
+  /// No description provided for @aboutCreatedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Created by Rodrigo F. Mello'**
+  String get aboutCreatedBy;
+
+  /// No description provided for @aboutAppName.
+  ///
+  /// In en, this message translates to:
+  /// **'Menelway Astro Planner'**
+  String get aboutAppName;
+
+  /// No description provided for @aboutNameOrigin.
+  ///
+  /// In en, this message translates to:
+  /// **'“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)'**
+  String get aboutNameOrigin;
 }
 
 class _AppLocalizationsDelegate
