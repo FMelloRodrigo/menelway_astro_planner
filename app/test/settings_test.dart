@@ -134,8 +134,8 @@ void main() {
       await SettingsService.clearSettings();
       final cleared = await SettingsService.loadSettings();
       expect(cleared.isRedNightMode, false);
-      expect(cleared.filters.observerLocationName, 'New York, USA');
-      expect(cleared.filters.observerLat, 40.7128);
+      expect(cleared.filters.observerLocationName, 'Nova Friburgo, Rio de Janeiro, Brazil');
+      expect(cleared.filters.observerLat, -22.2819);
     });
 
     test('CatalogManager getStorageDirectory resolves an existing writable directory', () async {

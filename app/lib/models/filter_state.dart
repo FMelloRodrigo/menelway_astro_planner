@@ -94,10 +94,10 @@ class FilterState {
     this.customStartMinute = 0,
     this.customEndHour = 23,
     this.customEndMinute = 0,
-    this.observerLat = 40.7128,
-    this.observerLon = -74.0060,
-    this.observerElevation = 10.0,
-    this.observerLocationName = 'New York, USA',
+    this.observerLat = -22.2819,
+    this.observerLon = -42.5311,
+    this.observerElevation = 858.0,
+    this.observerLocationName = 'Nova Friburgo, Rio de Janeiro, Brazil',
   })  : date = date != null
             ? DateTime(date.year, date.month, date.day)
             : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
@@ -296,10 +296,10 @@ class FilterState {
       customStartMinute: json['customStartMinute'] as int? ?? 0,
       customEndHour: json['customEndHour'] as int? ?? 23,
       customEndMinute: json['customEndMinute'] as int? ?? 0,
-      observerLat: (json['observerLat'] as num?)?.toDouble() ?? 40.7128,
-      observerLon: (json['observerLon'] as num?)?.toDouble() ?? -74.0060,
-      observerElevation: (json['observerElevation'] as num?)?.toDouble() ?? 10.0,
-      observerLocationName: json['observerLocationName'] as String? ?? 'New York, USA',
+      observerLat: (json['observerLat'] as num?)?.toDouble() ?? -22.2819,
+      observerLon: (json['observerLon'] as num?)?.toDouble() ?? -42.5311,
+      observerElevation: (json['observerElevation'] as num?)?.toDouble() ?? 858.0,
+      observerLocationName: json['observerLocationName'] as String? ?? 'Nova Friburgo, Rio de Janeiro, Brazil',
     );
   }
 }

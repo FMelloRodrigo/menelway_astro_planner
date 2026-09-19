@@ -261,14 +261,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       ],
     );
 
-    final addToListBtn = FilledButton.icon(
-      icon: const Icon(Icons.playlist_add_rounded, size: 18),
-      label: Text(l10n?.addToObservingList ?? "Add to List"),
-      style: FilledButton.styleFrom(
-        backgroundColor: accentColor,
-        foregroundColor: Colors.black,
+    final addToListBtn = SizedBox(
+      height: 40,
+      child: FilledButton.icon(
+        icon: const Icon(Icons.playlist_add_rounded, size: 18),
+        label: Text(l10n?.addToObservingList ?? "Add to List"),
+        style: FilledButton.styleFrom(
+          backgroundColor: accentColor,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: _showAddToListDialog,
       ),
-      onPressed: _showAddToListDialog,
     );
 
     final isFav = FavoritesManager.instance.isFavorite(widget.target.id);
@@ -287,7 +293,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               content: Text(
                 nowFav
                     ? (l10n?.addedToFavorites(widget.target.displayName) ?? "Added ${widget.target.displayName} to Favorites")
-                    : (l10n?.removedFromFavorites(widget.target.displayName) ?? "Removed ${widget.target.displayName} from Favorites"),
+                    : (l10n?.removedFromFavorites(widget.target.displayName) ?? "Removed ${widget.target.displayName} to Favorites"),
               ),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -295,7 +301,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           );
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isFav
                 ? (widget.isRedNightMode
@@ -330,36 +338,33 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final closeBtn = effectiveClose != null
         ? Tooltip(
             message: l10n?.closeDetailsTooltip ?? "Close details (Esc)",
-            child: OutlinedButton.icon(
-              icon: Icon(
-                Icons.close_rounded,
-                size: 18,
-                color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-              ),
-              label: Text(
-                l10n?.closeBtn ?? "Close",
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
-                    : const Color(0xFF222F42),
-                side: BorderSide(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: effectiveClose,
+              child: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
                   color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                      : Colors.white.withValues(alpha: 0.4),
-                  width: 1.4,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : const Color(0xFF222F42),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionBorder
+                        : Colors.white.withValues(alpha: 0.3),
+                    width: 1.4,
+                  ),
+                ),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 20,
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed
+                      : Colors.white.withValues(alpha: 0.85),
                 ),
               ),
-              onPressed: effectiveClose,
             ),
           )
         : null;
@@ -407,15 +412,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                      label: Text(l10n?.addToObservingList ?? "Add to Observing List"),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: SizedBox(
+                      height: 40,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.playlist_add_rounded, size: 18),
+                        label: Text(l10n?.addToObservingList ?? "Add to Observing List"),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: _showAddToListDialog,
                       ),
-                      onPressed: _showAddToListDialog,
                     ),
                   ),
                   const SizedBox(width: 8),

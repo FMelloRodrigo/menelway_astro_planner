@@ -120,8 +120,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get searchCityOnline => 'Buscar Cidade e País (Online)';
 
   @override
-  String get searchCityHint =>
-      'Digite a cidade (ex: Campinas, Londres, Atacama, Tóquio)...';
+  String get searchCityHint => 'Digite a cidade';
 
   @override
   String get searchOnlineTooltip => 'Buscar online';

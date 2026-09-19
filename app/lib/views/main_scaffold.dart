@@ -402,12 +402,45 @@ class _MainScaffoldState extends State<MainScaffold> {
               children: [
                 Icon(Icons.location_city_rounded, color: accentColor, size: 22),
                 const SizedBox(width: 8),
-                Text(
-                  l10n?.locationEditTitle ?? "Observer Location",
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Text(
+                    l10n?.locationEditTitle ?? "Observer Location",
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Tooltip(
+                  message: l10n?.closeBtn ?? "Close",
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => Navigator.of(ctx).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionSurfaceVariant
+                            : const Color(0xFF222F42),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: widget.isRedNightMode
+                              ? AstroColors.nightVisionBorder
+                              : Colors.white.withValues(alpha: 0.3),
+                          width: 1.4,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionRed
+                            : Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -432,7 +465,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     TextField(
                       controller: searchController,
                       decoration: InputDecoration(
-                        hintText: l10n?.searchCityHint ?? "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
+                        hintText: l10n?.searchCityHint ?? "Type city",
                         prefixIcon: const Icon(Icons.search_rounded, size: 20),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.arrow_forward_rounded, size: 20),
@@ -564,63 +597,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       ],
                     ),
 
-                    const SizedBox(height: 12),
-                    // Quick Presets
-                    Text(
-                      l10n?.popularAstroSites ?? "Popular Astrophotography Sites:",
-                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.5)),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        ActionChip(
-                          label: const Text("Atacama Desert (2500m)", style: TextStyle(fontSize: 11)),
-                          onPressed: () {
-                            setDialogState(() {
-                              latController.text = "-23.0293";
-                              lonController.text = "-67.7547";
-                              eleController.text = "2500";
-                              currentLocationName = "Atacama Desert, Chile";
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          label: const Text("La Palma (2396m)", style: TextStyle(fontSize: 11)),
-                          onPressed: () {
-                            setDialogState(() {
-                              latController.text = "28.7636";
-                              lonController.text = "-17.8947";
-                              eleController.text = "2396";
-                              currentLocationName = "Roque de los Muchachos, La Palma";
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          label: const Text("NYC (10m)", style: TextStyle(fontSize: 11)),
-                          onPressed: () {
-                            setDialogState(() {
-                              latController.text = "40.7128";
-                              lonController.text = "-74.0060";
-                              eleController.text = "10";
-                              currentLocationName = "New York, USA";
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          label: const Text("London (25m)", style: TextStyle(fontSize: 11)),
-                          onPressed: () {
-                            setDialogState(() {
-                              latController.text = "51.5074";
-                              lonController.text = "-0.1278";
-                              eleController.text = "25";
-                              currentLocationName = "London, UK";
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+
                   ],
                 ),
               ),

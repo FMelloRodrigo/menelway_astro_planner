@@ -39,7 +39,7 @@
 
   "locationEditTitle": "Observer Location",
   "searchCityOnline": "Search City & Country (Online)",
-  "searchCityHint": "Type city (e.g. Campinas, London, Atacama, Tokyo)...",
+  "searchCityHint": "Type city",
   "searchOnlineTooltip": "Search online",
   "manualCoordinates": "Manual Coordinates",
   "latitude": "Latitude (°)",

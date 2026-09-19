@@ -39,7 +39,7 @@
 
   "locationEditTitle": "Local do Observador",
   "searchCityOnline": "Buscar Cidade e País (Online)",
-  "searchCityHint": "Digite a cidade (ex: Campinas, Londres, Atacama, Tóquio)...",
+  "searchCityHint": "Digite a cidade",
   "searchOnlineTooltip": "Buscar online",
   "manualCoordinates": "Coordenadas Manuais",
   "latitude": "Latitude (°)",

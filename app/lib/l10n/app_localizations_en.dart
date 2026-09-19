@@ -116,8 +116,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchCityOnline => 'Search City & Country (Online)';
 
   @override
-  String get searchCityHint =>
-      'Type city (e.g. Campinas, London, Atacama, Tokyo)...';
+  String get searchCityHint => 'Type city';
 
   @override
   String get searchOnlineTooltip => 'Search online';

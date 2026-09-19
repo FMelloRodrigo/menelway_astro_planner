@@ -305,7 +305,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchCityHint.
   ///
   /// In en, this message translates to:
-  /// **'Type city (e.g. Campinas, London, Atacama, Tokyo)...'**
+  /// **'Type city'**
   String get searchCityHint;
 
   /// No description provided for @searchOnlineTooltip.
