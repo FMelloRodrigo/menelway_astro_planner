@@ -334,7 +334,8 @@ class AstroBridge {
       obsPtr.ref.longitudeDeg = longitude;
       obsPtr.ref.elevationM = elevation;
 
-      final dateSecondsUtc = date.toUtc().millisecondsSinceEpoch ~/ 1000;
+      final dateMidnightUtc = DateTime.utc(date.year, date.month, date.day);
+      final dateSecondsUtc = dateMidnightUtc.millisecondsSinceEpoch ~/ 1000;
       final ok = _getNightSummary(_engine!, obsPtr, dateSecondsUtc, summaryPtr);
       if (ok != 1) {
         throw StateError("Failed to get night summary: ${getLastError()}");
@@ -433,14 +434,21 @@ class AstroBridge {
         windowEndUtc = endDt.toUtc().millisecondsSinceEpoch ~/ 1000;
       } else {
         if (!night.hasAstronomicalNight || night.astronomicalDawn.isBefore(night.astronomicalDusk)) {
-          final start = night.nauticalDusk.isBefore(night.nauticalDawn) ? night.nauticalDusk : night.sunset;
-          final end = night.nauticalDawn.isAfter(night.nauticalDusk) ? night.nauticalDawn : night.sunrise;
+          final start = (night.nauticalDusk.isBefore(night.nauticalDawn) && night.nauticalDusk.isAfter(night.sunset))
+              ? night.nauticalDusk
+              : night.sunset;
+          final end = (night.nauticalDawn.isAfter(start))
+              ? night.nauticalDawn
+              : (night.sunrise.isAfter(start) ? night.sunrise : start.add(const Duration(hours: 8)));
           windowStartUtc = start.toUtc().millisecondsSinceEpoch ~/ 1000;
           windowEndUtc = end.toUtc().millisecondsSinceEpoch ~/ 1000;
         } else {
           windowStartUtc = night.astronomicalDusk.toUtc().millisecondsSinceEpoch ~/ 1000;
           windowEndUtc = night.astronomicalDawn.toUtc().millisecondsSinceEpoch ~/ 1000;
         }
+      }
+      if (windowEndUtc <= windowStartUtc) {
+        windowEndUtc = windowStartUtc + 8 * 3600;
       }
       critPtr.ref.windowStartUtc = windowStartUtc;
       critPtr.ref.windowEndUtc = windowEndUtc;

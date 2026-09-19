@@ -98,7 +98,9 @@ class FilterState {
     this.observerLon = -74.0060,
     this.observerElevation = 10.0,
     this.observerLocationName = 'New York, USA',
-  })  : date = date ?? DateTime.now(),
+  })  : date = date != null
+            ? DateTime(date.year, date.month, date.day)
+            : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
         horizonPoints = horizonPoints ?? [],
         selectedCatalogs = selectedCatalogs ?? {'Messier', 'Caldwell'},
         selectedObjectTypes = selectedObjectTypes ?? {

@@ -27,6 +27,17 @@ int main() {
     assert(night.astronomical_dusk_utc > 0);
     assert(night.astronomical_dawn_utc > night.astronomical_dusk_utc);
 
+    // Test 1b: Night Summary with non-midnight timestamp (afternoon time, e.g. +15 hours)
+    AstroNightSummary night_afternoon{};
+    int64_t sept_21_afternoon_utc = sept_21_2026_utc + 15 * 3600 + 42 * 60; // 15:42 UTC
+    int32_t ok_afternoon = astro_get_night_summary(engine, &obs, sept_21_afternoon_utc, &night_afternoon);
+    assert(ok_afternoon == 1);
+    assert(night_afternoon.astronomical_dusk_utc > 0);
+    assert(night_afternoon.astronomical_dawn_utc > night_afternoon.astronomical_dusk_utc);
+    assert(night_afternoon.astronomical_dusk_utc == night.astronomical_dusk_utc);
+    assert(night_afternoon.astronomical_dawn_utc == night.astronomical_dawn_utc);
+    std::cout << "  ✓ Non-midnight timestamp normalized correctly to identical night window.\n";
+
     // Test 2: Filter Targets
     AstroFilterCriteria crit{};
     crit.min_altitude_deg = 30.0;

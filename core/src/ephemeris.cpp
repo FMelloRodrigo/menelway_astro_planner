@@ -218,9 +218,16 @@ NightWindow calculate_night_window(
 ) {
     NightWindow window;
 
+    // Normalize date_midnight_utc to 00:00:00 UTC of that calendar date
+    time::DateTimeUtc dt = time::julian_date_to_datetime(date_midnight_utc);
+    dt.hour = 0;
+    dt.minute = 0;
+    dt.second = 0.0;
+    time::JulianDate normalized_midnight = time::datetime_to_julian_date(dt);
+
     // Approximate local solar noon: UTC midnight + 0.5 day - (lon / 360)
     double lon_offset_days = obs.longitude.value / 360.0;
-    double approx_noon = date_midnight_utc.value + 0.5 - lon_offset_days;
+    double approx_noon = normalized_midnight.value + 0.5 - lon_offset_days;
 
     // We scan from noon to noon next day (24 hours = 1.0 day)
     double scan_start = approx_noon;
@@ -290,15 +297,19 @@ NightWindow calculate_night_window(
 
     for (const auto& c : crossings) {
         if (c.descending) {
-            if (std::abs(c.target_alt - (-0.833)) < 0.1) window.sunset = c.jd;
-            else if (std::abs(c.target_alt - (-6.0)) < 0.1) window.civil_dusk = c.jd;
-            else if (std::abs(c.target_alt - (-12.0)) < 0.1) window.nautical_dusk = c.jd;
-            else if (std::abs(c.target_alt - (-18.0)) < 0.1) window.astronomical_dusk = c.jd;
+            if (c.jd.value <= window.solar_midnight.value) {
+                if (std::abs(c.target_alt - (-0.833)) < 0.1) window.sunset = c.jd;
+                else if (std::abs(c.target_alt - (-6.0)) < 0.1) window.civil_dusk = c.jd;
+                else if (std::abs(c.target_alt - (-12.0)) < 0.1) window.nautical_dusk = c.jd;
+                else if (std::abs(c.target_alt - (-18.0)) < 0.1) window.astronomical_dusk = c.jd;
+            }
         } else {
-            if (std::abs(c.target_alt - (-18.0)) < 0.1) window.astronomical_dawn = c.jd;
-            else if (std::abs(c.target_alt - (-12.0)) < 0.1) window.nautical_dawn = c.jd;
-            else if (std::abs(c.target_alt - (-6.0)) < 0.1) window.civil_dawn = c.jd;
-            else if (std::abs(c.target_alt - (-0.833)) < 0.1) window.sunrise = c.jd;
+            if (c.jd.value >= window.solar_midnight.value) {
+                if (std::abs(c.target_alt - (-18.0)) < 0.1) window.astronomical_dawn = c.jd;
+                else if (std::abs(c.target_alt - (-12.0)) < 0.1) window.nautical_dawn = c.jd;
+                else if (std::abs(c.target_alt - (-6.0)) < 0.1) window.civil_dawn = c.jd;
+                else if (std::abs(c.target_alt - (-0.833)) < 0.1) window.sunrise = c.jd;
+            }
         }
     }
 
