@@ -879,7 +879,9 @@ class _MainScaffoldState extends State<MainScaffold> {
               onTap: _editLocationDialog,
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                height: 32.0,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionSurfaceVariant
@@ -908,7 +910,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             // Night summary pill (Desktop)
             if (_nightSummary != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                height: 32.0,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionSurfaceVariant
@@ -942,7 +946,9 @@ class _MainScaffoldState extends State<MainScaffold> {
 
             // Database size pill (Desktop)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              height: 32.0,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: widget.isRedNightMode
                     ? AstroColors.nightVisionSurfaceVariant
@@ -969,28 +975,33 @@ class _MainScaffoldState extends State<MainScaffold> {
           ],
 
           // Red Night-Vision Mode Toggle
-          IconButton(
-            tooltip: widget.isRedNightMode ? (l10n?.nightModeStandard ?? "Deep Space Obsidian") : (l10n?.nightModeRed ?? "Telescope Red Mode"),
-            style: IconButton.styleFrom(
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                  : AstroColors.starlightCyan.withValues(alpha: 0.08),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                      : AstroColors.starlightCyan.withValues(alpha: 0.35),
-                  width: 1.2,
+          SizedBox(
+            width: 32.0,
+            height: 32.0,
+            child: IconButton(
+              tooltip: widget.isRedNightMode ? (l10n?.nightModeStandard ?? "Deep Space Obsidian") : (l10n?.nightModeRed ?? "Telescope Red Mode"),
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                backgroundColor: widget.isRedNightMode
+                    ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                    : AstroColors.starlightCyan.withValues(alpha: 0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
+                        : AstroColors.starlightCyan.withValues(alpha: 0.35),
+                    width: 1.2,
+                  ),
                 ),
               ),
+              icon: Icon(
+                widget.isRedNightMode ? Icons.nightlight_round : Icons.remove_red_eye_rounded,
+                size: 16,
+                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+              ),
+              onPressed: _handleToggleNightMode,
             ),
-            icon: Icon(
-              widget.isRedNightMode ? Icons.nightlight_round : Icons.remove_red_eye_rounded,
-              size: 16,
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-            ),
-            onPressed: _handleToggleNightMode,
           ),
           const SizedBox(width: 8),
 
@@ -1082,7 +1093,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                height: 32.0,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
@@ -1129,84 +1142,93 @@ class _MainScaffoldState extends State<MainScaffold> {
           if (isWide)
             Tooltip(
               message: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
-              child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                    : AstroColors.starGold.withValues(alpha: 0.12),
-                foregroundColor: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed
-                    : AstroColors.starGold,
-                side: BorderSide(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                      : AstroColors.starGold.withValues(alpha: 0.6),
-                  width: 1.2,
+              child: SizedBox(
+                height: 32.0,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
+                        : AstroColors.starGold.withValues(alpha: 0.12),
+                    foregroundColor: widget.isRedNightMode
+                        ? AstroColors.nightVisionRed
+                        : AstroColors.starGold,
+                    side: BorderSide(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
+                          : AstroColors.starGold.withValues(alpha: 0.6),
+                      width: 1.2,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    minimumSize: const Size(0, 32.0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: Icon(
+                    Icons.camera_alt_rounded,
+                    size: 16,
+                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                  ),
+                  label: Text(
+                    l10n?.equipmentRigsButton ?? "Equipment Rigs",
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                    ),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => EquipmentDialog(
+                        isRedNightMode: widget.isRedNightMode,
+                        onSaved: () {
+                          _saveSettings();
+                          setState(() {});
+                        },
+                      ),
+                    );
+                  },
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              icon: Icon(
-                Icons.camera_alt_rounded,
-                size: 18,
-                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-              ),
-              label: Text(
-                l10n?.equipmentRigsButton ?? "Equipment Rigs",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            )
+          else
+            SizedBox(
+              width: 32.0,
+              height: 32.0,
+              child: IconButton(
+                tooltip: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  backgroundColor: widget.isRedNightMode
+                      ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
+                      : AstroColors.starGold.withValues(alpha: 0.15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
+                          : AstroColors.starGold.withValues(alpha: 0.6),
+                      width: 1.2,
+                    ),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.camera_alt_rounded,
+                  size: 16,
                   color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                 ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => EquipmentDialog(
+                      isRedNightMode: widget.isRedNightMode,
+                      onSaved: () {
+                        _saveSettings();
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
               ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => EquipmentDialog(
-                    isRedNightMode: widget.isRedNightMode,
-                    onSaved: () {
-                      _saveSettings();
-                      setState(() {});
-                    },
-                  ),
-                );
-              },
-            ),
-          )
-          else
-            IconButton(
-              tooltip: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
-              style: IconButton.styleFrom(
-                backgroundColor: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
-                    : AstroColors.starGold.withValues(alpha: 0.15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                        : AstroColors.starGold.withValues(alpha: 0.6),
-                    width: 1.2,
-                  ),
-                ),
-              ),
-              icon: Icon(
-                Icons.camera_alt_rounded,
-                size: 18,
-                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => EquipmentDialog(
-                    isRedNightMode: widget.isRedNightMode,
-                    onSaved: () {
-                      _saveSettings();
-                      setState(() {});
-                    },
-                  ),
-                );
-              },
             ),
           const SizedBox(width: 8),
 
@@ -1230,7 +1252,9 @@ class _MainScaffoldState extends State<MainScaffold> {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: isWide ? 10 : 8, vertical: 6),
+                height: 32.0,
+                padding: EdgeInsets.symmetric(horizontal: isWide ? 10 : 8),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.18)

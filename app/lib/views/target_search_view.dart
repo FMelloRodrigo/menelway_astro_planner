@@ -181,75 +181,92 @@ class _TargetSearchViewState extends State<TargetSearchView> {
             builder: (context, constraints) {
               final isNarrow = constraints.maxWidth < 650;
 
-              final searchField = TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: l10n?.searchTargetsHint ?? (isNarrow
-                      ? "Search DSO (e.g. M42, NGC 7000, Arp 220)..."
-                      : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)..."),
-                  prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              tooltip: l10n?.clearSearchTooltip ?? "Clear search",
-                              onPressed: () {
-                                _debounceTimer?.cancel();
-                                _searchController.clear();
-                                setState(() {});
-                                widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
-                              tooltip: l10n?.searchTargetTooltip ?? "Search target",
-                              onPressed: () {
-                                _debounceTimer?.cancel();
-                                widget.onFilterChanged(
-                                  widget.filters.copyWith(searchQuery: _searchController.text.trim()),
-                                );
-                              },
-                            ),
-                          ],
-                        )
-                      : null,
+              const double topBarElementHeight = 48.0;
+
+              final searchField = SizedBox(
+                height: topBarElementHeight,
+                child: TextField(
+                  controller: _searchController,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: l10n?.searchTargetsHint ?? (isNarrow
+                        ? "Search DSO (e.g. M42, NGC 7000, Arp 220)..."
+                        : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)..."),
+                    prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                padding: EdgeInsets.zero,
+                                tooltip: l10n?.clearSearchTooltip ?? "Clear search",
+                                onPressed: () {
+                                  _debounceTimer?.cancel();
+                                  _searchController.clear();
+                                  setState(() {});
+                                  widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                padding: EdgeInsets.zero,
+                                tooltip: l10n?.searchTargetTooltip ?? "Search target",
+                                onPressed: () {
+                                  _debounceTimer?.cancel();
+                                  widget.onFilterChanged(
+                                    widget.filters.copyWith(searchQuery: _searchController.text.trim()),
+                                  );
+                                },
+                              ),
+                            ],
+                          )
+                        : null,
+                  ),
+                  onChanged: (text) {
+                    setState(() {});
+                    _onSearchChanged(text);
+                  },
+                  onSubmitted: (query) {
+                    _debounceTimer?.cancel();
+                    widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
+                  },
                 ),
-                onChanged: (text) {
-                  setState(() {});
-                  _onSearchChanged(text);
-                },
-                onSubmitted: (query) {
-                  _debounceTimer?.cancel();
-                  widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
-                },
               );
 
-              final filterButton = FilledButton.tonalIcon(
-                icon: const Icon(Icons.tune_rounded, size: 18),
-                label: Text(l10n?.filtersButton ?? "Filters"),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  backgroundColor: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
-                  foregroundColor: accentColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionBorder
-                          : AstroColors.spaceDarkBorder,
+              final filterButton = SizedBox(
+                height: topBarElementHeight,
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.tune_rounded, size: 18),
+                  label: Text(l10n?.filtersButton ?? "Filters"),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    backgroundColor: widget.isRedNightMode
+                        ? AstroColors.nightVisionSurfaceVariant
+                        : AstroColors.spaceDarkSurfaceVariant,
+                    foregroundColor: accentColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: widget.isRedNightMode
+                            ? AstroColors.nightVisionBorder
+                            : AstroColors.spaceDarkBorder,
+                      ),
                     ),
                   ),
+                  onPressed: _openFilterDialog,
                 ),
-                onPressed: _openFilterDialog,
               );
 
               final sortDropdown = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                height: topBarElementHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionSurfaceVariant
@@ -264,6 +281,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<SortMode>(
                     value: _sortMode,
+                    isDense: true,
                     isExpanded: isNarrow,
                     dropdownColor: widget.isRedNightMode
                         ? AstroColors.nightVisionSurfaceVariant

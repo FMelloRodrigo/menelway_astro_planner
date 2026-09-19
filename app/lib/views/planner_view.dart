@@ -441,13 +441,16 @@ class _PlannerViewState extends State<PlannerView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isNarrowSearch = constraints.maxWidth < 600;
+              const double topBarElementHeight = 40.0;
               final searchField = SizedBox(
-                height: 36,
+                height: topBarElementHeight,
                 child: TextField(
                   controller: _searchController,
                   onChanged: (v) => setState(() => _searchQuery = v),
                   style: TextStyle(fontSize: 13, color: textColor),
+                  textAlignVertical: TextAlignVertical.center,
                   decoration: InputDecoration(
+                    isDense: true,
                     hintText: isNarrowSearch ? "Search period targets..." : "Search period targets (e.g. M42, Rosette, Nebula)...",
                     hintStyle: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.4)),
                     prefixIcon: Icon(Icons.search_rounded, size: 16, color: accentColor),
@@ -471,17 +474,18 @@ class _PlannerViewState extends State<PlannerView> {
               );
 
               final sortDropdown = Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: isNarrowSearch
-                    ? BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                      )
-                    : null,
+                height: topBarElementHeight,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<PeriodSortBy>(
                     value: _sortBy,
+                    isDense: true,
                     isExpanded: isNarrowSearch,
                     dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
                     icon: Icon(Icons.sort_rounded, size: 16, color: accentColor),
