@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
+import 'app_logger.dart';
 import 'catalog_manager.dart';
 import '../models/equipment_profile.dart';
 import '../models/filter_state.dart';
@@ -18,6 +19,7 @@ class AppSettingsData {
   final String? activeEquipmentProfileId;
   final List<TargetItem>? favorites;
   final String? languageCode;
+  final int schemaVersion;
 
   AppSettingsData({
     required this.filters,
@@ -29,11 +31,16 @@ class AppSettingsData {
     this.activeEquipmentProfileId,
     this.favorites,
     this.languageCode,
+    this.schemaVersion = SettingsService.currentSchemaVersion,
   });
 }
 
 class SettingsService {
   static const String settingsFileName = 'user_settings.json';
+  static const String settingsBackupFileName = 'user_settings.json.bak';
+  static const int currentSchemaVersion = 1;
+
+  static const String _tag = 'SettingsService';
 
   /// Resolves the portable configuration file path.
   static Future<File> getSettingsFile() async {
@@ -49,8 +56,8 @@ class SettingsService {
         await portableFile.writeAsString('{}');
         return portableFile;
       }
-    } catch (_) {
-      // If exe directory is protected or read-only, fallback to storage directory
+    } catch (e) {
+      AppLogger.debug('Exe directory not writable for portable settings, falling back to app storage: $e', tag: _tag);
     }
 
     // 2. Storage directory (native filesDir on mobile or local AppData on desktop)
@@ -58,24 +65,124 @@ class SettingsService {
     return File(p.join(appDir.path, settingsFileName));
   }
 
+  /// Resolves the backup configuration file path.
+  static Future<File> getSettingsBackupFile() async {
+    final file = await getSettingsFile();
+    return File('${file.path}.bak');
+  }
+
+  /// Helper to safely read and parse a JSON settings file with automatic backup fallback.
+  static Future<Map<String, dynamic>> _readSettingsJson() async {
+    final primaryFile = await getSettingsFile();
+    final backupFile = await getSettingsBackupFile();
+
+    // 1. Try reading the primary settings file
+    if (await primaryFile.exists()) {
+      try {
+        final content = await primaryFile.readAsString();
+        if (content.trim().isNotEmpty && content.trim() != '{}') {
+          final decoded = jsonDecode(content);
+          if (decoded is Map<String, dynamic>) {
+            return _migrateData(decoded);
+          }
+        } else {
+          return {};
+        }
+      } catch (e, st) {
+        AppLogger.warning(
+          'Corrupted primary settings file at ${primaryFile.path}. Attempting backup recovery.',
+          tag: _tag,
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+
+    // 2. If primary failed or missing, try backup file
+    if (await backupFile.exists()) {
+      try {
+        final backupContent = await backupFile.readAsString();
+        if (backupContent.trim().isNotEmpty && backupContent.trim() != '{}') {
+          final decoded = jsonDecode(backupContent);
+          if (decoded is Map<String, dynamic>) {
+            AppLogger.info('Successfully recovered settings from backup file', tag: _tag);
+            return _migrateData(decoded);
+          }
+        }
+      } catch (e, st) {
+        AppLogger.error(
+          'Failed reading backup settings file as well',
+          tag: _tag,
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }
+
+    return {};
+  }
+
+  /// Safely writes JSON data with backup creation and atomic overwrite.
+  static Future<void> _writeSettingsJson(Map<String, dynamic> data) async {
+    try {
+      final file = await getSettingsFile();
+      final backupFile = await getSettingsBackupFile();
+
+      data['version'] = currentSchemaVersion;
+      data['savedAt'] = DateTime.now().toIso8601String();
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(data);
+
+      // Create backup of current valid file before overwriting
+      if (await file.exists()) {
+        try {
+          final currentContent = await file.readAsString();
+          if (currentContent.trim().isNotEmpty && currentContent.trim() != '{}') {
+            await backupFile.writeAsString(currentContent, flush: true);
+          }
+        } catch (e) {
+          AppLogger.warning('Failed to create settings backup before write', tag: _tag, error: e);
+        }
+      }
+
+      // Write atomically via temporary file
+      final tempFile = File('${file.path}.tmp');
+      await tempFile.writeAsString(jsonString, flush: true);
+
+      if (await file.exists()) {
+        await file.delete();
+      }
+      await tempFile.rename(file.path);
+    } catch (e, st) {
+      AppLogger.error('Failed to write settings to disk', tag: _tag, error: e, stackTrace: st);
+    }
+  }
+
+  /// Migrates older settings formats to the current schema.
+  static Map<String, dynamic> _migrateData(Map<String, dynamic> data) {
+    final version = data['version'] as int? ?? 1;
+    if (version < currentSchemaVersion) {
+      AppLogger.info('Migrating settings schema from v$version to v$currentSchemaVersion', tag: _tag);
+      data['version'] = currentSchemaVersion;
+    }
+    return data;
+  }
+
   /// Loads saved user settings. Returns default values if no configuration exists.
   static Future<AppSettingsData> loadSettings() async {
     try {
-      final file = await getSettingsFile();
-      if (!await file.exists()) {
+      final data = await _readSettingsJson();
+      if (data.isEmpty) {
         return AppSettingsData(filters: FilterState());
       }
-
-      final content = await file.readAsString();
-      if (content.trim().isEmpty || content.trim() == '{}') {
-        return AppSettingsData(filters: FilterState());
-      }
-
-      final data = jsonDecode(content) as Map<String, dynamic>;
 
       FilterState filters = FilterState();
       if (data.containsKey('filters') && data['filters'] is Map<String, dynamic>) {
-        filters = FilterState.fromJson(data['filters'] as Map<String, dynamic>);
+        try {
+          filters = FilterState.fromJson(data['filters'] as Map<String, dynamic>);
+        } catch (e) {
+          AppLogger.warning('Failed to parse saved FilterState, using defaults', tag: _tag, error: e);
+        }
       }
 
       final isRedNightMode = data['isRedNightMode'] as bool? ?? false;
@@ -85,14 +192,16 @@ class SettingsService {
       List<ObservingListModel>? observingBackup;
       if (data.containsKey('observingLists') && data['observingLists'] is List) {
         observingBackup = (data['observingLists'] as List<dynamic>)
-            .map((e) => ObservingListModel.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map((e) => ObservingListModel.fromJson(e))
             .toList();
       }
 
       List<EquipmentProfile>? equipmentProfiles;
       if (data.containsKey('equipmentProfiles') && data['equipmentProfiles'] is List) {
         equipmentProfiles = (data['equipmentProfiles'] as List<dynamic>)
-            .map((e) => EquipmentProfile.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map((e) => EquipmentProfile.fromJson(e))
             .toList();
       }
       final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
@@ -101,9 +210,12 @@ class SettingsService {
       List<TargetItem>? favorites;
       if (data.containsKey('favorites') && data['favorites'] is List) {
         favorites = (data['favorites'] as List<dynamic>)
-            .map((e) => TargetItem.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map((e) => TargetItem.fromJson(e))
             .toList();
       }
+
+      final schemaVersion = data['version'] as int? ?? currentSchemaVersion;
 
       return AppSettingsData(
         filters: filters,
@@ -115,8 +227,10 @@ class SettingsService {
         activeEquipmentProfileId: activeEquipmentProfileId,
         favorites: favorites,
         languageCode: languageCode,
+        schemaVersion: schemaVersion,
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Unexpected error loading settings, returning defaults', tag: _tag, error: e, stackTrace: st);
       return AppSettingsData(filters: FilterState());
     }
   }
@@ -134,19 +248,8 @@ class SettingsService {
     String? languageCode,
   }) async {
     try {
-      final file = await getSettingsFile();
-      Map<String, dynamic> data = {};
-      if (await file.exists()) {
-        final content = await file.readAsString();
-        if (content.trim().isNotEmpty && content.trim() != '{}') {
-          try {
-            data = jsonDecode(content) as Map<String, dynamic>;
-          } catch (_) {}
-        }
-      }
+      final data = await _readSettingsJson();
 
-      data['version'] = 1;
-      data['savedAt'] = DateTime.now().toIso8601String();
       data['isRedNightMode'] = isRedNightMode;
       data['filters'] = filters.toJson();
 
@@ -172,39 +275,39 @@ class SettingsService {
         data['languageCode'] = languageCode;
       }
 
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-    } catch (_) {
-      // Non-fatal persistence failure
+      await _writeSettingsJson(data);
+    } catch (e, st) {
+      AppLogger.error('Failed saving user settings', tag: _tag, error: e, stackTrace: st);
     }
   }
 
   /// Quick helper to update just the user's preferred language code ('en', 'pt', etc.).
   static Future<void> saveLanguage(String? languageCode) async {
     try {
-      final file = await getSettingsFile();
-      Map<String, dynamic> data = {};
-      if (await file.exists()) {
-        final content = await file.readAsString();
-        if (content.trim().isNotEmpty && content.trim() != '{}') {
-          try {
-            data = jsonDecode(content) as Map<String, dynamic>;
-          } catch (_) {}
-        }
-      }
+      final data = await _readSettingsJson();
       if (languageCode != null) {
         data['languageCode'] = languageCode;
       } else {
         data.remove('languageCode');
       }
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-    } catch (_) {}
+      await _writeSettingsJson(data);
+    } catch (e, st) {
+      AppLogger.error('Failed saving language setting', tag: _tag, error: e, stackTrace: st);
+    }
   }
 
   /// Clears user configuration, resetting settings file to empty defaults.
   static Future<void> clearSettings() async {
     try {
       final file = await getSettingsFile();
-      await file.writeAsString('{}');
-    } catch (_) {}
+      final backupFile = await getSettingsBackupFile();
+      await file.writeAsString('{}', flush: true);
+      if (await backupFile.exists()) {
+        await backupFile.delete();
+      }
+      AppLogger.info('Settings cleared to defaults', tag: _tag);
+    } catch (e, st) {
+      AppLogger.error('Error clearing settings', tag: _tag, error: e, stackTrace: st);
+    }
   }
 }

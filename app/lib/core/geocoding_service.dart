@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import 'app_logger.dart';
+
 class GeoLocationResult {
   final int id;
   final String name;
@@ -48,6 +50,10 @@ class GeoLocationResult {
 }
 
 class GeocodingService {
+  static const String _tag = 'GeocodingService';
+  static const Duration requestTimeout = Duration(seconds: 6);
+  static const int maxResults = 8;
+
   /// Searches for matching cities/locations using the free Open-Meteo Geocoding API.
   static Future<List<GeoLocationResult>> searchCities(String query) async {
     final cleanQuery = query.trim();
@@ -56,13 +62,13 @@ class GeocodingService {
     try {
       final encoded = Uri.encodeComponent(cleanQuery);
       final url = Uri.parse(
-        'https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=8&language=en&format=json',
+        'https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=$maxResults&language=en&format=json',
       );
 
       final response = await http.get(
         url,
         headers: {'User-Agent': 'AstroTargetsPlanner/1.0'},
-      ).timeout(const Duration(seconds: 6));
+      ).timeout(requestTimeout);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -72,9 +78,11 @@ class GeocodingService {
               .map((e) => GeoLocationResult.fromJson(e as Map<String, dynamic>))
               .toList();
         }
+      } else {
+        AppLogger.warning('Open-Meteo API returned HTTP ${response.statusCode} for "$cleanQuery"', tag: _tag);
       }
-    } catch (_) {
-      // Network timeout or connection error handled gracefully
+    } catch (e) {
+      AppLogger.warning('Geocoding search failed for "$cleanQuery"', tag: _tag, error: e);
     }
     return [];
   }

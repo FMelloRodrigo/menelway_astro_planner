@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'app_logger.dart';
+
 class CatalogManager {
   static const String dbFileName = 'catalogs.db';
+  static const String _tag = 'CatalogManager';
   static const MethodChannel _storageChannel = MethodChannel('com.astrotargets.app/storage');
 
   static Future<String>? _dbPathFuture;
@@ -22,7 +25,9 @@ class CatalogManager {
           }
           return dir;
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('Native storage channel invoke failed on Android: $e', tag: _tag);
+      }
 
       // 2. Fallback heuristics if native channel is unavailable (e.g. headless tests)
       try {
@@ -36,7 +41,9 @@ class CatalogManager {
             return candidate;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('System temp parent check fallback failed: $e', tag: _tag);
+      }
 
       final candidates = [
         '/data/user/0/com.astrotargets.app.app/files',
@@ -54,7 +61,9 @@ class CatalogManager {
       if (!fallbackDir.existsSync()) {
         try {
           fallbackDir.createSync(recursive: true);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.warning('Failed to create fallback directory on Android: $fallbackDir', tag: _tag, error: e);
+        }
       }
       return fallbackDir;
     } else {
@@ -66,7 +75,9 @@ class CatalogManager {
       if (!dir.existsSync()) {
         try {
           dir.createSync(recursive: true);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.warning('Failed to create storage directory: $baseDir', tag: _tag, error: e);
+        }
       }
       return dir;
     }
@@ -132,11 +143,14 @@ class CatalogManager {
         if (await targetFile.exists()) {
           try {
             await targetFile.delete();
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.debug('Could not delete old target database file before replacing: $e', tag: _tag);
+          }
         }
         await tmpFile.rename(targetFile.path);
       }
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.warning('Exception unpacking bundled catalog database', tag: _tag, error: e, stackTrace: st);
       if (await targetFile.exists()) {
         final len = await targetFile.length();
         if (len > 1024 * 1024) {
@@ -158,7 +172,9 @@ class CatalogManager {
         final bytes = await f.length();
         return bytes / (1024.0 * 1024.0);
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Error determining database file size', tag: _tag, error: e);
+    }
     return 0.0;
   }
 
@@ -189,9 +205,11 @@ class CatalogManager {
             'source': 'CDS / SIMBAD (Online)',
           };
         }
+      } else {
+        AppLogger.warning('CDS Sesame returned status ${response.statusCode} for "$targetName"', tag: _tag);
       }
-    } catch (_) {
-      // Network or parsing error
+    } catch (e) {
+      AppLogger.warning('Failed to query CDS Sesame online object "$targetName"', tag: _tag, error: e);
     }
     return null;
   }

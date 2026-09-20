@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../core/astro_bridge.dart';
+import '../core/app_logger.dart';
 import '../core/catalog_manager.dart';
 import '../core/favorites_manager.dart';
 import '../models/altitude_point.dart';
@@ -111,7 +112,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             _isLoadingYearly = false;
           });
         }
-      } catch (_) {
+      } catch (e) {
+        AppLogger.error('Failed loading yearly visibility for target ${widget.target.id}', tag: 'TargetDetailsSheet', error: e);
         if (mounted) {
           setState(() => _isLoadingYearly = false);
         }
@@ -135,7 +137,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
         _curvePoints = points;
         _isLoadingCurve = false;
       });
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('Failed generating altitude curve for target ${widget.target.id}', tag: 'TargetDetailsSheet', error: e);
       setState(() => _isLoadingCurve = false);
     }
   }

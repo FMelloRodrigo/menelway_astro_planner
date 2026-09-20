@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import 'app_logger.dart';
+
 class SkySurvey {
   final String id;
   final String label;
@@ -18,6 +20,7 @@ class SkySurvey {
 class SkyImageService {
   SkyImageService._();
   static final SkyImageService instance = SkyImageService._();
+  static const String _tag = 'SkyImageService';
 
   static const List<SkySurvey> availableSurveys = [
     SkySurvey(
@@ -113,7 +116,8 @@ class SkyImageService {
       // Auto-prune existing disk cache on startup to enforce the cap
       Future.microtask(() => pruneDiskCache());
       return _diskCacheDir;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.warning('Failed to initialize sky image cache directory', tag: _tag, error: e);
       _diskCacheInitialized = true;
       return null;
     }
@@ -142,12 +146,14 @@ class SkyImageService {
             // Touch file to update LRU timestamp
             try {
               await cacheFile.setLastModified(DateTime.now());
-            } catch (_) {}
+            } catch (e) {
+              AppLogger.debug('Failed to touch cached file: $e', tag: _tag);
+            }
             return bytes;
           }
         }
-      } catch (_) {
-        // Disk read error, fall through to network
+      } catch (e) {
+        AppLogger.debug('Disk cache read error for $url: $e', tag: _tag);
       }
     }
 
@@ -170,14 +176,18 @@ class SkyImageService {
             try {
               await cacheFile!.writeAsBytes(bytes);
               await pruneDiskCache();
-            } catch (_) {}
+            } catch (e) {
+              AppLogger.debug('Failed writing sky image to disk cache: $e', tag: _tag);
+            }
           });
         }
 
         return bytes;
+      } else {
+        AppLogger.warning('CDS HiPS2FITS request failed with HTTP ${response.statusCode}', tag: _tag);
       }
-    } catch (_) {
-      // Network timeout or offline
+    } catch (e) {
+      AppLogger.debug('Network fetch failed for sky image ($url): $e', tag: _tag);
     }
 
     return null;
@@ -211,7 +221,8 @@ class SkyImageService {
       for (final f in files) {
         try {
           timestamps[f] = await f.lastModified();
-        } catch (_) {
+        } catch (e) {
+          AppLogger.debug('Could not read timestamp for ${f.path}: $e', tag: _tag);
           timestamps[f] = DateTime.fromMillisecondsSinceEpoch(0);
         }
       }
@@ -227,9 +238,13 @@ class SkyImageService {
       for (var i = 0; i < excessCount; i++) {
         try {
           await files[i].delete();
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.debug('Could not delete old cached sky image: $e', tag: _tag);
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.warning('Error during sky image cache prune', tag: _tag, error: e);
+    }
   }
 
   /// Returns the number of cached sky image files currently stored on disk.
@@ -244,7 +259,9 @@ class SkyImageService {
           count++;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('Error counting disk cache files: $e', tag: _tag);
+    }
     return count;
   }
 
@@ -259,10 +276,14 @@ class SkyImageService {
         if (entity is File && entity.path.endsWith('.jpg')) {
           try {
             totalBytes += await entity.length();
-          } catch (_) {}
+          } catch (e) {
+            AppLogger.debug('Error reading cache file size: $e', tag: _tag);
+          }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.debug('Error calculating disk cache size: $e', tag: _tag);
+    }
     return totalBytes;
   }
 
@@ -274,7 +295,9 @@ class SkyImageService {
       try {
         await diskDir.delete(recursive: true);
         _diskCacheInitialized = false;
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.warning('Failed deleting sky image cache directory', tag: _tag, error: e);
+      }
     }
   }
 }

@@ -1,2 +1,39 @@
-/dist
+# Build and distribution directories
+/dist/
 /core/build/
+app/build/
+build/
+
+# Dart and Flutter tooling
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android build artifacts and caches
+.gradle/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/build/
+app/android/.cxx/
+*.apk
+*.aab
+
+# Windows / Visual Studio intermediate and cache files
+.vs/
+*.user
+*.suo
+*.VC.opendb
+*.ipch
+x64/
+Debug/
+Release/
+
+# Logs, crash dumps, and backup files
+*.log
+*.bak
+*.tmp
+*.crash

@@ -4,6 +4,7 @@ import 'package:app/models/filter_state.dart';
 import 'package:app/models/observing_list.dart';
 import 'package:app/core/settings_service.dart';
 import 'package:app/core/catalog_manager.dart';
+import 'package:app/core/app_logger.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -136,6 +137,62 @@ void main() {
       expect(cleared.isRedNightMode, false);
       expect(cleared.filters.observerLocationName, 'Nova Friburgo, Rio de Janeiro, Brazil');
       expect(cleared.filters.observerLat, -22.2819);
+    });
+
+    test('SettingsService backup creation and corruption recovery', () async {
+      await SettingsService.clearSettings();
+
+      // 1. Initial write
+      final filterV1 = FilterState(observerLocationName: 'Original City', observerLat: 10.0);
+      await SettingsService.saveSettings(
+        filters: filterV1,
+        isRedNightMode: false,
+      );
+
+      final settingsFile = await SettingsService.getSettingsFile();
+      final backupFile = await SettingsService.getSettingsBackupFile();
+      expect(settingsFile.existsSync(), isTrue);
+
+      // 2. Second write should trigger creation of .bak of first write
+      final filterV2 = FilterState(observerLocationName: 'Updated City', observerLat: 20.0);
+      await SettingsService.saveSettings(
+        filters: filterV2,
+        isRedNightMode: true,
+      );
+      expect(backupFile.existsSync(), isTrue);
+
+      // Verify normal load gets v2
+      var loaded = await SettingsService.loadSettings();
+      expect(loaded.isRedNightMode, true);
+      expect(loaded.filters.observerLocationName, 'Updated City');
+
+      // 3. Corrupt primary file with broken JSON
+      await settingsFile.writeAsString('{ "corrupted_json": [ incomplete ...');
+
+      // 4. Loading should fail on primary, log warning, and fall back to backup
+      loaded = await SettingsService.loadSettings();
+      expect(loaded.filters.observerLocationName, isNotEmpty);
+
+      // Clean up
+      await SettingsService.clearSettings();
+      expect(backupFile.existsSync(), isFalse);
+    });
+
+    test('AppLogger records messages and notifies listener', () {
+      final logs = <String>[];
+      AppLogger.onLog = (level, tag, message, error, stackTrace) {
+        logs.add('${level.name}:$tag:$message');
+      };
+
+      AppLogger.info('Test Info Message', tag: 'TestTag');
+      AppLogger.warning('Test Warning Message', tag: 'TestTag');
+      AppLogger.error('Test Error Message', tag: 'TestTag', error: Exception('Boom'));
+
+      expect(logs.any((l) => l.contains('info:TestTag:Test Info Message')), isTrue);
+      expect(logs.any((l) => l.contains('warning:TestTag:Test Warning Message')), isTrue);
+      expect(logs.any((l) => l.contains('error:TestTag:Test Error Message')), isTrue);
+
+      AppLogger.onLog = null;
     });
 
     test('CatalogManager getStorageDirectory resolves an existing writable directory', () async {

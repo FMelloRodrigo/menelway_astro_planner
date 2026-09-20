@@ -5,6 +5,7 @@ import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
 import 'astro_ffi_types.dart';
+import 'app_logger.dart';
 import '../models/target_item.dart';
 import '../models/night_summary.dart';
 import '../models/altitude_point.dart';
@@ -201,7 +202,9 @@ class AstroBridge {
       // 1. Try standard DLL load (same directory as .exe)
       try {
         return DynamicLibrary.open('astro_core.dll');
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.debug('Standard DLL load (astro_core.dll) failed: $e', tag: 'AstroBridge');
+      }
 
       // 2. Try path relative to executable
       final exeDir = p.dirname(Platform.resolvedExecutable);
@@ -785,7 +788,8 @@ class AstroBridge {
       final jsonStr = jsonPtr.toDartString();
       final decoded = jsonDecode(jsonStr) as List<dynamic>;
       return decoded.map((e) => ObservingListModel.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Failed to parse observing lists JSON from engine', tag: 'AstroBridge', error: e, stackTrace: st);
       return [];
     } finally {
       _freeString(jsonPtr);
@@ -849,7 +853,8 @@ class AstroBridge {
       } finally {
         _freeString(jsonPtr);
       }
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.error('Failed to calculate target yearly visibility', tag: 'AstroBridge', error: e, stackTrace: st);
       return null;
     } finally {
       for (final p in allocatedPointers) {
