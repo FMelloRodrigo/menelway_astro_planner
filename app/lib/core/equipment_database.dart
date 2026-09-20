@@ -1,4 +1,5 @@
 import '../models/equipment_profile.dart';
+import 'equipment_search.dart';
 
 class EquipmentDatabase {
   static final List<TelescopeProfile> telescopes = [
@@ -640,41 +641,12 @@ class EquipmentDatabase {
 
   /// Searches telescopes by matching name, brand, aperture, or focal length
   static List<TelescopeProfile> searchTelescopes(String query) {
-    final clean = query.trim().toLowerCase();
-    if (clean.isEmpty) return telescopes;
-
-    final tokens = clean.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
-
-    return telescopes.where((t) {
-      final nameLower = t.name.toLowerCase();
-      final flStr = t.focalLengthMm.toString();
-      final apStr = t.apertureMm.toString();
-
-      return tokens.every((tok) =>
-          nameLower.contains(tok) ||
-          flStr.contains(tok) ||
-          apStr.contains(tok) ||
-          t.id.contains(tok));
-    }).toList();
+    return EquipmentSearchUtil.searchTelescopes(telescopes, query);
   }
 
   /// Searches cameras by matching name, brand, sensor chip (e.g. IMX571), or sensor size
   static List<CameraProfile> searchCameras(String query) {
-    final clean = query.trim().toLowerCase();
-    if (clean.isEmpty) return cameras;
-
-    final tokens = clean.split(RegExp(r'\s+')).where((t) => t.isNotEmpty);
-
-    return cameras.where((c) {
-      final nameLower = c.name.toLowerCase();
-      final idLower = c.id.toLowerCase();
-      final pxStr = c.pixelSizeMicrons.toString();
-
-      return tokens.every((tok) =>
-          nameLower.contains(tok) ||
-          idLower.contains(tok) ||
-          pxStr.contains(tok));
-    }).toList();
+    return EquipmentSearchUtil.searchCameras(cameras, query);
   }
 
   /// Default starter rigs for immediate out-of-the-box use

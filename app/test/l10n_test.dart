@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/settings_service.dart';
@@ -146,24 +148,37 @@ void main() {
     });
 
     test('SettingsService persists and loads languageCode', () async {
-      final filters = FilterState();
+      final tempDir = await Directory.systemTemp.createTemp('l10n_settings_');
+      final tempFile = File(p.join(tempDir.path, 'l10n_settings.json'));
+      SettingsService.customSettingsFile = tempFile;
 
-      await SettingsService.saveSettings(
-        filters: filters,
-        isRedNightMode: false,
-        languageCode: 'pt',
-      );
+      try {
+        final filters = FilterState();
 
-      final loaded = await SettingsService.loadSettings();
-      expect(loaded.languageCode, 'pt');
+        await SettingsService.saveSettings(
+          filters: filters,
+          isRedNightMode: false,
+          languageCode: 'pt',
+        );
 
-      // Test saveLanguage helper
-      await SettingsService.saveLanguage('en');
-      final updated = await SettingsService.loadSettings();
-      expect(updated.languageCode, 'en');
+        final loaded = await SettingsService.loadSettings();
+        expect(loaded.languageCode, 'pt');
 
-      // Reset
-      await SettingsService.saveLanguage(null);
+        // Test saveLanguage helper
+        await SettingsService.saveLanguage('en');
+        final updated = await SettingsService.loadSettings();
+        expect(updated.languageCode, 'en');
+
+        // Reset
+        await SettingsService.saveLanguage(null);
+      } finally {
+        SettingsService.customSettingsFile = null;
+        try {
+          if (tempDir.existsSync()) {
+            tempDir.deleteSync(recursive: true);
+          }
+        } catch (_) {}
+      }
     });
 
     testWidgets('localizeMoonPhase translates all 8 moon phases to Portuguese', (WidgetTester tester) async {

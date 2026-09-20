@@ -42,8 +42,15 @@ class SettingsService {
 
   static const String _tag = 'SettingsService';
 
+  /// Optional override for testing or custom configuration directory isolation.
+  static File? customSettingsFile;
+
   /// Resolves the portable configuration file path.
   static Future<File> getSettingsFile() async {
+    if (customSettingsFile != null) {
+      return customSettingsFile!;
+    }
+
     // 1. Try next to the executable for true Windows portable zero-install mode
     try {
       if (Platform.isWindows) {

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../controllers/filter_dialog_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
@@ -27,130 +28,45 @@ class FilterDialog extends StatefulWidget {
 }
 
 class _FilterDialogState extends State<FilterDialog> {
-  late FilterState _state;
+  late final FilterDialogController _controller;
   final ScrollController _scrollController = ScrollController();
 
-  final List<String> allCatalogs = [
-    'Messier',
-    'Caldwell',
-    'Arp',
-    'Herschel',
-    'NGC',
-    'IC',
-    'Sharpless',
-    'Barnard',
-  ];
+  FilterState get _state => _controller.state;
+  List<String> get allCatalogs => FilterDialogController.defaultCatalogs;
+  List<String> get allTypes => FilterDialogController.defaultObjectTypes;
 
-  final List<String> allTypes = [
-    'Galaxy',
-    'Planetary Nebula',
-    'Bright Nebula',
-    'Dark Nebula',
-    'Open Cluster',
-    'Globular Cluster',
-    'Supernova Remnant',
-  ];
+  int _getPresetIndex() => _controller.presetIndex;
 
-  int _getPresetIndex() {
-    final min = _state.minAzimuth.round();
-    final max = _state.maxAzimuth.round();
-    if (min == 0 && max == 360) return 0;
-    if (min == 315 && max == 45) return 1;
-    if (min == 45 && max == 135) return 2;
-    if (min == 135 && max == 225) return 3;
-    if (min == 225 && max == 315) return 4;
-    if (min == 0 && max == 90) return 5;
-    if (min == 90 && max == 180) return 6;
-    if (min == 180 && max == 270) return 7;
-    if (min == 270 && max == 360) return 8;
-    return 9; // Custom Degree Range
-  }
-
-  void _applyPreset(int index) {
-    switch (index) {
-      case 0:
-        _state.minAzimuth = 0.0;
-        _state.maxAzimuth = 360.0;
-        _state.quadrant = 0;
-        break;
-      case 1:
-        _state.minAzimuth = 315.0;
-        _state.maxAzimuth = 45.0;
-        _state.quadrant = 0;
-        break;
-      case 2:
-        _state.minAzimuth = 45.0;
-        _state.maxAzimuth = 135.0;
-        _state.quadrant = 0;
-        break;
-      case 3:
-        _state.minAzimuth = 135.0;
-        _state.maxAzimuth = 225.0;
-        _state.quadrant = 0;
-        break;
-      case 4:
-        _state.minAzimuth = 225.0;
-        _state.maxAzimuth = 315.0;
-        _state.quadrant = 0;
-        break;
-      case 5:
-        _state.minAzimuth = 0.0;
-        _state.maxAzimuth = 90.0;
-        _state.quadrant = 0;
-        break;
-      case 6:
-        _state.minAzimuth = 90.0;
-        _state.maxAzimuth = 180.0;
-        _state.quadrant = 0;
-        break;
-      case 7:
-        _state.minAzimuth = 180.0;
-        _state.maxAzimuth = 270.0;
-        _state.quadrant = 0;
-        break;
-      case 8:
-        _state.minAzimuth = 270.0;
-        _state.maxAzimuth = 360.0;
-        _state.quadrant = 0;
-        break;
-      case 9:
-        _state.quadrant = 0;
-        break;
-    }
-  }
+  void _applyPreset(int index) => _controller.applyPreset(index);
 
   String _cardinalName(double az, [AppLocalizations? l10n]) {
-    final a = (az % 360 + 360) % 360;
     final isPt = l10n?.localeName == 'pt';
-    if (a >= 337.5 || a < 22.5) return "N";
-    if (a < 67.5) return "NE";
-    if (a < 112.5) return isPt ? "L" : "E";
-    if (a < 157.5) return "SE";
-    if (a < 202.5) return "S";
-    if (a < 247.5) return isPt ? "SO" : "SW";
-    if (a < 292.5) return isPt ? "O" : "W";
-    return isPt ? "NO" : "NW";
+    return FilterDialogController.cardinalName(az, isPt: isPt);
   }
 
   @override
   void initState() {
     super.initState();
-    _state = widget.initialFilters.copyWith();
+    _controller = FilterDialogController(initialFilters: widget.initialFilters);
   }
 
   @override
   void dispose() {
+    _controller.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isNarrow = MediaQuery.of(context).size.width < 600;
-    final quadrantOptions = getQuadrantOptions(l10n);
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
+        final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+        final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+        final isNarrow = MediaQuery.of(context).size.width < 600;
+        final quadrantOptions = getQuadrantOptions(l10n);
 
     return Dialog(
       backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
@@ -231,7 +147,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             child: InkWell(
                               borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
                               onTap: () {
-                                setState(() => _state.useCustomTimeWindow = false);
+                                _controller.setUseCustomTimeWindow(false);
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -277,13 +193,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             child: InkWell(
                               borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
                               onTap: () {
-                                setState(() {
-                                  _state.useCustomTimeWindow = true;
-                                  final maxDur = _state.windowDurationHours;
-                                  if (_state.minDurationHours > maxDur) {
-                                    _state.minDurationHours = math.max(0.5, maxDur);
-                                  }
-                                });
+                                _controller.setUseCustomTimeWindow(true);
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -524,7 +434,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                 max: math.min(70.0, _state.maxAltitude - 5),
                                 divisions: 12,
                                 activeColor: accentColor,
-                                onChanged: (v) => setState(() => _state.minAltitude = v),
+                                onChanged: (v) => _controller.setMinAltitude(v),
                               ),
                             ],
                           ),
@@ -542,7 +452,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                 max: 90,
                                 divisions: 8,
                                 activeColor: accentColor,
-                                onChanged: (v) => setState(() => _state.maxAltitude = v),
+                                onChanged: (v) => _controller.setMaxAltitude(v),
                               ),
                             ],
                           ),
@@ -567,7 +477,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: maxDur > 0.5 ? maxDur : 0.6,
                                   divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
                                   activeColor: accentColor,
-                                  onChanged: (v) => setState(() => _state.minDurationHours = v),
+                                  onChanged: (v) => _controller.setMinDurationHours(v),
                                 );
                               }),
                             ],
@@ -591,7 +501,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: math.min(70.0, _state.maxAltitude - 5),
                                   divisions: 12,
                                   activeColor: accentColor,
-                                  onChanged: (v) => setState(() => _state.minAltitude = v),
+                                  onChanged: (v) => _controller.setMinAltitude(v),
                                 ),
                               ],
                             ),
@@ -611,7 +521,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: 90,
                                   divisions: 8,
                                   activeColor: accentColor,
-                                  onChanged: (v) => setState(() => _state.maxAltitude = v),
+                                  onChanged: (v) => _controller.setMaxAltitude(v),
                                 ),
                               ],
                             ),
@@ -639,7 +549,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                     max: maxDur > 0.5 ? maxDur : 0.6,
                                     divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
                                     activeColor: accentColor,
-                                    onChanged: (v) => setState(() => _state.minDurationHours = v),
+                                    onChanged: (v) => _controller.setMinDurationHours(v),
                                   );
                                 }),
                               ],
@@ -690,9 +600,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             }),
                             onChanged: (v) {
                               if (v != null) {
-                                setState(() {
-                                  _applyPreset(v);
-                                });
+                                _controller.applyPreset(v);
                               }
                             },
                           ),
@@ -713,12 +621,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: 360,
                                   divisions: 72,
                                   activeColor: accentColor,
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _state.minAzimuth = v;
-                                      _state.quadrant = 0;
-                                    });
-                                  },
+                                  onChanged: (v) => _controller.setMinAzimuth(v),
                                 ),
                               ),
                             ],
@@ -739,12 +642,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: 360,
                                   divisions: 72,
                                   activeColor: accentColor,
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _state.maxAzimuth = v;
-                                      _state.quadrant = 0;
-                                    });
-                                  },
+                                  onChanged: (v) => _controller.setMaxAzimuth(v),
                                 ),
                               ),
                             ],
@@ -792,9 +690,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   }),
                                   onChanged: (v) {
                                     if (v != null) {
-                                      setState(() {
-                                        _applyPreset(v);
-                                      });
+                                      _controller.applyPreset(v);
                                     }
                                   },
                                 ),
@@ -817,12 +713,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                         max: 360,
                                         divisions: 72,
                                         activeColor: accentColor,
-                                        onChanged: (v) {
-                                          setState(() {
-                                            _state.minAzimuth = v;
-                                            _state.quadrant = 0; // Switch to custom range
-                                          });
-                                        },
+                                        onChanged: (v) => _controller.setMinAzimuth(v),
                                       ),
                                     ),
                                   ],
@@ -845,12 +736,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                         max: 360,
                                         divisions: 72,
                                         activeColor: accentColor,
-                                        onChanged: (v) {
-                                          setState(() {
-                                            _state.maxAzimuth = v;
-                                            _state.quadrant = 0; // Switch to custom range
-                                          });
-                                        },
+                                        onChanged: (v) => _controller.setMaxAzimuth(v),
                                       ),
                                     ),
                                   ],
@@ -923,9 +809,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               Switch(
                                 value: _state.useCustomHorizon,
                                 activeThumbColor: accentColor,
-                                onChanged: (val) {
-                                  setState(() => _state.useCustomHorizon = val);
-                                },
+                                onChanged: (val) => _controller.setUseCustomHorizon(val),
                               ),
                             ],
                           ),
@@ -967,11 +851,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                       builder: (_) => HorizonMakerDialog(
                                         initialFilters: _state,
                                         isRedNightMode: widget.isRedNightMode,
-                                        onApply: (updated) {
-                                          setState(() {
-                                            _state = updated;
-                                          });
-                                        },
+                                        onApply: (updated) => _controller.updateFilterState(updated),
                                       ),
                                     );
                                   },
@@ -998,7 +878,7 @@ class _FilterDialogState extends State<FilterDialog> {
                       max: 90,
                       divisions: 18,
                       activeColor: accentColor,
-                      onChanged: (v) => setState(() => _state.minMoonSeparation = v),
+                      onChanged: (v) => _controller.setMinMoonSeparation(v),
                     ),
 
                     const SizedBox(height: 16),
@@ -1014,15 +894,7 @@ class _FilterDialogState extends State<FilterDialog> {
                         return FilterChip(
                           label: Text(cat),
                           selected: selected,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _state.selectedCatalogs.add(cat);
-                              } else if (_state.selectedCatalogs.length > 1) {
-                                _state.selectedCatalogs.remove(cat);
-                              }
-                            });
-                          },
+                          onSelected: (val) => _controller.setCatalogSelected(cat, val),
                         );
                       }).toList(),
                     ),
@@ -1040,15 +912,7 @@ class _FilterDialogState extends State<FilterDialog> {
                         return FilterChip(
                           label: Text(localizeObjectType(type, l10n)),
                           selected: selected,
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _state.selectedObjectTypes.add(type);
-                              } else if (_state.selectedObjectTypes.length > 1) {
-                                _state.selectedObjectTypes.remove(type);
-                              }
-                            });
-                          },
+                          onSelected: (val) => _controller.setObjectTypeSelected(type, val),
                         );
                       }).toList(),
                     ),
@@ -1082,7 +946,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             max: 18.0,
                             divisions: 26,
                             activeColor: accentColor,
-                            onChanged: (v) => setState(() => _state.maxMagnitude = v),
+                            onChanged: (v) => _controller.setMaxMagnitude(v),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -1095,7 +959,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             max: 60,
                             divisions: 12,
                             activeColor: accentColor,
-                            onChanged: (v) => setState(() => _state.minSizeArcmin = v),
+                            onChanged: (v) => _controller.setMinSizeArcmin(v),
                           ),
                         ],
                       )
@@ -1125,7 +989,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: 18.0,
                                   divisions: 26,
                                   activeColor: accentColor,
-                                  onChanged: (v) => setState(() => _state.maxMagnitude = v),
+                                  onChanged: (v) => _controller.setMaxMagnitude(v),
                                 ),
                               ],
                             ),
@@ -1145,7 +1009,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   max: 60,
                                   divisions: 12,
                                   activeColor: accentColor,
-                                  onChanged: (v) => setState(() => _state.minSizeArcmin = v),
+                                  onChanged: (v) => _controller.setMinSizeArcmin(v),
                                 ),
                               ],
                             ),
@@ -1195,16 +1059,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           icon: const Icon(Icons.refresh_rounded, size: 16),
                           label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
                           style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
-                          onPressed: () {
-                            setState(() {
-                              _state = FilterState(
-                                observerLat: _state.observerLat,
-                                observerLon: _state.observerLon,
-                                observerElevation: _state.observerElevation,
-                                date: _state.date,
-                              );
-                            });
-                          },
+                          onPressed: () => _controller.resetToDefaults(),
                         ),
                       ),
                     ],
@@ -1216,16 +1071,7 @@ class _FilterDialogState extends State<FilterDialog> {
                         icon: const Icon(Icons.refresh_rounded, size: 16),
                         label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
                         style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
-                        onPressed: () {
-                          setState(() {
-                            _state = FilterState(
-                              observerLat: _state.observerLat,
-                              observerLon: _state.observerLon,
-                              observerElevation: _state.observerElevation,
-                              date: _state.date,
-                            );
-                          });
-                        },
+                        onPressed: () => _controller.resetToDefaults(),
                       ),
                       Row(
                         children: [
@@ -1239,7 +1085,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             label: Text(l10n?.applyFilters ?? "Apply Filters"),
                             style: FilledButton.styleFrom(backgroundColor: accentColor),
                             onPressed: () {
-                              widget.onApply(_state);
+                              widget.onApply(_controller.state);
                               Navigator.of(context).pop();
                             },
                           ),
@@ -1250,6 +1096,8 @@ class _FilterDialogState extends State<FilterDialog> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 
@@ -1300,35 +1148,12 @@ class _FilterDialogState extends State<FilterDialog> {
     );
 
     if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _state.customStartHour = picked.hour;
-          _state.customStartMinute = picked.minute;
-        } else {
-          _state.customEndHour = picked.hour;
-          _state.customEndMinute = picked.minute;
-        }
-        final maxDur = _state.windowDurationHours;
-        if (_state.minDurationHours > maxDur) {
-          _state.minDurationHours = math.max(0.5, maxDur);
-        }
-      });
+      _controller.setCustomTime(isStart: isStart, hour: picked.hour, minute: picked.minute);
     }
   }
 
   void _setCustomWindow(int startH, int startM, int endH, int endM) {
-    setState(() {
-      _state.useCustomTimeWindow = true;
-      _state.customStartHour = startH;
-      _state.customStartMinute = startM;
-      _state.customEndHour = endH;
-      _state.customEndMinute = endM;
-
-      final maxDur = _state.windowDurationHours;
-      if (_state.minDurationHours > maxDur) {
-        _state.minDurationHours = math.max(0.5, maxDur);
-      }
-    });
+    _controller.setCustomWindow(startH, startM, endH, endM);
   }
 
   Widget _buildTimeBox({

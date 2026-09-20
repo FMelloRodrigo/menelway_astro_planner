@@ -5,11 +5,27 @@ import 'package:app/models/observing_list.dart';
 import 'package:app/core/settings_service.dart';
 import 'package:app/core/catalog_manager.dart';
 import 'package:app/core/app_logger.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Settings & FilterState Persistence Tests', () {
+    late Directory tempDir;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('settings_test_');
+      SettingsService.customSettingsFile = File(p.join(tempDir.path, 'user_settings.json'));
+    });
+
+    tearDown(() async {
+      SettingsService.customSettingsFile = null;
+      try {
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+    });
     test('FilterState serialization and deserialization preserves all values', () {
       final original = FilterState(
         minAltitude: 35.0,

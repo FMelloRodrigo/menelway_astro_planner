@@ -12,6 +12,7 @@ import '../theme/astro_theme.dart';
 import '../views/equipment_dialog.dart';
 import '../views/equipment_framing_dialog.dart';
 import '../l10n/app_localizations.dart';
+import 'fov_projector.dart';
 
 enum PreviewDisplayMode {
   photoWithReticle,
@@ -1162,15 +1163,16 @@ class TargetVectorPainter extends CustomPainter {
       return;
     }
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final fovArcmin = fovDeg * 60.0;
-    final minDim = math.min(size.width, size.height);
-    final pixelsPerArcmin = minDim / fovArcmin;
-
-    final targetCenter = Offset(
-      center.dx - (panOffsetArcminX * pixelsPerArcmin),
-      center.dy - (panOffsetArcminY * pixelsPerArcmin),
+    final projector = FovProjector(
+      viewportSize: size,
+      fovDeg: fovDeg,
+      panOffsetArcminX: panOffsetArcminX,
+      panOffsetArcminY: panOffsetArcminY,
     );
+    final center = projector.viewportCenter;
+    final pixelsPerArcmin = projector.pixelsPerArcmin;
+    final targetCenter = projector.targetCenter;
+    final minDim = projector.minDim;
 
     final primaryColor = isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final secondaryColor = isRedNightMode ? AstroColors.nightVisionRedDim : AstroColors.nebulaIndigo;
@@ -1210,14 +1212,10 @@ class TargetVectorPainter extends CustomPainter {
     // 2. Draw Target Apparent Dimensions (Ellipse / Cloud / Cluster)
     // Only in Vector mode or Photo + Reticle mode; in Photo Mode, do not draw target apparent vectors or circles.
     if (!isPhotoOnly) {
-      final majorArcmin = target.majorAxisArcmin;
-      final minorArcmin = target.surfaceBrightness != null && majorArcmin != null
-          ? majorArcmin * 0.65
-          : majorArcmin;
-
-      if (majorArcmin != null && majorArcmin > 0) {
-        final radX = (majorArcmin / 2.0) * pixelsPerArcmin;
-        final radY = ((minorArcmin ?? majorArcmin) / 2.0) * pixelsPerArcmin;
+      final radii = projector.calculateTargetRadii(target.majorAxisArcmin, target.surfaceBrightness);
+      if (radii != Size.zero) {
+        final radX = radii.width;
+        final radY = radii.height;
 
         canvas.save();
         canvas.translate(targetCenter.dx, targetCenter.dy);
@@ -1332,11 +1330,12 @@ class TargetVectorPainter extends CustomPainter {
 
     // 3. Equipment Framing Simulator Sensor Frame Overlay
     if (showFraming && equipment != null) {
-      final fovW = equipment!.sensorFovWidthArcmin;
-      final fovH = equipment!.sensorFovHeightArcmin;
-
-      final rectW = fovW * pixelsPerArcmin;
-      final rectH = fovH * pixelsPerArcmin;
+      final sensorPixels = projector.calculateSensorPixelSize(
+        equipment!.sensorFovWidthArcmin,
+        equipment!.sensorFovHeightArcmin,
+      );
+      final rectW = sensorPixels.width;
+      final rectH = sensorPixels.height;
 
       // If offset is non-zero, draw guide line and target catalog reticle (only when reticle is enabled and not photo-only)
       if (!isPhotoOnly && showReticle && (panOffsetArcminX != 0.0 || panOffsetArcminY != 0.0)) {
@@ -1471,7 +1470,7 @@ class TargetVectorPainter extends CustomPainter {
       _drawOrientation(canvas, size, primaryColor);
 
       // 6. Physical Scale Ruler Bar (Bottom Left)
-      _drawScaleBar(canvas, size, fovArcmin, pixelsPerArcmin, primaryColor);
+      _drawScaleBar(canvas, projector, primaryColor);
 
       // 7. Apparent Size Label (Bottom Right)
       _drawApparentSizeLabel(canvas, size, primaryColor);
@@ -1498,64 +1497,34 @@ class TargetVectorPainter extends CustomPainter {
 
   void _drawScaleBar(
     Canvas canvas,
-    Size size,
-    double fovArcmin,
-    double pixelsPerArcmin,
+    FovProjector projector,
     Color color,
   ) {
-    double scaleArcmin = 10.0;
-    if (fovArcmin < 20.0) {
-      scaleArcmin = 5.0;
-    } else if (fovArcmin < 50.0) {
-      scaleArcmin = 10.0;
-    } else if (fovArcmin < 120.0) {
-      scaleArcmin = 30.0;
-    } else if (fovArcmin < 300.0) {
-      scaleArcmin = 60.0;
-    } else {
-      scaleArcmin = 120.0;
-    }
-
-    final barPixels = scaleArcmin * pixelsPerArcmin;
-    if (barPixels <= 0 || barPixels > size.width * 0.7) return;
-
-    final scaleLabel = scaleArcmin >= 60.0
-        ? "${(scaleArcmin / 60.0).toStringAsFixed(0)}°"
-        : "${scaleArcmin.toStringAsFixed(0)}'";
-
-    final startX = size.width * 0.28;
-    final y = size.height - 14.0;
+    final scale = projector.calculateScaleBar();
+    if (!scale.isValid) return;
 
     final barPaint = Paint()
       ..color = color.withValues(alpha: 0.8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4;
 
-    canvas.drawLine(Offset(startX, y), Offset(startX + barPixels, y), barPaint);
-    canvas.drawLine(Offset(startX, y - 3), Offset(startX, y + 3), barPaint);
-    canvas.drawLine(Offset(startX + barPixels, y - 3), Offset(startX + barPixels, y + 3), barPaint);
+    canvas.drawLine(Offset(scale.startX, scale.y), Offset(scale.startX + scale.barPixels, scale.y), barPaint);
+    canvas.drawLine(Offset(scale.startX, scale.y - 3), Offset(scale.startX, scale.y + 3), barPaint);
+    canvas.drawLine(Offset(scale.startX + scale.barPixels, scale.y - 3), Offset(scale.startX + scale.barPixels, scale.y + 3), barPaint);
 
     final textPainter = TextPainter(
       text: TextSpan(
-        text: scaleLabel,
+        text: scale.label,
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.85)),
       ),
       textDirection: TextDirection.ltr,
     );
     textPainter.layout();
-    textPainter.paint(canvas, Offset(startX + (barPixels - textPainter.width) / 2, y - 13));
+    textPainter.paint(canvas, Offset(scale.startX + (scale.barPixels - textPainter.width) / 2, scale.y - 13));
   }
 
   void _drawApparentSizeLabel(Canvas canvas, Size size, Color color) {
-    String label;
-    if (target.majorAxisArcmin != null && target.majorAxisArcmin! > 0) {
-      final maj = target.majorAxisArcmin!;
-      label = maj >= 60.0
-          ? "Size: ${(maj / 60.0).toStringAsFixed(1)}°"
-          : "Size: ${maj.toStringAsFixed(1)}'";
-    } else {
-      label = "Point Source";
-    }
+    final label = FovProjector.formatApparentSize(target.majorAxisArcmin);
 
     final textPainter = TextPainter(
       text: TextSpan(
