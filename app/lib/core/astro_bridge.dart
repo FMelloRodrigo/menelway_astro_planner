@@ -5,6 +5,7 @@ import 'package:ffi/ffi.dart';
 import 'package:path/path.dart' as p;
 
 import 'astro_ffi_types.dart';
+import 'astro_engine.dart';
 import 'app_logger.dart';
 import '../models/target_item.dart';
 import '../models/night_summary.dart';
@@ -163,7 +164,7 @@ typedef _AstroGetTargetYearlyVisibilityJsonDart = Pointer<Utf8> Function(
 typedef _AstroFreeStringC = Void Function(Pointer<Utf8> str);
 typedef _AstroFreeStringDart = void Function(Pointer<Utf8> str);
 
-class AstroBridge {
+class AstroBridge implements AstroEngine {
   static AstroBridge? _instance;
   late final DynamicLibrary _lib;
   Pointer<AstroEngineContext>? _engine;

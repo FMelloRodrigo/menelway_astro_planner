@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../core/astro_bridge.dart';
+import '../core/astro_engine.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -26,6 +26,7 @@ class PlannerView extends StatefulWidget {
   final List<ObservingListModel> availableLists;
   final void Function(int listId, int dsoId, String? notes) onAddToList;
   final void Function(FilterState newFilters) onFilterChanged;
+  final AstroEngine? engine;
 
   const PlannerView({
     super.key,
@@ -35,6 +36,7 @@ class PlannerView extends StatefulWidget {
     required this.availableLists,
     required this.onAddToList,
     required this.onFilterChanged,
+    this.engine,
   });
 
   @override
@@ -42,6 +44,8 @@ class PlannerView extends StatefulWidget {
 }
 
 class _PlannerViewState extends State<PlannerView> {
+  AstroEngine get _engine => widget.engine ?? AstroEngine.instance;
+
   late DateTime _startDate;
   late DateTime _endDate;
   List<PeriodTargetItem> _targets = [];
@@ -92,7 +96,7 @@ class _PlannerViewState extends State<PlannerView> {
 
     Future.microtask(() {
       try {
-        final results = AstroBridge.instance.filterTargetsPeriod(
+        final results = _engine.filterTargetsPeriod(
           filters: widget.filters,
           periodStart: _startDate,
           periodEnd: _endDate,

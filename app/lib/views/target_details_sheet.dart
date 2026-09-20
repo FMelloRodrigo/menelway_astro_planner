@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../core/astro_bridge.dart';
+import '../core/astro_engine.dart';
 import '../core/app_logger.dart';
 import '../core/catalog_manager.dart';
 import '../core/favorites_manager.dart';
@@ -29,6 +29,7 @@ class TargetDetailsSheet extends StatefulWidget {
   final void Function(int listId, int dsoId, String notes) onAddToList;
   final FilterState? filters;
   final VoidCallback? onClose;
+  final AstroEngine? engine;
 
   const TargetDetailsSheet({
     super.key,
@@ -42,6 +43,7 @@ class TargetDetailsSheet extends StatefulWidget {
     required this.onAddToList,
     this.filters,
     this.onClose,
+    this.engine,
   });
 
   @override
@@ -49,6 +51,8 @@ class TargetDetailsSheet extends StatefulWidget {
 }
 
 class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
+  AstroEngine get _engine => widget.engine ?? AstroEngine.instance;
+
   List<AltitudePoint> _curvePoints = [];
   bool _isLoadingCurve = true;
   YearlyVisibilityModel? _yearlyVisibility;
@@ -96,7 +100,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     setState(() => _isLoadingYearly = true);
     Future.microtask(() {
       try {
-        final yearly = AstroBridge.instance.getTargetYearlyVisibility(
+        final yearly = _engine.getTargetYearlyVisibility(
           targetId: widget.target.id,
           latitude: widget.latitude,
           longitude: widget.longitude,
@@ -124,7 +128,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   void _loadCurve() {
     setState(() => _isLoadingCurve = true);
     try {
-      final points = AstroBridge.instance.generateAltitudeCurve(
+      final points = _engine.generateAltitudeCurve(
         targetId: widget.target.id,
         latitude: widget.latitude,
         longitude: widget.longitude,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../core/astro_bridge.dart';
+import '../core/astro_engine.dart';
 import '../core/catalog_manager.dart';
 import '../core/equipment_manager.dart';
 import '../core/geocoding_service.dart';
@@ -28,6 +28,7 @@ class MainScaffold extends StatefulWidget {
   final AppSettingsData? initialSettings;
   final String? currentLanguageCode;
   final ValueChanged<String?>? onChangeLanguage;
+  final AstroEngine? engine;
 
   const MainScaffold({
     super.key,
@@ -37,6 +38,7 @@ class MainScaffold extends StatefulWidget {
     this.initialSettings,
     this.currentLanguageCode,
     this.onChangeLanguage,
+    this.engine,
   });
 
   @override
@@ -44,6 +46,8 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
+  AstroEngine get _engine => widget.engine ?? AstroEngine.instance;
+
   int _selectedTabIndex = 0;
   bool _isInitializing = true;
   bool _isLoadingTargets = false;
@@ -74,34 +78,34 @@ class _MainScaffoldState extends State<MainScaffold> {
       final sizeMb = await CatalogManager.getDatabaseSizeMb();
       _dbSizeMb = sizeMb;
 
-      AstroBridge.instance.initEngine(dbPath);
+      _engine.initEngine(dbPath);
 
-      _nightSummary = AstroBridge.instance.getNightSummary(
+      _nightSummary = _engine.getNightSummary(
         latitude: _filters.observerLat,
         longitude: _filters.observerLon,
         elevation: _filters.observerElevation,
         date: _filters.date,
       );
 
-      _observingLists = AstroBridge.instance.getObservingLists();
+      _observingLists = _engine.getObservingLists();
 
       // Auto-restore observing lists from settings backup if SQLite user lists are empty
       if (_observingLists.isEmpty &&
           widget.initialSettings?.observingListsBackup != null &&
           widget.initialSettings!.observingListsBackup!.isNotEmpty) {
         for (final list in widget.initialSettings!.observingListsBackup!) {
-          final newId = AstroBridge.instance.createObservingList(
+          final newId = _engine.createObservingList(
             list.name,
             list.description,
             list.sessionDate,
           );
           if (newId > 0) {
             for (final item in list.items) {
-              AstroBridge.instance.addTargetToList(newId, item.dsoId, item.notes);
+              _engine.addTargetToList(newId, item.dsoId, item.notes);
             }
           }
         }
-        _observingLists = AstroBridge.instance.getObservingLists();
+        _observingLists = _engine.getObservingLists();
       }
 
       FavoritesManager.instance.init(widget.initialSettings?.favorites);
@@ -126,7 +130,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     Future.microtask(() {
       try {
-        final results = AstroBridge.instance.filterTargets(
+        final results = _engine.filterTargets(
           filters: _filters,
           night: _nightSummary!,
           stepMinutes: 10,
@@ -150,7 +154,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _refreshObservingLists() {
     setState(() {
-      _observingLists = AstroBridge.instance.getObservingLists();
+      _observingLists = _engine.getObservingLists();
     });
   }
 
@@ -310,7 +314,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     await SettingsService.clearSettings();
 
     // 2. Clear SQLite user lists and items
-    AstroBridge.instance.clearAllObservingLists();
+    _engine.clearAllObservingLists();
 
     // 3. Clear favorites
     FavoritesManager.instance.clear();
@@ -322,7 +326,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     setState(() {
       _filters = FilterState();
       _observingLists = [];
-      _nightSummary = AstroBridge.instance.getNightSummary(
+      _nightSummary = _engine.getNightSummary(
         latitude: _filters.observerLat,
         longitude: _filters.observerLon,
         elevation: _filters.observerElevation,
@@ -619,7 +623,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     _filters.observerLon = newLon;
                     _filters.observerElevation = newEle;
                     _filters.observerLocationName = currentLocationName;
-                    _nightSummary = AstroBridge.instance.getNightSummary(
+                    _nightSummary = _engine.getNightSummary(
                       latitude: newLat,
                       longitude: newLon,
                       elevation: newEle,
@@ -1395,7 +1399,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       _runFiltering();
                     },
                     onAddToList: (listId, dsoId, notes) {
-                      AstroBridge.instance.addTargetToList(listId, dsoId, notes);
+                      _engine.addTargetToList(listId, dsoId, notes);
                       _refreshObservingLists();
                       _saveSettings();
                     },
@@ -1406,8 +1410,9 @@ class _MainScaffoldState extends State<MainScaffold> {
                         night: _nightSummary!,
                         isRedNightMode: widget.isRedNightMode,
                         availableLists: _observingLists,
+                        engine: _engine,
                         onAddToList: (listId, dsoId, notes) {
-                          AstroBridge.instance.addTargetToList(listId, dsoId, notes ?? '');
+                          _engine.addTargetToList(listId, dsoId, notes ?? '');
                           _refreshObservingLists();
                           _saveSettings();
                         },
@@ -1424,17 +1429,17 @@ class _MainScaffoldState extends State<MainScaffold> {
                         lists: _observingLists,
                         isRedNightMode: widget.isRedNightMode,
                         onCreateList: (name, desc, date) {
-                          AstroBridge.instance.createObservingList(name, desc, date);
+                          _engine.createObservingList(name, desc, date);
                           _refreshObservingLists();
                           _saveSettings();
                         },
                         onDeleteList: (listId) {
-                          AstroBridge.instance.deleteObservingList(listId);
+                          _engine.deleteObservingList(listId);
                           _refreshObservingLists();
                           _saveSettings();
                         },
                         onRemoveItem: (listId, dsoId) {
-                          AstroBridge.instance.removeTargetFromList(listId, dsoId);
+                          _engine.removeTargetFromList(listId, dsoId);
                           _refreshObservingLists();
                           _saveSettings();
                         },
@@ -1445,7 +1450,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                         isRedNightMode: widget.isRedNightMode,
                         availableLists: _observingLists,
                         onAddToList: (listId, dsoId, notes) {
-                          AstroBridge.instance.addTargetToList(listId, dsoId, notes);
+                          _engine.addTargetToList(listId, dsoId, notes);
                           _refreshObservingLists();
                           _saveSettings();
                         },
