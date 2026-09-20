@@ -813,13 +813,27 @@ class _MainScaffoldState extends State<MainScaffold> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.blur_on_rounded, color: accentColor, size: 20),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: widget.isRedNightMode
+                  ? ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        AstroColors.nightVisionRed,
+                        BlendMode.modulate,
+                      ),
+                      child: Image.asset(
+                        'assets/app_icon.png',
+                        width: 28,
+                        height: 28,
+                        fit: BoxFit.contain,
+                      ),
+                    )
+                  : Image.asset(
+                      'assets/app_icon.png',
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.contain,
+                    ),
             ),
             const SizedBox(width: 10),
             Expanded(

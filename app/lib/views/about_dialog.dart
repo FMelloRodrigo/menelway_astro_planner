@@ -55,18 +55,27 @@ class AboutDialogView extends StatelessWidget {
               // Header
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: accentColor.withValues(alpha: 0.35)),
-                    ),
-                    child: Icon(
-                      Icons.blur_on_rounded,
-                      size: 22,
-                      color: accentColor,
-                    ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: isRedNightMode
+                        ? ColorFiltered(
+                            colorFilter: const ColorFilter.mode(
+                              AstroColors.nightVisionRed,
+                              BlendMode.modulate,
+                            ),
+                            child: Image.asset(
+                              'assets/app_icon.png',
+                              width: 36,
+                              height: 36,
+                              fit: BoxFit.contain,
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/app_icon.png',
+                            width: 36,
+                            height: 36,
+                            fit: BoxFit.contain,
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
