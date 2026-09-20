@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/url_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/astro_theme.dart';
 
@@ -380,6 +381,40 @@ class AboutDialogView extends StatelessWidget {
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 16),
+
+                      // Buy Me A Coffee Button
+                      Center(
+                        child: FilledButton.icon(
+                          onPressed: () => UrlService.openUrl("https://buymeacoffee.com/rodrigofmello"),
+                          icon: Icon(
+                            Icons.coffee_rounded,
+                            size: 19,
+                            color: isRedNightMode ? Colors.black : const Color(0xFF000000),
+                          ),
+                          label: Text(
+                            "Buy Me A Coffee",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                              color: isRedNightMode ? Colors.black : const Color(0xFF000000),
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: isRedNightMode
+                                ? AstroColors.nightVisionRed
+                                : const Color(0xFFFFDD00),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            elevation: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                     ],
                   ),
                 ),

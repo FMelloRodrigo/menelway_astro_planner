@@ -28,6 +28,7 @@ class FilterDialog extends StatefulWidget {
 
 class _FilterDialogState extends State<FilterDialog> {
   late FilterState _state;
+  final ScrollController _scrollController = ScrollController();
 
   final List<String> allCatalogs = [
     'Messier',
@@ -138,6 +139,12 @@ class _FilterDialogState extends State<FilterDialog> {
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
@@ -158,8 +165,11 @@ class _FilterDialogState extends State<FilterDialog> {
         vertical: isNarrow ? 16 : 24,
       ),
       child: Container(
-        width: 650,
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+        width: isNarrow ? null : 750,
+        constraints: BoxConstraints(
+          maxWidth: 750,
+          maxHeight: MediaQuery.of(context).size.height * 0.90,
+        ),
         padding: EdgeInsets.all(isNarrow ? 16 : 24),
         child: Column(
           children: [
@@ -189,10 +199,15 @@ class _FilterDialogState extends State<FilterDialog> {
 
             // Filter Body (Scrollable)
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Scrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(right: 16, bottom: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     // Section 1: Observing Time Window (Telescopius Rule)
                     _buildSectionHeader(l10n?.observingTimeWindow ?? "Observing Time Window", Icons.schedule_rounded),
                     const SizedBox(height: 8),
@@ -1141,8 +1156,11 @@ class _FilterDialogState extends State<FilterDialog> {
                 ),
               ),
             ),
+          ),
 
-            const Divider(height: 20),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
 
             // Footer Actions
             isNarrow

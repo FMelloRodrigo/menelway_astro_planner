@@ -21,6 +21,22 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "getFilesDir" -> result.success(applicationContext.filesDir.absolutePath)
                 "getCacheDir" -> result.success(applicationContext.cacheDir.absolutePath)
+                "openUrl" -> {
+                    val url = call.argument<String>("url")
+                    if (url != null) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("OPEN_URL_ERROR", e.localizedMessage, null)
+                        }
+                    } else {
+                        result.error("INVALID_URL", "URL cannot be null", null)
+                    }
+                }
                 "pickImage" -> {
                     if (pendingPickerResult != null) {
                         try {
