@@ -9,7 +9,6 @@ build/
 .packages
 .pub-cache/
 .pub/
-pubspec.lock
 .flutter-plugins
 .flutter-plugins-dependencies
 
@@ -22,15 +21,27 @@ app/android/.cxx/
 *.apk
 *.aab
 
-# Windows / Visual Studio intermediate and cache files
+# Windows / Native build outputs and intermediate files
 .vs/
 *.user
 *.suo
 *.VC.opendb
 *.ipch
-x64/
-Debug/
-Release/
+*.dll
+*.exe
+*.pdb
+*.lib
+*.obj
+/x64/
+/Debug/
+/Release/
+core/build/Debug/
+core/build/Release/
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Logs, crash dumps, and backup files
 *.log

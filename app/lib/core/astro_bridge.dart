@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import 'astro_ffi_types.dart';
 import 'astro_engine.dart';
+import 'native_library_resolver.dart';
 import 'app_logger.dart';
 import '../models/target_item.dart';
 import '../models/night_summary.dart';
@@ -188,8 +189,8 @@ class AstroBridge implements AstroEngine {
   late final _AstroGetTargetYearlyVisibilityJsonDart _getTargetYearlyVisibilityJson;
   late final _AstroFreeStringDart _freeString;
 
-  AstroBridge._() {
-    _lib = _loadLibrary();
+  AstroBridge._({DynamicLibrary? library}) {
+    _lib = library ?? NativeLibraryResolver.resolve();
     _bindFunctions();
   }
 
@@ -198,39 +199,9 @@ class AstroBridge implements AstroEngine {
     return _instance!;
   }
 
-  DynamicLibrary _loadLibrary() {
-    if (Platform.isWindows) {
-      // 1. Try standard DLL load (same directory as .exe)
-      try {
-        return DynamicLibrary.open('astro_core.dll');
-      } catch (e) {
-        AppLogger.debug('Standard DLL load (astro_core.dll) failed: $e', tag: 'AstroBridge');
-      }
-
-      // 2. Try path relative to executable
-      final exeDir = p.dirname(Platform.resolvedExecutable);
-      final dllPath = p.join(exeDir, 'astro_core.dll');
-      if (File(dllPath).existsSync()) {
-        return DynamicLibrary.open(dllPath);
-      }
-
-      // 3. Try build output from core/build/Release
-      final devDll = p.join(Directory.current.path, '..', 'core', 'build', 'Release', 'astro_core.dll');
-      if (File(devDll).existsSync()) {
-        return DynamicLibrary.open(p.canonicalize(devDll));
-      }
-
-      final devDllAlt = p.join(Directory.current.path, 'core', 'build', 'Release', 'astro_core.dll');
-      if (File(devDllAlt).existsSync()) {
-        return DynamicLibrary.open(p.canonicalize(devDllAlt));
-      }
-
-      return DynamicLibrary.open('astro_core.dll');
-    } else if (Platform.isAndroid) {
-      return DynamicLibrary.open('libastro_core.so');
-    } else {
-      return DynamicLibrary.process();
-    }
+  /// Creates an AstroBridge instance backed by a custom DynamicLibrary.
+  factory AstroBridge.fromLibrary(DynamicLibrary library) {
+    return AstroBridge._(library: library);
   }
 
   void _bindFunctions() {
