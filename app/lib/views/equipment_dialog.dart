@@ -217,6 +217,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
     return Dialog(
       backgroundColor: surfaceColor,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: borderColor),
@@ -224,7 +225,7 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680, maxHeight: 760),
         child: Padding(
-          padding: const EdgeInsets.all(18.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -241,12 +242,14 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
                               : (l10n?.editEquipmentRig ?? "Edit Equipment Rig"))
                           : (l10n?.equipmentDialogTitle ?? "Equipment Rigs & Optics"),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (_isEditing)
-                    TextButton.icon(
-                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: Text(l10n?.backToList ?? "Back to List"),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                      tooltip: l10n?.backToList ?? "Back to List",
                       onPressed: () => setState(() => _isEditing = false),
                     )
                   else
@@ -646,21 +649,29 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
           const SizedBox(height: 16),
 
           // Action Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              OutlinedButton(
-                onPressed: () => setState(() => _isEditing = false),
-                child: Text(l10n?.cancel ?? "Cancel"),
-              ),
-              const SizedBox(width: 10),
-              FilledButton.icon(
-                icon: const Icon(Icons.save_rounded, size: 16),
-                label: Text(l10n?.saveRig ?? "Save Rig"),
-                style: FilledButton.styleFrom(backgroundColor: accentColor, foregroundColor: Colors.black),
-                onPressed: _saveCurrentProfile,
-              ),
-            ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: () => setState(() => _isEditing = false),
+                  child: Text(l10n?.cancel ?? "Cancel"),
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.save_rounded, size: 16),
+                  label: Text(l10n?.saveRig ?? "Save Rig"),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: _saveCurrentProfile,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -696,7 +707,14 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
             children: [
               Icon(Icons.auto_awesome_rounded, size: 14, color: accentColor),
               const SizedBox(width: 6),
-              Text(l10n?.computedOpticalSpecs ?? "Computed Optical Specifications", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+              Expanded(
+                child: Text(
+                  l10n?.computedOpticalSpecs ?? "Computed Optical Specifications",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -744,9 +762,22 @@ class _EquipmentDialogState extends State<EquipmentDialog> with SingleTickerProv
 
   Widget _buildSpecItem(String label, String value, Color textColor) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
-        Text(label, style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
+        Text(
+          value,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }

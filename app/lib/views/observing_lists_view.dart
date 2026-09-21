@@ -155,23 +155,31 @@ class _ObservingListsViewState extends State<ObservingListsView> {
       ),
       body: widget.lists.isEmpty
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.playlist_play_rounded, size: 56, color: textColor.withValues(alpha: 0.3)),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n?.emptyObservingLists ?? "No custom observing lists yet",
-                    style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.7)),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text(l10n?.createNewList ?? "Create List"),
-                    style: FilledButton.styleFrom(backgroundColor: accentColor),
-                    onPressed: _showCreateDialog,
-                  ),
-                ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.playlist_play_rounded, size: 56, color: textColor.withValues(alpha: 0.3)),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Text(
+                        l10n?.emptyObservingLists ?? "No custom observing lists yet",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.7)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(l10n?.createNewList ?? "Create List"),
+                      style: FilledButton.styleFrom(backgroundColor: accentColor),
+                      onPressed: _showCreateDialog,
+                    ),
+                  ],
+                ),
               ),
             )
           : ListView.builder(

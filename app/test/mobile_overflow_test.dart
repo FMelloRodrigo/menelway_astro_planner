@@ -10,6 +10,7 @@ import 'package:app/views/altitude_curve_chart.dart';
 import 'package:app/views/equipment_dialog.dart';
 import 'package:app/views/favorites_view.dart';
 import 'package:app/views/horizon_maker_dialog.dart';
+import 'package:app/views/observing_lists_view.dart';
 import 'package:app/views/planner_view.dart';
 import 'package:app/views/target_details_sheet.dart';
 
@@ -236,6 +237,46 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
+
+      // Tap 'Criar Novo Equipamento' to enter editor mode with "Salvar Equipamento"
+      final createRigBtn = find.text("Criar Novo Equipamento");
+      expect(createRigBtn, findsOneWidget);
+      await tester.tap(createRigBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Verify "Salvar Equipamento" button is present and there is no overflow
+      expect(find.text("Salvar Equipamento"), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ObservingListsView empty state does not overflow and is centered on 360px', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        createTestApp(
+          ObservingListsView(
+            lists: const [],
+            isRedNightMode: false,
+            onCreateList: (_, _, _) {},
+            onDeleteList: (_) {},
+            onRemoveItem: (_, _) {},
+          ),
+          locale: const Locale('pt', 'BR'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Verify empty text is found and centered
+      final emptyText = find.text("Nenhuma lista de observação ainda. Crie uma para organizar sua sessão!");
+      expect(emptyText, findsOneWidget);
+      final textWidget = tester.widget<Text>(emptyText);
+      expect(textWidget.textAlign, TextAlign.center);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('TargetDetailsSheet does not overflow on 360px', (tester) async {
