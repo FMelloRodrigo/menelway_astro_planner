@@ -595,17 +595,19 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       _buildSmallChip(target.messier!, AstroColors.nebulaIndigo)
                     else if (target.caldwell != null && target.caldwell!.isNotEmpty)
                       _buildSmallChip(target.caldwell!, AstroColors.nebulaIndigo)
-                    else
+                    else if (target.catalog.isNotEmpty)
                       _buildSmallChip(target.catalog, AstroColors.nebulaIndigo),
                     if (target.arp != null && target.arp!.isNotEmpty)
                       _buildSmallChip(target.arp!, Colors.deepOrangeAccent),
                     if (target.herschel != null && target.herschel!.isNotEmpty)
                       _buildSmallChip(target.herschel!, Colors.amber.shade700),
-                    _buildSmallChip(localizeObjectType(target.objectType, l10n), AstroColors.starlightCyan),
-                    Text(
-                      target.constellation,
-                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
-                    ),
+                    if (target.objectType.isNotEmpty)
+                      _buildSmallChip(localizeObjectType(target.objectType, l10n), AstroColors.starlightCyan),
+                    if (target.constellation.isNotEmpty)
+                      Text(
+                        target.constellation,
+                        style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                      ),
                   ],
                 ),
               ],

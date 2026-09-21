@@ -254,7 +254,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       spacing: 6,
       runSpacing: 4,
       children: [
-        _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
+        if (widget.target.catalog.isNotEmpty)
+          _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
         if (widget.target.messier != null && widget.target.messier!.isNotEmpty)
           _buildBadge(widget.target.messier!, AstroColors.nebulaIndigo),
         if (widget.target.caldwell != null && widget.target.caldwell!.isNotEmpty)
@@ -263,8 +264,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
         if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
           _buildBadge(widget.target.herschel!, Colors.amber.shade700),
-        _buildBadge(localizeObjectType(widget.target.objectType, l10n), AstroColors.starlightCyan),
-        _buildBadge(widget.target.constellation, AstroColors.starGold),
+        if (widget.target.objectType.isNotEmpty)
+          _buildBadge(localizeObjectType(widget.target.objectType, l10n), AstroColors.starlightCyan),
+        if (widget.target.constellation.isNotEmpty)
+          _buildBadge(widget.target.constellation, AstroColors.starGold),
       ],
     );
 

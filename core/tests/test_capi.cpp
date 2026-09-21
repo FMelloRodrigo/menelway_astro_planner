@@ -61,14 +61,42 @@ int main() {
     std::cout << "  Filtered " << targets->count << " visible Messier galaxies\n";
     assert(targets->count > 0);
 
-    for (size_t i = 0; i < targets->count && i < 3; ++i) {
+    for (size_t i = 0; i < targets->count; ++i) {
         const auto& t = targets->items[i];
-        std::cout << "    [" << t.id << "] " << t.name << " (" << t.messier << ", " << t.common_name << ")"
-                  << " PeakAlt: " << t.peak_altitude_deg << " deg, Visible: " << t.visible_duration_hours << " hrs\n";
+        assert(t.name != nullptr && std::strlen(t.name) > 0);
+        assert(t.catalog != nullptr && std::strlen(t.catalog) > 0);
+        assert(t.object_type != nullptr && std::strlen(t.object_type) > 0);
+        assert(t.constellation != nullptr && std::strlen(t.constellation) > 0);
+        if (i < 3) {
+            std::cout << "    [" << t.id << "] " << t.name << " (" << t.messier << ", " << t.common_name << ")"
+                      << " PeakAlt: " << t.peak_altitude_deg << " deg, Visible: " << t.visible_duration_hours << " hrs\n";
+        }
     }
 
     int64_t first_target_id = targets->items[0].id;
     astro_free_target_list(targets);
+
+    // Test 2b: Search specifically for M33 to verify all catalog identifiers & common names are preserved
+    AstroFilterCriteria m33_crit{};
+    m33_crit.search_query = "m33";
+    m33_crit.limit = 10;
+    AstroTargetList* m33_targets = astro_filter_targets(engine, &obs, &m33_crit, 10);
+    assert(m33_targets != nullptr);
+    assert(m33_targets->count >= 1);
+    const auto& m33 = m33_targets->items[0];
+    std::cout << "  ✓ M33 Search Result: Name=" << m33.name 
+              << ", Messier=" << m33.messier 
+              << ", Catalog=" << m33.catalog 
+              << ", Type=" << m33.object_type 
+              << ", Herschel=" << m33.herschel 
+              << ", Common=" << m33.common_name << "\n";
+    assert(std::strcmp(m33.name, "NGC 598") == 0);
+    assert(std::strcmp(m33.messier, "M 33") == 0);
+    assert(std::strcmp(m33.catalog, "NGC") == 0);
+    assert(std::strcmp(m33.object_type, "Galaxy") == 0);
+    assert(std::strcmp(m33.herschel, "H 17-5") == 0);
+    assert(std::strstr(m33.common_name, "Triangulum") != nullptr);
+    astro_free_target_list(m33_targets);
 
     // Test 3: Generate altitude curve for the first target
     AstroCurveData* curve = astro_generate_curve(

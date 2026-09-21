@@ -473,11 +473,15 @@ class AstroBridge implements AstroEngine {
           final posAng = item.positionAngleDeg >= 0.0 ? item.positionAngleDeg : null;
           final sb = item.surfaceBrightness >= 0.0 ? item.surfaceBrightness : null;
 
-          final mStr = item.messier.toDartString();
-          final cStr = item.caldwell.toDartString();
-          final arpStr = item.arp.toDartString();
-          final herschelStr = item.herschel.toDartString();
-          final commonStr = item.commonName.toDartString();
+          final nameStr = item.name.address != 0 ? item.name.toDartString() : '';
+          final mStr = item.messier.address != 0 ? item.messier.toDartString() : '';
+          final cStr = item.caldwell.address != 0 ? item.caldwell.toDartString() : '';
+          final arpStr = item.arp.address != 0 ? item.arp.toDartString() : '';
+          final herschelStr = item.herschel.address != 0 ? item.herschel.toDartString() : '';
+          final catStr = item.catalog.address != 0 ? item.catalog.toDartString() : '';
+          final typeStr = item.objectType.address != 0 ? item.objectType.toDartString() : '';
+          final constelStr = item.constellation.address != 0 ? item.constellation.toDartString() : '';
+          final commonStr = item.commonName.address != 0 ? item.commonName.toDartString() : '';
 
           final transit = DateTime.fromMillisecondsSinceEpoch(item.transitUtc * 1000, isUtc: true).toLocal();
           final vStart = item.visibleStartUtc > 0
@@ -489,14 +493,14 @@ class AstroBridge implements AstroEngine {
 
           results.add(TargetItem(
             id: item.id,
-            name: item.name.toDartString(),
+            name: nameStr,
             messier: mStr.isNotEmpty ? mStr : null,
             caldwell: cStr.isNotEmpty ? cStr : null,
             arp: arpStr.isNotEmpty ? arpStr : null,
             herschel: herschelStr.isNotEmpty ? herschelStr : null,
-            catalog: item.catalog.toDartString(),
-            objectType: item.objectType.toDartString(),
-            constellation: item.constellation.toDartString(),
+            catalog: catStr,
+            objectType: typeStr,
+            constellation: constelStr,
             raHours: item.raHours,
             decDegrees: item.decDegrees,
             magnitude: mag,
@@ -611,7 +615,7 @@ class AstroBridge implements AstroEngine {
 
           results.add(PeriodTargetItem(
             id: cItem.id,
-            name: cItem.name.toDartString(),
+            name: cItem.name.address != 0 ? cItem.name.toDartString() : '',
             messier: cItem.messier.address != 0 && cItem.messier.toDartString().isNotEmpty
                 ? cItem.messier.toDartString()
                 : null,
@@ -624,9 +628,9 @@ class AstroBridge implements AstroEngine {
             herschel: cItem.herschel.address != 0 && cItem.herschel.toDartString().isNotEmpty
                 ? cItem.herschel.toDartString()
                 : null,
-            catalog: cItem.catalog.toDartString(),
-            objectType: cItem.objectType.toDartString(),
-            constellation: cItem.constellation.toDartString(),
+            catalog: cItem.catalog.address != 0 ? cItem.catalog.toDartString() : '',
+            objectType: cItem.objectType.address != 0 ? cItem.objectType.toDartString() : '',
+            constellation: cItem.constellation.address != 0 ? cItem.constellation.toDartString() : '',
             raHours: cItem.raHours,
             decDegrees: cItem.decDegrees,
             magnitude: cItem.magnitude < 900.0 ? cItem.magnitude : null,

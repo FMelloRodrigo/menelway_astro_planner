@@ -7,6 +7,7 @@
 #include "astro/units.hpp"
 
 #include <cstring>
+#include <deque>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -22,13 +23,13 @@ struct AstroEngineContext {
 struct AstroTargetListImpl {
     AstroTargetList public_list;
     std::vector<AstroTargetItem> items;
-    std::vector<std::string> string_pool;
+    std::deque<std::string> string_pool;
 };
 
 struct AstroPeriodTargetListImpl {
     AstroPeriodTargetList public_list;
     std::vector<AstroPeriodTargetItem> items;
-    std::vector<std::string> string_pool;
+    std::deque<std::string> string_pool;
 };
 
 struct AstroCurveDataImpl {
@@ -202,8 +203,7 @@ AstroTargetList* astro_filter_targets(
 
         auto impl = std::make_unique<AstroTargetListImpl>();
         impl->items.reserve(results.size());
-        // String pool for pointers
-        impl->string_pool.reserve(results.size() * 6);
+        // String pool uses std::deque to guarantee pointer stability across push_back calls
 
         auto intern_str = [&](const std::string& s) -> const char* {
             if (s.empty()) return "";
@@ -320,7 +320,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
 
         auto impl = std::make_unique<AstroPeriodTargetListImpl>();
         impl->items.reserve(results.size());
-        impl->string_pool.reserve(results.size() * 8);
+        // String pool uses std::deque to guarantee pointer stability across push_back calls
 
         auto intern_str = [&](const std::string& s) -> const char* {
             if (s.empty()) return "";
