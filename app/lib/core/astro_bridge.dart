@@ -587,8 +587,10 @@ class AstroBridge implements AstroEngine {
       critPtr.ref.utcOffsetMinutes = DateTime.now().timeZoneOffset.inMinutes;
       _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
 
-      final startUtc = periodStart.toUtc().millisecondsSinceEpoch ~/ 1000;
-      final endUtc = periodEnd.toUtc().millisecondsSinceEpoch ~/ 1000;
+      final startUtc = DateTime.utc(periodStart.year, periodStart.month, periodStart.day, 12, 0, 0)
+              .millisecondsSinceEpoch ~/ 1000;
+      final endUtc = DateTime.utc(periodEnd.year, periodEnd.month, periodEnd.day, 12, 0, 0)
+              .millisecondsSinceEpoch ~/ 1000;
 
       final listPtr = _filterTargetsPeriod(
         _engine!,
@@ -610,7 +612,10 @@ class AstroBridge implements AstroEngine {
           final cItem = itemsPtr[i];
           final peakUnix = cItem.peakDateUtc;
           final peakDt = peakUnix > 0
-              ? DateTime.fromMillisecondsSinceEpoch(peakUnix * 1000, isUtc: true).toLocal()
+              ? () {
+                  final utc = DateTime.fromMillisecondsSinceEpoch(peakUnix * 1000, isUtc: true);
+                  return DateTime(utc.year, utc.month, utc.day);
+                }()
               : null;
 
           results.add(PeriodTargetItem(

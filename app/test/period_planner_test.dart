@@ -92,6 +92,16 @@ void main() {
       expect(targetItem.meetsCriteria, isTrue);
     });
 
+    test('Period peak UTC timestamp preserves calendar date without timezone rollback', () {
+      // 1791158400 corresponds to 2026-10-05 00:00:00 UTC
+      const peakUnix = 1791158400;
+      final utc = DateTime.fromMillisecondsSinceEpoch(peakUnix * 1000, isUtc: true);
+      final peakDt = DateTime(utc.year, utc.month, utc.day);
+      expect(peakDt.year, 2026);
+      expect(peakDt.month, 10);
+      expect(peakDt.day, 5);
+    });
+
     test('PeriodTargetItem with 0 observable days handles ratio safely', () {
       final periodItem = const PeriodTargetItem(
         id: 100,
