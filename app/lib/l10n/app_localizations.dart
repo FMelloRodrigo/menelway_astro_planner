@@ -1739,8 +1739,74 @@ abstract class AppLocalizations {
   /// No description provided for @yearlyDaysObservablePeak.
   ///
   /// In en, this message translates to:
-  /// **'{days} days observable this year • Peak: {hours}h on {date}'**
+  /// **'{days} days observable this year • Annual Peak: {hours}h on {date}'**
   String yearlyDaysObservablePeak(int days, String hours, String date);
+
+  /// No description provided for @periodPeakDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Period Peak: {date}'**
+  String periodPeakDate(String date);
+
+  /// No description provided for @plannedPeriodBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PLANNED PERIOD: {start} – {end}'**
+  String plannedPeriodBannerTitle(String start, String end);
+
+  /// No description provided for @periodBestNightSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Best Night in Window: {date} ({hours}h visible)'**
+  String periodBestNightSummary(String date, String hours);
+
+  /// No description provided for @periodDaysObservableSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{observable} of {total} nights observable in this window'**
+  String periodDaysObservableSummary(int observable, int total);
+
+  /// No description provided for @periodPeakAltSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak Altitude: {alt}°'**
+  String periodPeakAltSummary(String alt);
+
+  /// No description provided for @periodEvaluatedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Metrics and altitude curve below are evaluated for {date} (period peak night).'**
+  String periodEvaluatedNote(String date);
+
+  /// No description provided for @periodNotObservableSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Target does not meet active filter limits during this period (0 days observable).'**
+  String get periodNotObservableSummary;
+
+  /// No description provided for @periodEvaluatedStartDateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Metrics and altitude curve below are evaluated for {date} (period start).'**
+  String periodEvaluatedStartDateNote(String date);
+
+  /// No description provided for @visibleOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Observable on {date}'**
+  String visibleOnDate(String date);
+
+  /// No description provided for @visibleFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Observable from {date}'**
+  String visibleFromDate(String date);
+
+  /// No description provided for @outsideFiltersOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside limits on {date}'**
+  String outsideFiltersOnDate(String date);
 
   /// No description provided for @theoreticalMaxAtTransit.
   ///

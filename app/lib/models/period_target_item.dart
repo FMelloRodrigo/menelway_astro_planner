@@ -124,6 +124,27 @@ class PeriodTargetItem {
     return '$sign${d.toString().padLeft(2, '0')}° ${m.toString().padLeft(2, '0')}\' ${s.toStringAsFixed(0).padLeft(2, '0')}"';
   }
 
+  /// Returns whether this target is observable on a specific calendar date within
+  /// its period observing window.
+  bool isObservableOn(DateTime date) {
+    if (!isObservable || observableDaysCount == 0) return false;
+    final m = date.month;
+    final d = date.day;
+    if (startMonth == 0 || endMonth == 0) return false;
+    if (startMonth <= endMonth) {
+      if (m < startMonth || m > endMonth) return false;
+      if (m == startMonth && d < startDay) return false;
+      if (m == endMonth && d > endDay) return false;
+      return true;
+    } else {
+      // Crosses year boundary (e.g. Nov to Feb)
+      if (m > endMonth && m < startMonth) return false;
+      if (m == startMonth && d < startDay) return false;
+      if (m == endMonth && d > endDay) return false;
+      return true;
+    }
+  }
+
   TargetItem toTargetItem({DateTime? date}) {
     final d = date ?? peakDate ?? DateTime.now();
     return TargetItem(
@@ -147,7 +168,7 @@ class PeriodTargetItem {
       visibleDurationHours: maxHoursObservable,
       transitTime: d,
       minMoonSepDeg: 0,
-      meetsCriteria: isObservable,
+      meetsCriteria: date != null ? isObservableOn(date) : isObservable,
     );
   }
 }

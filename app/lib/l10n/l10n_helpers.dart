@@ -122,10 +122,13 @@ String localizeBestWindowSummary(YearlyVisibilityModel y, AppLocalizations? l10n
   final endM = localizeMonthAbbr(y.endMonth, l10n);
   final peakM = localizeMonthAbbr(y.peakMonth, l10n);
 
+  final isPt = l10n.localeName.startsWith('pt');
+  final peakLabel = isPt ? "Pico Anual" : "Annual Peak";
+
   if (y.startMonth == y.endMonth && y.startDay == y.endDay) {
-    return "$startM ${y.startDay} (Peak: ${y.maxHoursInPeak.toStringAsFixed(1)}h)";
+    return "$startM ${y.startDay} ($peakLabel: ${y.maxHoursInPeak.toStringAsFixed(1)}h)";
   }
 
-  return "$startM ${y.startDay} – $endM ${y.endDay} (Peak: $peakM ${y.peakDay})";
+  return "$startM ${y.startDay} – $endM ${y.endDay} ($peakLabel: $peakM ${y.peakDay})";
 }
 

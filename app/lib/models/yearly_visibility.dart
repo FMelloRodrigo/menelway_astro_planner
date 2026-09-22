@@ -93,6 +93,19 @@ class YearlyVisibilityModel {
 
   bool get isCircumpolar => totalObservableDays >= 365;
 
+  /// Checks whether the target is observable on a specific calendar date
+  /// according to the simulated 12-month visibility breakdown.
+  bool isDateObservable(DateTime date) {
+    if (!canEverReachMinAlt || totalObservableDays == 0) return false;
+    final m = date.month;
+    final d = date.day;
+    final monthItem = months.where((item) => item.month == m).firstOrNull;
+    if (monthItem == null || !monthItem.isObservable || monthItem.observableDaysCount == 0) {
+      return false;
+    }
+    return d >= monthItem.startDay && d <= monthItem.endDay;
+  }
+
   factory YearlyVisibilityModel.fromJson(Map<String, dynamic> json) {
     final rawMonths = json['months'] as List<dynamic>? ?? [];
     final startM = json['start_month'] as int? ?? json['best_window_start'] as int? ?? 1;

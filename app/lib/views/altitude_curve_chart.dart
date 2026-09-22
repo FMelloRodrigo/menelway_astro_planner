@@ -96,6 +96,23 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: Text(
+                          DateFormat('MMM d').format(widget.night.sunset),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                          ),
+                        ),
+                      ),
                     ],
                   );
 

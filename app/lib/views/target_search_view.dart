@@ -70,14 +70,19 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         _searchController.text = widget.filters.searchQuery;
       }
     }
-    // When a search query is active and targets are available:
-    // Auto-select the first target so the split view Target Details Sheet with the
-    // Yearly Observing Window card appears immediately without extra clicks.
-    if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
-      final exists = _selectedTarget != null && widget.targets.any((t) => t.id == _selectedTarget!.id);
-      if (!exists) {
+    // Keep _selectedTarget synchronized with the newly evaluated TargetItem instance
+    // in widget.targets (e.g. when filters update meetsCriteria/visibleDurationHours).
+    if (_selectedTarget != null) {
+      final matching = widget.targets.where((t) => t.id == _selectedTarget!.id).firstOrNull;
+      if (matching != null) {
+        _selectedTarget = matching;
+      } else if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
         _selectedTarget = widget.targets.first;
+      } else if (widget.filters.searchQuery.isEmpty) {
+        _selectedTarget = null;
       }
+    } else if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
+      _selectedTarget = widget.targets.first;
     } else if (widget.filters.searchQuery.isEmpty && oldWidget.filters.searchQuery.isNotEmpty) {
       _selectedTarget = null;
     }

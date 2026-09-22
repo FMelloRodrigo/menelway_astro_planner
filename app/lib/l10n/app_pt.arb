@@ -288,7 +288,17 @@
   "activeFiltersMode": "Filtros Ativos",
   "fullSkyNightMode": "Céu Completo e Noite",
   "yearlyObservingWindow": "JANELA ANUAL DE OBSERVAÇÃO",
-  "yearlyDaysObservablePeak": "{days} dias observáveis este ano • Pico: {hours}h em {date}",
+  "yearlyDaysObservablePeak": "{days} dias observáveis este ano • Pico Anual: {hours}h em {date}",
+  "periodPeakDate": "Pico no Período: {date}",
+  "plannedPeriodBannerTitle": "PERÍODO PLANEJADO: {start} – {end}",
+  "periodBestNightSummary": "Melhor Noite no Período: {date} ({hours}h visíveis)",
+  "periodDaysObservableSummary": "{observable} de {total} noites observáveis neste período",
+  "periodPeakAltSummary": "Altitude Máxima: {alt}°",
+  "periodEvaluatedNote": "Métricas e curva de altitude abaixo são avaliadas para {date} (melhor noite do período).",
+  "periodNotObservableSummary": "O alvo não atende aos limites dos filtros durante este período (0 noites observáveis).",
+  "periodEvaluatedStartDateNote": "Métricas e curva de altitude abaixo são avaliadas para {date} (início do período).",
+  "visibleOnDate": "Observável em {date}",
+  "outsideFiltersOnDate": "Fora dos limites em {date}",
   "theoreticalMaxAtTransit": "Máximo teórico: {alt}° no trânsito{extra}",
   "limitsSubtitle": "Limites: ≥{minAlt}° por ≥{minHours}h",
   "yearRoundCircumpolar": "Ano Todo (Circumpolar)",
@@ -339,5 +349,9 @@
   "aboutCloseBtn": "Fechar",
   "aboutCreatedBy": "Criado por Rodrigo F. Mello",
   "aboutAppName": "Menelway Astro Planner",
-  "aboutNameOrigin": "“Menelway” = “Menel” (palavra em élfico de Tolkien para Céus/Firmamento) + Arroway (do livro/filme Contato)"
+  "aboutNameOrigin": "“Menelway” = “Menel” (palavra em élfico de Tolkien para Céus/Firmamento) + Arroway (do livro/filme Contato)",
+
+  "visibleOnDate": "Observável em {date}",
+  "visibleFromDate": "Observável a partir de {date}",
+  "outsideFiltersOnDate": "Fora dos limites em {date}"
 }

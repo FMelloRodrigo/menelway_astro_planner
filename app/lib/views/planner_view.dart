@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../core/astro_engine.dart';
+import '../core/app_logger.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -107,9 +108,10 @@ class _PlannerViewState extends State<PlannerView> {
           setState(() {
             _targets = results;
             _isLoading = false;
-            // Clear selection if it no longer exists
-            if (_selectedTarget != null && !_targets.any((t) => t.id == _selectedTarget!.id)) {
-              _selectedTarget = null;
+            // Update selection if it exists or clear if removed
+            if (_selectedTarget != null) {
+              final matching = _targets.where((t) => t.id == _selectedTarget!.id).firstOrNull;
+              _selectedTarget = matching;
             }
           });
         }
@@ -187,6 +189,21 @@ class _PlannerViewState extends State<PlannerView> {
         _endDate = picked.end;
       });
       _runPeriodQuery();
+    }
+  }
+
+  NightSummary _getNightForPeriodTarget(PeriodTargetItem target) {
+    final date = target.peakDate ?? _startDate;
+    try {
+      return (widget.engine ?? _engine).getNightSummary(
+        latitude: widget.filters.observerLat,
+        longitude: widget.filters.observerLon,
+        elevation: widget.filters.observerElevation,
+        date: date,
+      );
+    } catch (e) {
+      AppLogger.error('Failed getting night summary for planner target date: $date', tag: 'PlannerView', error: e);
+      return widget.night;
     }
   }
 
@@ -571,8 +588,8 @@ class _PlannerViewState extends State<PlannerView> {
                             Expanded(
                               flex: 6,
                               child: TargetDetailsSheet(
-                                target: _selectedTarget!.toTargetItem(),
-                                night: widget.night,
+                                target: _selectedTarget!.toTargetItem(date: _selectedTarget!.peakDate ?? _startDate),
+                                night: _getNightForPeriodTarget(_selectedTarget!),
                                 latitude: widget.filters.observerLat,
                                 longitude: widget.filters.observerLon,
                                 elevation: widget.filters.observerElevation,
@@ -580,6 +597,10 @@ class _PlannerViewState extends State<PlannerView> {
                                 availableLists: widget.availableLists,
                                 onAddToList: widget.onAddToList,
                                 filters: widget.filters,
+                                engine: widget.engine,
+                                periodTarget: _selectedTarget,
+                                plannedStartDate: _startDate,
+                                plannedEndDate: _endDate,
                                 onClose: () => setState(() => _selectedTarget = null),
                               ),
                             ),
@@ -678,8 +699,8 @@ class _PlannerViewState extends State<PlannerView> {
               isScrollControlled: true,
               backgroundColor: Colors.transparent,
               builder: (_) => TargetDetailsSheet(
-                target: target.toTargetItem(),
-                night: widget.night,
+                target: target.toTargetItem(date: target.peakDate ?? _startDate),
+                night: _getNightForPeriodTarget(target),
                 latitude: widget.filters.observerLat,
                 longitude: widget.filters.observerLon,
                 elevation: widget.filters.observerElevation,
@@ -687,6 +708,10 @@ class _PlannerViewState extends State<PlannerView> {
                 availableLists: widget.availableLists,
                 onAddToList: widget.onAddToList,
                 filters: widget.filters,
+                engine: widget.engine,
+                periodTarget: target,
+                plannedStartDate: _startDate,
+                plannedEndDate: _endDate,
               ),
             );
           }
@@ -781,7 +806,8 @@ class _PlannerViewState extends State<PlannerView> {
                               if (target.peakDate != null && isObservable) ...[
                                 const SizedBox(width: 6),
                                 Text(
-                                  "Peak: ${DateFormat('MMM d').format(target.peakDate!)}",
+                                  l10n?.periodPeakDate(DateFormat('MMM d').format(target.peakDate!)) ??
+                                      "Period Peak: ${DateFormat('MMM d').format(target.peakDate!)}",
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,

@@ -455,11 +455,75 @@
   "activeFiltersMode": "Active Filters",
   "fullSkyNightMode": "Full Sky & Night",
   "yearlyObservingWindow": "YEARLY OBSERVING WINDOW",
-  "yearlyDaysObservablePeak": "{days} days observable this year • Peak: {hours}h on {date}",
+  "yearlyDaysObservablePeak": "{days} days observable this year • Annual Peak: {hours}h on {date}",
   "@yearlyDaysObservablePeak": {
     "placeholders": {
       "days": { "type": "int" },
       "hours": { "type": "String" },
+      "date": { "type": "String" }
+    }
+  },
+  "periodPeakDate": "Period Peak: {date}",
+  "@periodPeakDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "plannedPeriodBannerTitle": "PLANNED PERIOD: {start} – {end}",
+  "@plannedPeriodBannerTitle": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "periodBestNightSummary": "Best Night in Window: {date} ({hours}h visible)",
+  "@periodBestNightSummary": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "hours": { "type": "String" }
+    }
+  },
+  "periodDaysObservableSummary": "{observable} of {total} nights observable in this window",
+  "@periodDaysObservableSummary": {
+    "placeholders": {
+      "observable": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "periodPeakAltSummary": "Peak Altitude: {alt}°",
+  "@periodPeakAltSummary": {
+    "placeholders": {
+      "alt": { "type": "String" }
+    }
+  },
+  "periodEvaluatedNote": "Metrics and altitude curve below are evaluated for {date} (period peak night).",
+  "@periodEvaluatedNote": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "periodNotObservableSummary": "Target does not meet active filter limits during this period (0 days observable).",
+  "periodEvaluatedStartDateNote": "Metrics and altitude curve below are evaluated for {date} (period start).",
+  "@periodEvaluatedStartDateNote": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "visibleOnDate": "Observable on {date}",
+  "@visibleOnDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "visibleFromDate": "Observable from {date}",
+  "@visibleFromDate": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "outsideFiltersOnDate": "Outside limits on {date}",
+  "@outsideFiltersOnDate": {
+    "placeholders": {
       "date": { "type": "String" }
     }
   },

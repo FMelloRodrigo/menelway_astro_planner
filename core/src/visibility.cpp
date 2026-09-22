@@ -20,13 +20,12 @@ TargetVisibilityResult evaluate_visibility(
     }
 
     double step_days = (static_cast<double>(step_minutes) / 1440.0);
-    double step_hours = static_cast<double>(step_minutes) / 60.0;
 
     double max_alt = -999.0;
     time::JulianDate peak_t{0.0};
 
-    double cur_continuous_hours = 0.0;
     time::JulianDate cur_block_start{0.0};
+    time::JulianDate cur_block_end{0.0};
 
     double longest_continuous_hours = 0.0;
     time::JulianDate best_block_start{0.0};
@@ -63,22 +62,27 @@ TargetVisibilityResult evaluate_visibility(
         bool instant_pass = passes_alt && passes_az && passes_quad && passes_moon && passes_custom_horizon;
 
         if (instant_pass) {
-            if (cur_continuous_hours == 0.0) {
+            if (cur_block_start.value == 0.0) {
                 cur_block_start = cur_jd;
             }
-            cur_continuous_hours += step_hours;
-            result.total_visible_hours += step_hours;
+            cur_block_end = cur_jd;
             if (moon_sep.value < min_moon_sep_while_visible) {
                 min_moon_sep_while_visible = moon_sep.value;
             }
 
-            if (cur_continuous_hours > longest_continuous_hours) {
-                longest_continuous_hours = cur_continuous_hours;
+            double block_hours = (cur_block_end.value - cur_block_start.value) * 24.0;
+            if (block_hours > longest_continuous_hours || best_block_start.value == 0.0) {
+                longest_continuous_hours = block_hours;
                 best_block_start = cur_block_start;
-                best_block_end = cur_jd;
+                best_block_end = cur_block_end;
             }
         } else {
-            cur_continuous_hours = 0.0;
+            if (cur_block_start.value > 0.0) {
+                double block_hours = (cur_block_end.value - cur_block_start.value) * 24.0;
+                result.total_visible_hours += block_hours;
+                cur_block_start = time::JulianDate{0.0};
+                cur_block_end = time::JulianDate{0.0};
+            }
         }
 
         if (include_samples) {
@@ -93,6 +97,11 @@ TargetVisibilityResult evaluate_visibility(
         }
     }
 
+    if (cur_block_start.value > 0.0) {
+        double block_hours = (cur_block_end.value - cur_block_start.value) * 24.0;
+        result.total_visible_hours += block_hours;
+    }
+
     result.peak_altitude = units::Degrees{max_alt};
     result.peak_time = peak_t;
     result.transit_time = peak_t; // Peak altitude corresponds to meridian transit
@@ -100,7 +109,7 @@ TargetVisibilityResult evaluate_visibility(
     result.visible_start = best_block_start;
     result.visible_end = best_block_end;
     result.min_moon_separation_during_visibility = units::Degrees{min_moon_sep_while_visible};
-    result.meets_criteria = (longest_continuous_hours >= criteria.min_duration_hours);
+    result.meets_criteria = (best_block_start.value > 0.0) && (longest_continuous_hours >= criteria.min_duration_hours);
 
     return result;
 }
@@ -236,7 +245,7 @@ YearlyVisibilityResult calculate_yearly_visibility(
                 day_crit.window_end = win_end;
                 day_crit.min_moon_separation = units::Degrees{0.0}; // Seasonal visibility should not be masked by transient monthly moon orbits
 
-                auto vis = evaluate_visibility(target, obs, day_crit, /*step_minutes=*/15, /*include_samples=*/false);
+                auto vis = evaluate_visibility(target, obs, day_crit, /*step_minutes=*/10, /*include_samples=*/false);
                 dr.hours = vis.max_continuous_hours;
                 dr.peak_alt = vis.peak_altitude.value;
                 dr.is_obs = vis.meets_criteria;

@@ -11,6 +11,7 @@ import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
+import '../models/period_target_item.dart';
 import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
@@ -30,6 +31,9 @@ class TargetDetailsSheet extends StatefulWidget {
   final FilterState? filters;
   final VoidCallback? onClose;
   final AstroEngine? engine;
+  final PeriodTargetItem? periodTarget;
+  final DateTime? plannedStartDate;
+  final DateTime? plannedEndDate;
 
   const TargetDetailsSheet({
     super.key,
@@ -44,6 +48,9 @@ class TargetDetailsSheet extends StatefulWidget {
     this.filters,
     this.onClose,
     this.engine,
+    this.periodTarget,
+    this.plannedStartDate,
+    this.plannedEndDate,
   });
 
   @override
@@ -78,20 +85,39 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     if (mounted) setState(() {});
   }
 
+  bool _hasFilterChanges(FilterState? a, FilterState? b) {
+    if (identical(a, b)) return false;
+    if (a == null || b == null) return true;
+    return a.minAltitude != b.minAltitude ||
+        a.maxAltitude != b.maxAltitude ||
+        a.minDurationHours != b.minDurationHours ||
+        a.minAzimuth != b.minAzimuth ||
+        a.maxAzimuth != b.maxAzimuth ||
+        a.quadrant != b.quadrant ||
+        a.minMoonSeparation != b.minMoonSeparation ||
+        a.useCustomTimeWindow != b.useCustomTimeWindow ||
+        a.customStartHour != b.customStartHour ||
+        a.customStartMinute != b.customStartMinute ||
+        a.customEndHour != b.customEndHour ||
+        a.customEndMinute != b.customEndMinute ||
+        a.useCustomHorizon != b.useCustomHorizon ||
+        a.horizonPoints.length != b.horizonPoints.length ||
+        a.date.year != b.date.year;
+  }
+
   @override
   void didUpdateWidget(covariant TargetDetailsSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.target.id != widget.target.id) {
+    if (oldWidget.target.id != widget.target.id ||
+        oldWidget.night.sunset != widget.night.sunset) {
       _loadCurve();
       _loadYearlyVisibility();
-    } else if (oldWidget.filters?.minAltitude != widget.filters?.minAltitude ||
-        oldWidget.filters?.minDurationHours != widget.filters?.minDurationHours ||
-        oldWidget.filters?.minAzimuth != widget.filters?.minAzimuth ||
-        oldWidget.filters?.maxAzimuth != widget.filters?.maxAzimuth ||
-        oldWidget.filters?.quadrant != widget.filters?.quadrant ||
-        oldWidget.filters?.useCustomTimeWindow != widget.filters?.useCustomTimeWindow ||
-        oldWidget.filters?.customStartHour != widget.filters?.customStartHour ||
-        oldWidget.filters?.customEndHour != widget.filters?.customEndHour) {
+    } else if (oldWidget.target.meetsCriteria != widget.target.meetsCriteria ||
+        _hasFilterChanges(oldWidget.filters, widget.filters) ||
+        oldWidget.latitude != widget.latitude ||
+        oldWidget.longitude != widget.longitude ||
+        oldWidget.elevation != widget.elevation ||
+        oldWidget.periodTarget != widget.periodTarget) {
       _loadYearlyVisibility();
     }
   }
@@ -477,6 +503,17 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
             const SizedBox(height: 16),
 
+            if (widget.periodTarget != null &&
+                widget.plannedStartDate != null &&
+                widget.plannedEndDate != null) ...[
+              _buildPeriodPlanningBanner(
+                widget.periodTarget!,
+                widget.plannedStartDate!,
+                widget.plannedEndDate!,
+              ),
+              const SizedBox(height: 14),
+            ],
+
             // Key Metrics Grid
             Container(
               padding: const EdgeInsets.all(12),
@@ -623,10 +660,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
                 maxAltitudeThreshold: widget.filters?.maxAltitude ?? 90.0,
                 customWindowStart: (widget.filters?.useCustomTimeWindow == true)
-                    ? widget.filters!.getWindowStart(widget.filters!.date)
+                    ? widget.filters!.getWindowStart(widget.night.sunset)
                     : null,
                 customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
-                    ? widget.filters!.getWindowEnd(widget.filters!.date)
+                    ? widget.filters!.getWindowEnd(widget.night.sunset)
                     : null,
                 isRedNightMode: widget.isRedNightMode,
               ),
@@ -696,6 +733,163 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
         Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
         Text(label, style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
       ],
+    );
+  }
+
+  Widget _buildPeriodPlanningBanner(
+    PeriodTargetItem periodTarget,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final isRed = widget.isRedNightMode;
+
+    final startStr = DateFormat('MMM d').format(startDate);
+    final endStr = DateFormat('MMM d').format(endDate);
+    final hasPeak = periodTarget.peakDate != null && periodTarget.isObservable && periodTarget.observableDaysCount > 0;
+    final peakDateStr = hasPeak ? DateFormat('MMM d').format(periodTarget.peakDate!) : '';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isRed
+            ? AstroColors.nightVisionSurfaceVariant
+            : AstroColors.spaceDarkSurfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasPeak
+              ? (isRed ? AstroColors.nightVisionRed : AstroColors.starlightCyan.withValues(alpha: 0.5))
+              : Colors.orange.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_month_rounded,
+                size: 16,
+                color: hasPeak ? accentColor : Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n?.plannedPeriodBannerTitle(startStr, endStr) ??
+                      "PLANNED PERIOD: $startStr – $endStr",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: hasPeak ? accentColor : Colors.orange,
+                  ),
+                ),
+              ),
+              if (hasPeak)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AstroColors.visibleGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AstroColors.visibleGreen.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    l10n?.periodPeakDate(peakDateStr) ?? "Period Peak: $peakDateStr",
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AstroColors.visibleGreen,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasPeak) ...[
+            Text(
+              l10n?.periodBestNightSummary(peakDateStr, periodTarget.maxHoursObservable.toStringAsFixed(1)) ??
+                  "Best Night in Window: $peakDateStr (${periodTarget.maxHoursObservable.toStringAsFixed(1)}h visible)",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "${l10n?.periodDaysObservableSummary(periodTarget.observableDaysCount, periodTarget.totalPeriodDays) ?? '${periodTarget.observableDaysCount} of ${periodTarget.totalPeriodDays} nights observable in this window'} • ${l10n?.periodPeakAltSummary(periodTarget.peakAltitudeDeg.toStringAsFixed(1)) ?? 'Peak Altitude: ${periodTarget.peakAltitudeDeg.toStringAsFixed(1)}°'}",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: textColor.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 13,
+                  color: textColor.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    l10n?.periodEvaluatedNote(peakDateStr) ??
+                        "Metrics and altitude curve below are evaluated for $peakDateStr (period peak night).",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                      color: textColor.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Text(
+              l10n?.periodNotObservableSummary ??
+                  "Target does not meet active filter limits during this period (0 days observable).",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: textColor.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 13,
+                  color: textColor.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    l10n?.periodEvaluatedStartDateNote(startStr) ??
+                        "Metrics and altitude curve below are evaluated for $startStr (period start).",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                      color: textColor.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -852,22 +1046,39 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     if (_yearlyVisibility == null) return const SizedBox.shrink();
 
     final y = _yearlyVisibility!;
-    final isVisibleTonight = widget.target.meetsCriteria;
-
-    // Determine tonight status text factoring in days remaining until season start
-    String tonightStatusText;
     final now = widget.night.sunset;
     final currentMonth = now.month;
     final currentDay = now.day;
+    final inSeasonTonight = y.isDateObservable(now);
+    final isVisibleTonight = inSeasonTonight && (_showFilteredYearly ? widget.target.meetsCriteria : true);
 
-    if (isVisibleTonight) {
-      tonightStatusText = l10n?.visibleTonight ?? "Visible Tonight";
-    } else if (!y.canEverReachMinAlt) {
+    // Determine tonight status text factoring in days remaining until season start
+    String tonightStatusText;
+
+    if (!y.canEverReachMinAlt) {
       tonightStatusText = l10n?.unreachable ?? "Unreachable";
     } else if (y.totalObservableDays == 0) {
       tonightStatusText = _showFilteredYearly
           ? (l10n?.notObservableFiltered ?? "Not observable with active filters")
           : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
+    } else if (widget.periodTarget != null) {
+      final p = widget.periodTarget!;
+      if (p.isObservable && p.observableDaysCount > 0) {
+        final startM = localizeMonthAbbr(p.startMonth, l10n);
+        final dateStr = "$startM ${p.startDay}";
+        if (p.startMonth == p.endMonth && p.startDay == p.endDay) {
+          tonightStatusText = l10n?.visibleOnDate(dateStr) ?? "Observable on $dateStr";
+        } else {
+          tonightStatusText = l10n?.visibleFromDate(dateStr) ?? "Observable from $dateStr";
+        }
+      } else {
+        tonightStatusText = _showFilteredYearly
+            ? (l10n?.notObservableFiltered ?? "Not observable with active filters")
+            : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
+      }
+    } else if (isVisibleTonight) {
+      final dateStr = DateFormat('MMM d').format(now);
+      tonightStatusText = l10n?.visibleTonight ?? "Visible Tonight";
     } else {
       final thisYear = now.year;
       DateTime seasonStart = DateTime(thisYear, y.startMonth, y.startDay);
@@ -890,7 +1101,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           tonightStatusText = l10n?.startsOnDate("$startM ${y.startDay}") ?? "Starts $startM ${y.startDay}";
         }
       } else if (!now.isAfter(seasonEnd)) {
-        tonightStatusText = l10n?.inSeasonBelowLimits ?? "In Season · Below limits tonight";
+        final dateStr = DateFormat('MMM d').format(now);
+        tonightStatusText = widget.periodTarget != null
+            ? (l10n?.outsideFiltersOnDate(dateStr) ?? "Outside limits on $dateStr")
+            : (l10n?.inSeasonBelowLimits ?? "In Season · Below limits tonight");
       } else {
         final endM = localizeMonthAbbr(y.endMonth, l10n);
         tonightStatusText = l10n?.offSeasonEnded("$endM ${y.endDay}") ?? "Off-Season (Ended $endM ${y.endDay})";
@@ -1068,18 +1282,23 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 ],
               );
 
-              final isZeroDays = y.totalObservableDays == 0;
+              final isPositiveStatus = widget.periodTarget != null
+                  ? (widget.periodTarget!.isObservable && widget.periodTarget!.observableDaysCount > 0)
+                  : isVisibleTonight;
+              final isZeroDays = widget.periodTarget != null
+                  ? (!widget.periodTarget!.isObservable || widget.periodTarget!.observableDaysCount == 0 || !y.canEverReachMinAlt)
+                  : (y.totalObservableDays == 0 || !y.canEverReachMinAlt);
               final statusPill = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isVisibleTonight
+                  color: isPositiveStatus
                       ? AstroColors.visibleGreen.withValues(alpha: 0.15)
                       : (isZeroDays
                           ? Colors.orange.withValues(alpha: 0.15)
                           : Colors.amber.withValues(alpha: 0.15)),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: isVisibleTonight
+                    color: isPositiveStatus
                         ? AstroColors.visibleGreen.withValues(alpha: 0.5)
                         : (isZeroDays
                             ? Colors.orange.withValues(alpha: 0.5)
@@ -1090,11 +1309,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isVisibleTonight
+                      isPositiveStatus
                           ? Icons.check_circle_outline_rounded
                           : (isZeroDays ? Icons.filter_alt_off_rounded : Icons.schedule_rounded),
                       size: 13,
-                      color: isVisibleTonight
+                      color: isPositiveStatus
                           ? AstroColors.visibleGreen
                           : (isZeroDays ? Colors.orange : Colors.amber),
                     ),
@@ -1104,7 +1323,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: isVisibleTonight
+                        color: isPositiveStatus
                             ? AstroColors.visibleGreen
                             : (isZeroDays ? Colors.orange : Colors.amber),
                       ),

@@ -156,6 +156,44 @@ void main() {
       final apr = model.months[2];
       expect(apr.isObservable, false);
       expect(apr.dateRangeLabel, contains("Not observable"));
+
+      // isDateObservable tests
+      expect(model.isDateObservable(DateTime(2026, 9, 21)), isFalse); // 6 days before season starts
+      expect(model.isDateObservable(DateTime(2026, 9, 26)), isFalse);
+      expect(model.isDateObservable(DateTime(2026, 9, 27)), isTrue);  // Season start
+      expect(model.isDateObservable(DateTime(2026, 9, 30)), isTrue);
+      expect(model.isDateObservable(DateTime(2026, 10, 15)), isTrue); // Full month
+      expect(model.isDateObservable(DateTime(2026, 4, 15)), isFalse); // Non-observable month
+      expect(model.isDateObservable(DateTime(2026, 5, 10)), isFalse); // Month not present in payload
+    });
+
+    test('isDateObservable returns false for unreachable or zero-day targets', () {
+      final unreachableModel = const YearlyVisibilityModel(
+        targetId: 1,
+        theoreticalMaxAltitudeDeg: 10,
+        canEverReachMinAlt: false,
+        peakMonth: 1,
+        bestWindowStart: 0,
+        bestWindowEnd: 0,
+        maxHoursInPeak: 0,
+        bestWindowSummary: 'Unreachable',
+        months: [],
+      );
+      expect(unreachableModel.isDateObservable(DateTime(2026, 9, 21)), isFalse);
+
+      final zeroDaysModel = const YearlyVisibilityModel(
+        targetId: 2,
+        theoreticalMaxAltitudeDeg: 50,
+        canEverReachMinAlt: true,
+        peakMonth: 1,
+        bestWindowStart: 0,
+        bestWindowEnd: 0,
+        totalObservableDays: 0,
+        maxHoursInPeak: 0,
+        bestWindowSummary: 'Zero days',
+        months: [],
+      );
+      expect(zeroDaysModel.isDateObservable(DateTime(2026, 9, 21)), isFalse);
     });
   });
 }

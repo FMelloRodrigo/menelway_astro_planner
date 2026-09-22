@@ -926,7 +926,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String yearlyDaysObservablePeak(int days, String hours, String date) {
-    return '$days days observable this year • Peak: ${hours}h on $date';
+    return '$days days observable this year • Annual Peak: ${hours}h on $date';
+  }
+
+  @override
+  String periodPeakDate(String date) {
+    return 'Period Peak: $date';
+  }
+
+  @override
+  String plannedPeriodBannerTitle(String start, String end) {
+    return 'PLANNED PERIOD: $start – $end';
+  }
+
+  @override
+  String periodBestNightSummary(String date, String hours) {
+    return 'Best Night in Window: $date (${hours}h visible)';
+  }
+
+  @override
+  String periodDaysObservableSummary(int observable, int total) {
+    return '$observable of $total nights observable in this window';
+  }
+
+  @override
+  String periodPeakAltSummary(String alt) {
+    return 'Peak Altitude: $alt°';
+  }
+
+  @override
+  String periodEvaluatedNote(String date) {
+    return 'Metrics and altitude curve below are evaluated for $date (period peak night).';
+  }
+
+  @override
+  String get periodNotObservableSummary =>
+      'Target does not meet active filter limits during this period (0 days observable).';
+
+  @override
+  String periodEvaluatedStartDateNote(String date) {
+    return 'Metrics and altitude curve below are evaluated for $date (period start).';
+  }
+
+  @override
+  String visibleOnDate(String date) {
+    return 'Observable on $date';
+  }
+
+  @override
+  String visibleFromDate(String date) {
+    return 'Observable from $date';
+  }
+
+  @override
+  String outsideFiltersOnDate(String date) {
+    return 'Outside limits on $date';
   }
 
   @override
