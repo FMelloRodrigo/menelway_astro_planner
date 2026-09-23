@@ -392,6 +392,12 @@ abstract class AppLocalizations {
   /// **'Magnitude (Brightest)'**
   String get sortMagnitude;
 
+  /// No description provided for @sortVisibleStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible From'**
+  String get sortVisibleStartTime;
+
   /// No description provided for @sortTransitTime.
   ///
   /// In en, this message translates to:
@@ -409,6 +415,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Size (Largest)'**
   String get sortSize;
+
+  /// No description provided for @visibleFromTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible from {time}'**
+  String visibleFromTooltip(String time);
+
+  /// No description provided for @visibilityWindowSpan.
+  ///
+  /// In en, this message translates to:
+  /// **'Visible: {start} – {end}'**
+  String visibilityWindowSpan(String start, String end);
 
   /// No description provided for @noTargetsFound.
   ///

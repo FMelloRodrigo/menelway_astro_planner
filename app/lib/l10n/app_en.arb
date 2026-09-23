@@ -60,9 +60,29 @@
   "sortBy": "Sort by",
   "sortPeakAltitude": "Peak Altitude",
   "sortMagnitude": "Magnitude (Brightest)",
+  "sortVisibleStartTime": "Visible From",
   "sortTransitTime": "Transit Time",
   "sortVisibleDuration": "Visible Duration",
   "sortSize": "Size (Largest)",
+  "visibleFromTooltip": "Visible from {time}",
+  "@visibleFromTooltip": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "visibilityWindowSpan": "Visible: {start} – {end}",
+  "@visibilityWindowSpan": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
   "noTargetsFound": "No targets match your filter criteria.",
   "noTargetsSubtitle": "Try relaxing altitude limits, magnitude, or clearing search keywords.",
 

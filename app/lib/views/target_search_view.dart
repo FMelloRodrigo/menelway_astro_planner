@@ -16,6 +16,7 @@ import 'target_details_sheet.dart';
 enum SortMode {
   peakAltitude,
   visibleDuration,
+  visibleStartTime,
   brightness,
   transitTime,
 }
@@ -127,6 +128,18 @@ class _TargetSearchViewState extends State<TargetSearchView> {
             return a.meetsCriteria ? -1 : 1;
           }
           return (a.magnitude ?? 99).compareTo(b.magnitude ?? 99);
+        });
+        break;
+      case SortMode.visibleStartTime:
+        list.sort((a, b) {
+          if (a.meetsCriteria != b.meetsCriteria) {
+            return a.meetsCriteria ? -1 : 1;
+          }
+          final aStart = a.visibleStartTime ?? DateTime(2099);
+          final bStart = b.visibleStartTime ?? DateTime(2099);
+          final cmp = aStart.compareTo(bStart);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
       case SortMode.transitTime:
@@ -305,6 +318,10 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       DropdownMenuItem(
                         value: SortMode.visibleDuration,
                         child: Text(l10n?.sortVisibleDuration ?? "Visible Duration", overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: SortMode.visibleStartTime,
+                        child: Text(l10n?.sortVisibleStartTime ?? "Visible From", overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.brightness,
@@ -667,6 +684,21 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     ),
                   );
 
+            String windowSpanText = "--:--";
+            String windowSpanTooltip = l10n?.notObservableFiltered ?? "Not observable with active filters";
+
+            if (target.visibleStartTime != null && target.meetsCriteria) {
+              final startStr = DateFormat('HH:mm').format(target.visibleStartTime!);
+              if (target.visibleEndTime != null) {
+                final endStr = DateFormat('HH:mm').format(target.visibleEndTime!);
+                windowSpanText = '$startStr – $endStr';
+                windowSpanTooltip = l10n?.visibilityWindowSpan(startStr, endStr) ?? "Visible: $startStr – $endStr";
+              } else {
+                windowSpanText = startStr;
+                windowSpanTooltip = l10n?.visibleFromTooltip(startStr) ?? "Visible from $startStr";
+              }
+            }
+
             if (isNarrow) {
               // Mobile 2-row layout: Spacious and never cramped
               return Padding(
@@ -701,17 +733,20 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             ),
                           ],
                         ),
-                        // Transit
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.schedule_rounded, size: 13, color: textColor.withValues(alpha: 0.5)),
-                            const SizedBox(width: 3),
-                            Text(
-                              DateFormat('HH:mm').format(target.transitTime),
-                              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
-                            ),
-                          ],
+                        // Visible Window Span
+                        Tooltip(
+                          message: windowSpanTooltip,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.schedule_rounded, size: 13, color: textColor.withValues(alpha: 0.5)),
+                              const SizedBox(width: 3),
+                              Text(
+                                windowSpanText,
+                                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                              ),
+                            ],
+                          ),
                         ),
                         // Moon
                         Row(
@@ -760,15 +795,18 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                           ],
                         ),
                         const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(Icons.schedule_rounded, size: 14, color: textColor.withValues(alpha: 0.5)),
-                            const SizedBox(width: 4),
-                            Text(
-                              DateFormat('HH:mm').format(target.transitTime),
-                              style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
-                            ),
-                          ],
+                        Tooltip(
+                          message: windowSpanTooltip,
+                          child: Row(
+                            children: [
+                              Icon(Icons.schedule_rounded, size: 14, color: textColor.withValues(alpha: 0.5)),
+                              const SizedBox(width: 4),
+                              Text(
+                                windowSpanText,
+                                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

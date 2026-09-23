@@ -55,9 +55,29 @@
   "sortBy": "Ordenar por",
   "sortPeakAltitude": "Altitude Máxima",
   "sortMagnitude": "Magnitude (Mais Brilho)",
+  "sortVisibleStartTime": "Início da Visibilidade",
   "sortTransitTime": "Horário de Trânsito",
   "sortVisibleDuration": "Duração Visível",
   "sortSize": "Tamanho (Maior)",
+  "visibleFromTooltip": "Visível a partir de {time}",
+  "@visibleFromTooltip": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "visibilityWindowSpan": "Visível: {start} – {end}",
+  "@visibilityWindowSpan": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
   "noTargetsFound": "Nenhum alvo corresponde aos critérios de filtro.",
   "noTargetsSubtitle": "Tente flexibilizar limites de altitude, magnitude ou limpar termos de busca.",
 

@@ -164,6 +164,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortMagnitude => 'Magnitude (Brightest)';
 
   @override
+  String get sortVisibleStartTime => 'Visible From';
+
+  @override
   String get sortTransitTime => 'Transit Time';
 
   @override
@@ -171,6 +174,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sortSize => 'Size (Largest)';
+
+  @override
+  String visibleFromTooltip(String time) {
+    return 'Visible from $time';
+  }
+
+  @override
+  String visibilityWindowSpan(String start, String end) {
+    return 'Visible: $start – $end';
+  }
 
   @override
   String get noTargetsFound => 'No targets match your filter criteria.';
