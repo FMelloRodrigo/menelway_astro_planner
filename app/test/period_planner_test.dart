@@ -7,6 +7,7 @@ import 'package:app/models/filter_state.dart';
 import 'package:app/models/night_summary.dart';
 import 'package:app/models/yearly_visibility.dart';
 import 'package:app/views/target_details_sheet.dart';
+import 'package:app/views/planner_view.dart';
 import 'package:app/l10n/app_localizations.dart';
 
 class CustomYearlyMockEngine extends FakeAstroEngine {
@@ -332,6 +333,58 @@ void main() {
       // 5. Verify status pill says 'Observable from Oct 1' rather than 'Visible Tonight'
       expect(find.text('Visible Tonight'), findsNothing);
       expect(find.text('Observable from Oct 1'), findsOneWidget);
+    });
+
+    testWidgets('PlannerView renders with Portuguese localizations', (WidgetTester tester) async {
+      final mockEngine = FakeAstroEngine();
+      AstroEngine.instance = mockEngine;
+
+      final testNight = NightSummary(
+        sunset: DateTime(2026, 10, 9, 18, 15),
+        civilDusk: DateTime(2026, 10, 9, 18, 40),
+        nauticalDusk: DateTime(2026, 10, 9, 19, 10),
+        astronomicalDusk: DateTime(2026, 10, 9, 19, 45),
+        solarMidnight: DateTime(2026, 10, 10, 0, 1),
+        astronomicalDawn: DateTime(2026, 10, 10, 4, 30),
+        nauticalDawn: DateTime(2026, 10, 10, 5, 5),
+        civilDawn: DateTime(2026, 10, 10, 5, 35),
+        sunrise: DateTime(2026, 10, 10, 6, 0),
+        moonIllumination: 0.05,
+        moonPhaseName: 'Waxing Crescent',
+        hasAstronomicalNight: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('pt'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: PlannerView(
+              filters: FilterState(),
+              night: testNight,
+              isRedNightMode: false,
+              availableLists: const [],
+              onAddToList: (_, __, ___) {},
+              onFilterChanged: (_) {},
+              engine: mockEngine,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('PLANEJADOR DE OBSERVAÇÕES FUTURAS'), findsOneWidget);
+      expect(find.text('Próximos 7 Dias'), findsOneWidget);
+      expect(find.text('Este Fim de Semana'), findsOneWidget);
+      expect(find.text('Próximo Mês'), findsOneWidget);
+      expect(find.text('Próximos 30 Dias'), findsOneWidget);
+      expect(find.text('Período Personalizado...'), findsOneWidget);
+      expect(find.text('Janela: Noite Toda'), findsOneWidget);
+      expect(find.text('Filtros'), findsOneWidget);
+      expect(find.text('Mais Dias Observáveis'), findsOneWidget);
     });
   });
 }

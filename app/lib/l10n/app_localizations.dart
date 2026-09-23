@@ -2107,6 +2107,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)'**
   String get aboutNameOrigin;
+
+  /// No description provided for @futureObservationPlanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Future Observation Planner'**
+  String get futureObservationPlanner;
+
+  /// No description provided for @presetNext7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 7 Days'**
+  String get presetNext7Days;
+
+  /// No description provided for @presetThisWeekend.
+  ///
+  /// In en, this message translates to:
+  /// **'This Weekend'**
+  String get presetThisWeekend;
+
+  /// No description provided for @presetNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Month'**
+  String get presetNextMonth;
+
+  /// No description provided for @presetNext30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 30 Days'**
+  String get presetNext30Days;
+
+  /// No description provided for @presetCustomPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Period...'**
+  String get presetCustomPeriod;
+
+  /// No description provided for @plannerWindowCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Window: {start} – {end}'**
+  String plannerWindowCustom(String start, String end);
+
+  /// No description provided for @plannerWindowFullNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Window: Full Night'**
+  String get plannerWindowFullNight;
+
+  /// No description provided for @plannerDirectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction: {direction}'**
+  String plannerDirectionLabel(String direction);
+
+  /// No description provided for @plannerAltMinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Alt ≥ {alt}°'**
+  String plannerAltMinLabel(String alt);
+
+  /// No description provided for @plannerDurationMinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration ≥ {hours}h'**
+  String plannerDurationMinLabel(String hours);
+
+  /// No description provided for @searchPeriodTargetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search period targets (e.g. M42, Rosette, Nebula)...'**
+  String get searchPeriodTargetsHint;
+
+  /// No description provided for @searchPeriodTargetsHintShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Search period targets...'**
+  String get searchPeriodTargetsHintShort;
+
+  /// No description provided for @sortMostObservableDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Observable Days'**
+  String get sortMostObservableDays;
+
+  /// No description provided for @sortPeakDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak Date'**
+  String get sortPeakDate;
+
+  /// No description provided for @sortHighestAltitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest Altitude'**
+  String get sortHighestAltitude;
+
+  /// No description provided for @sortBrightestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightest First'**
+  String get sortBrightestFirst;
+
+  /// No description provided for @simulatingSkyPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulating sky across {days} nights...'**
+  String simulatingSkyPeriod(int days);
+
+  /// No description provided for @noTargetsMatchPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'No Targets Match This Period'**
+  String get noTargetsMatchPeriod;
+
+  /// No description provided for @noTargetsPeriodSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'None of the catalog candidates meet your active limits (Alt ≥ {minAlt}°, {direction}) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.'**
+  String noTargetsPeriodSubtitle(String minAlt, String direction);
+
+  /// No description provided for @adjustFiltersBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust Filters'**
+  String get adjustFiltersBtn;
+
+  /// No description provided for @errorCalculatingPeriodTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Error calculating period targets: {error}'**
+  String errorCalculatingPeriodTargets(String error);
+
+  /// No description provided for @targetInConstellation.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} in {constellation}'**
+  String targetInConstellation(String type, String constellation);
+
+  /// No description provided for @periodDaysObservableShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{observable} of {total} days observable'**
+  String periodDaysObservableShort(int observable, int total);
+
+  /// No description provided for @outsideFiltersInPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside active filters in this period'**
+  String get outsideFiltersInPeriod;
+
+  /// No description provided for @periodPeakAltAndMaxHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak Alt: {alt}° • Max: {hours}h/night'**
+  String periodPeakAltAndMaxHours(String alt, String hours);
+
+  /// No description provided for @periodNeverClearsAlt.
+  ///
+  /// In en, this message translates to:
+  /// **'Never clears {alt}° in active window'**
+  String periodNeverClearsAlt(String alt);
+
+  /// No description provided for @periodDaysRatio.
+  ///
+  /// In en, this message translates to:
+  /// **'{observable} / {total} days'**
+  String periodDaysRatio(int observable, int total);
+
+  /// No description provided for @periodDaysOnlySpan.
+  ///
+  /// In en, this message translates to:
+  /// **'{ratio} • Day {day} only'**
+  String periodDaysOnlySpan(String ratio, int day);
+
+  /// No description provided for @addNamedTargetTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {targetName} to:'**
+  String addNamedTargetTo(String targetName);
+
+  /// No description provided for @observingListItemCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items'**
+  String observingListItemCount(int count);
+
+  /// No description provided for @addedTargetToList.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {targetName} to \'{listName}\'!'**
+  String addedTargetToList(String targetName, String listName);
+
+  /// No description provided for @daysCountSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'({days} d)'**
+  String daysCountSuffix(int days);
+
+  /// No description provided for @okBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get okBtn;
+
+  /// No description provided for @listItemsPlannedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} targets planned'**
+  String listItemsPlannedCount(int count);
+
+  /// No description provided for @exportCsvFramingTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV / Framing'**
+  String get exportCsvFramingTooltip;
+
+  /// No description provided for @deleteListTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete list'**
+  String get deleteListTooltip;
+
+  /// No description provided for @noTargetsInList.
+  ///
+  /// In en, this message translates to:
+  /// **'No targets in this list. Add targets from the search view!'**
+  String get noTargetsInList;
 }
 
 class _AppLocalizationsDelegate

@@ -646,5 +646,142 @@
   "aboutCloseBtn": "Close",
   "aboutCreatedBy": "Created by Rodrigo F. Mello",
   "aboutAppName": "Menelway Astro Planner",
-  "aboutNameOrigin": "“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)"
+  "aboutNameOrigin": "“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)",
+
+  "futureObservationPlanner": "Future Observation Planner",
+  "presetNext7Days": "Next 7 Days",
+  "presetThisWeekend": "This Weekend",
+  "presetNextMonth": "Next Month",
+  "presetNext30Days": "Next 30 Days",
+  "presetCustomPeriod": "Custom Period...",
+  "plannerWindowCustom": "Window: {start} – {end}",
+  "@plannerWindowCustom": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "plannerWindowFullNight": "Window: Full Night",
+  "plannerDirectionLabel": "Direction: {direction}",
+  "@plannerDirectionLabel": {
+    "placeholders": {
+      "direction": { "type": "String" }
+    }
+  },
+  "plannerAltMinLabel": "Alt ≥ {alt}°",
+  "@plannerAltMinLabel": {
+    "placeholders": {
+      "alt": { "type": "String" }
+    }
+  },
+  "plannerDurationMinLabel": "Duration ≥ {hours}h",
+  "@plannerDurationMinLabel": {
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "searchPeriodTargetsHint": "Search period targets (e.g. M42, Rosette, Nebula)...",
+  "searchPeriodTargetsHintShort": "Search period targets...",
+  "sortMostObservableDays": "Most Observable Days",
+  "sortPeakDate": "Peak Date",
+  "sortHighestAltitude": "Highest Altitude",
+  "sortBrightestFirst": "Brightest First",
+  "simulatingSkyPeriod": "Simulating sky across {days} nights...",
+  "@simulatingSkyPeriod": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "noTargetsMatchPeriod": "No Targets Match This Period",
+  "noTargetsPeriodSubtitle": "None of the catalog candidates meet your active limits (Alt ≥ {minAlt}°, {direction}) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.",
+  "@noTargetsPeriodSubtitle": {
+    "placeholders": {
+      "minAlt": { "type": "String" },
+      "direction": { "type": "String" }
+    }
+  },
+  "adjustFiltersBtn": "Adjust Filters",
+  "errorCalculatingPeriodTargets": "Error calculating period targets: {error}",
+  "@errorCalculatingPeriodTargets": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "targetInConstellation": "{type} in {constellation}",
+  "@targetInConstellation": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "constellation": { "type": "String" }
+    }
+  },
+  "periodDaysObservableShort": "{observable} of {total} days observable",
+  "@periodDaysObservableShort": {
+    "placeholders": {
+      "observable": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "outsideFiltersInPeriod": "Outside active filters in this period",
+  "periodPeakAltAndMaxHours": "Peak Alt: {alt}° • Max: {hours}h/night",
+  "@periodPeakAltAndMaxHours": {
+    "placeholders": {
+      "alt": { "type": "String" },
+      "hours": { "type": "String" }
+    }
+  },
+  "periodNeverClearsAlt": "Never clears {alt}° in active window",
+  "@periodNeverClearsAlt": {
+    "placeholders": {
+      "alt": { "type": "String" }
+    }
+  },
+  "periodDaysRatio": "{observable} / {total} days",
+  "@periodDaysRatio": {
+    "placeholders": {
+      "observable": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "periodDaysOnlySpan": "{ratio} • Day {day} only",
+  "@periodDaysOnlySpan": {
+    "placeholders": {
+      "ratio": { "type": "String" },
+      "day": { "type": "int" }
+    }
+  },
+  "addNamedTargetTo": "Add {targetName} to:",
+  "@addNamedTargetTo": {
+    "placeholders": {
+      "targetName": { "type": "String" }
+    }
+  },
+  "observingListItemCount": "{count} items",
+  "@observingListItemCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "addedTargetToList": "Added {targetName} to '{listName}'!",
+  "@addedTargetToList": {
+    "placeholders": {
+      "targetName": { "type": "String" },
+      "listName": { "type": "String" }
+    }
+  },
+  "daysCountSuffix": "({days} d)",
+  "@daysCountSuffix": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "okBtn": "OK",
+  "listItemsPlannedCount": "{count} targets planned",
+  "@listItemsPlannedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "exportCsvFramingTooltip": "Export CSV / Framing",
+  "deleteListTooltip": "Delete list",
+  "noTargetsInList": "No targets in this list. Add targets from the search view!"
 }

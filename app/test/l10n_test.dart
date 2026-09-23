@@ -6,6 +6,7 @@ import 'package:app/core/settings_service.dart';
 import 'package:app/l10n/app_localizations.dart';
 import 'package:app/l10n/l10n_helpers.dart';
 import 'package:app/models/filter_state.dart';
+import 'package:app/models/period_target_item.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -256,6 +257,59 @@ void main() {
       expect(localizeMonthAbbr(9, l10nPt), 'Set');
       expect(localizeMonthAbbr(10, l10nPt), 'Out');
       expect(localizeMonthAbbr(12, l10nPt), 'Dez');
+
+      // Planner keys
+      expect(l10nPt.futureObservationPlanner, 'Planejador de Observações Futuras');
+      expect(l10nPt.presetNext7Days, 'Próximos 7 Dias');
+      expect(l10nPt.presetThisWeekend, 'Este Fim de Semana');
+      expect(l10nPt.presetNextMonth, 'Próximo Mês');
+      expect(l10nPt.presetNext30Days, 'Próximos 30 Dias');
+      expect(l10nPt.presetCustomPeriod, 'Período Personalizado...');
+      expect(l10nPt.plannerWindowFullNight, 'Janela: Noite Toda');
+      expect(l10nPt.plannerDirectionLabel('Norte (315° - 45°)'), 'Direção: Norte (315° - 45°)');
+      expect(l10nPt.plannerAltMinLabel('30'), 'Alt ≥ 30°');
+      expect(l10nPt.plannerDurationMinLabel('2.0'), 'Duração ≥ 2.0h');
+      expect(l10nPt.searchPeriodTargetsHintShort, 'Buscar alvos no período...');
+      expect(l10nPt.sortMostObservableDays, 'Mais Dias Observáveis');
+      expect(l10nPt.sortPeakDate, 'Data do Pico');
+      expect(l10nPt.sortHighestAltitude, 'Maior Altitude');
+      expect(l10nPt.sortBrightestFirst, 'Mais Brilhantes Primeiro');
+      expect(l10nPt.noTargetsMatchPeriod, 'Nenhum Alvo Corresponde a Este Período');
+      expect(l10nPt.adjustFiltersBtn, 'Ajustar Filtros');
+    });
+
+    test('localizePeriodObservabilitySummary properly translates in Portuguese and English', () {
+      final periodTarget = PeriodTargetItem(
+        id: 1,
+        name: 'M42',
+        messier: 'M42',
+        catalog: 'Messier',
+        objectType: 'Bright Nebula',
+        constellation: 'Ori',
+        raHours: 5.58,
+        decDegrees: -5.39,
+        peakAltitudeDeg: 60.0,
+        maxHoursObservable: 5.0,
+        observableDaysCount: 10,
+        totalPeriodDays: 14,
+        startMonth: 10,
+        startDay: 1,
+        endMonth: 10,
+        endDay: 10,
+        isObservable: true,
+      );
+
+      final l10nPt = lookupAppLocalizations(const Locale('pt'));
+      final l10nEn = lookupAppLocalizations(const Locale('en'));
+
+      expect(
+        localizePeriodObservabilitySummary(periodTarget, l10nPt),
+        '10 / 14 dias (Out 1 – Out 10)',
+      );
+      expect(
+        localizePeriodObservabilitySummary(periodTarget, l10nEn),
+        '10 / 14 days (Oct 1 – Oct 10)',
+      );
     });
   });
 }

@@ -211,7 +211,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                           style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
                         ),
                         subtitle: Text(
-                          "${list.sessionDate.isNotEmpty ? '${list.sessionDate} • ' : ''}${list.items.length} targets planned",
+                          "${list.sessionDate.isNotEmpty ? '${list.sessionDate} • ' : ''}${l10n?.listItemsPlannedCount(list.items.length) ?? '${list.items.length} targets planned'}",
                           style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
                         ),
                         trailing: Row(
@@ -219,12 +219,12 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.file_download_outlined, size: 20),
-                              tooltip: "Export CSV / Framing",
+                              tooltip: l10n?.exportCsvFramingTooltip ?? "Export CSV / Framing",
                               onPressed: () => _exportListCsv(list),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                              tooltip: "Delete list",
+                              tooltip: l10n?.deleteListTooltip ?? "Delete list",
                               onPressed: () => widget.onDeleteList(list.id),
                             ),
                             IconButton(
@@ -246,7 +246,7 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                           Padding(
                             padding: const EdgeInsets.all(16),
                             child: Text(
-                              "No targets in this list. Add targets from the search view!",
+                              l10n?.noTargetsInList ?? "No targets in this list. Add targets from the search view!",
                               style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
                             ),
                           )

@@ -1,3 +1,4 @@
+import '../models/period_target_item.dart';
 import '../models/yearly_visibility.dart';
 import 'app_localizations.dart';
 
@@ -130,5 +131,24 @@ String localizeBestWindowSummary(YearlyVisibilityModel y, AppLocalizations? l10n
   }
 
   return "$startM ${y.startDay} – $endM ${y.endDay} ($peakLabel: $peakM ${y.peakDay})";
+}
+
+/// Helper to localize the period observability summary for period targets.
+String localizePeriodObservabilitySummary(PeriodTargetItem target, AppLocalizations? l10n) {
+  if (l10n == null) return target.periodObservabilitySummary;
+
+  if (!target.isObservable || target.observableDaysCount == 0) {
+    return l10n.periodNotObservableSummary;
+  }
+
+  final ratio = l10n.periodDaysRatio(target.observableDaysCount, target.totalPeriodDays);
+
+  if (target.startMonth == target.endMonth && target.startDay == target.endDay) {
+    return l10n.periodDaysOnlySpan(ratio, target.startDay);
+  }
+
+  final startM = localizeMonthAbbr(target.startMonth, l10n);
+  final endM = localizeMonthAbbr(target.endMonth, l10n);
+  return '$ratio ($startM ${target.startDay} – $endM ${target.endDay})';
 }
 

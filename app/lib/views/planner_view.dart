@@ -118,8 +118,13 @@ class _PlannerViewState extends State<PlannerView> {
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error calculating period targets: $e")),
+            SnackBar(
+              content: Text(
+                l10n?.errorCalculatingPeriodTargets(e.toString()) ?? "Error calculating period targets: $e",
+              ),
+            ),
           );
         }
       }
@@ -260,13 +265,15 @@ class _PlannerViewState extends State<PlannerView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final localeStr = Localizations.localeOf(context).toString();
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
     final isWide = MediaQuery.of(context).size.width >= 900;
 
     final displayTargets = _filteredAndSortedTargets;
     final totalDays = _endDate.difference(_startDate).inDays + 1;
-    final dateFormat = DateFormat('MMM d, yyyy');
+    final dateFormat = DateFormat('MMM d, yyyy', localeStr);
 
     return Column(
       children: [
@@ -288,76 +295,104 @@ class _PlannerViewState extends State<PlannerView> {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final isNarrowHeader = constraints.maxWidth < 600;
-                  final titleWidget = Row(
-                    children: [
-                      Icon(Icons.calendar_month_rounded, size: 20, color: accentColor),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          "FUTURE OBSERVATION PLANNER",
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: textColor.withValues(alpha: 0.7),
-                          ),
+                  Widget buildTitle(bool isNarrow) {
+                    return Row(
+                      mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+                      children: [
+                        Icon(Icons.calendar_month_rounded, size: 20, color: accentColor),
+                        const SizedBox(width: 8),
+                        isNarrow
+                            ? Expanded(
+                                child: Text(
+                                  (l10n?.futureObservationPlanner ?? "FUTURE OBSERVATION PLANNER").toUpperCase(),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    color: textColor.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                (l10n?.futureObservationPlanner ?? "FUTURE OBSERVATION PLANNER").toUpperCase(),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                  color: textColor.withValues(alpha: 0.7),
+                                ),
+                              ),
+                      ],
+                    );
+                  }
+
+                  Widget buildRangeButton(bool isNarrow) {
+                    return InkWell(
+                      onTap: _pickCustomRange,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
+                          children: [
+                            Icon(Icons.date_range_rounded, size: 14, color: accentColor),
+                            const SizedBox(width: 6),
+                            isNarrow
+                                ? Expanded(
+                                    child: Text(
+                                      "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n?.daysCountSuffix(totalDays) ?? '($totalDays d)'}",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: textColor,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n?.daysCountSuffix(totalDays) ?? '($totalDays d)'}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: textColor,
+                                    ),
+                                  ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down_rounded, size: 16, color: accentColor),
+                          ],
                         ),
                       ),
-                    ],
-                  );
-
-                  final rangeButton = InkWell(
-                    onTap: _pickCustomRange,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accentColor.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.date_range_rounded, size: 14, color: accentColor),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ($totalDays d)",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: textColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 16, color: accentColor),
-                        ],
-                      ),
-                    ),
-                  );
+                    );
+                  }
 
                   if (isNarrowHeader) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        titleWidget,
+                        buildTitle(true),
                         const SizedBox(height: 8),
-                        rangeButton,
+                        buildRangeButton(true),
                       ],
                     );
                   }
 
                   return Row(
                     children: [
-                      titleWidget,
+                      buildTitle(false),
                       const Spacer(),
-                      rangeButton,
+                      buildRangeButton(false),
                     ],
                   );
                 },
@@ -370,15 +405,15 @@ class _PlannerViewState extends State<PlannerView> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildPresetChip("Next 7 Days", _setPresetNext7Days),
+                    _buildPresetChip(l10n?.presetNext7Days ?? "Next 7 Days", _setPresetNext7Days),
                     const SizedBox(width: 6),
-                    _buildPresetChip("This Weekend", _setPresetThisWeekend),
+                    _buildPresetChip(l10n?.presetThisWeekend ?? "This Weekend", _setPresetThisWeekend),
                     const SizedBox(width: 6),
-                    _buildPresetChip("Next Month", _setPresetNextMonth),
+                    _buildPresetChip(l10n?.presetNextMonth ?? "Next Month", _setPresetNextMonth),
                     const SizedBox(width: 6),
-                    _buildPresetChip("Next 30 Days", _setPresetNext30Days),
+                    _buildPresetChip(l10n?.presetNext30Days ?? "Next 30 Days", _setPresetNext30Days),
                     const SizedBox(width: 6),
-                    _buildPresetChip("Custom Period...", _pickCustomRange, isSpecial: true),
+                    _buildPresetChip(l10n?.presetCustomPeriod ?? "Custom Period...", _pickCustomRange, isSpecial: true),
                   ],
                 ),
               ),
@@ -395,23 +430,30 @@ class _PlannerViewState extends State<PlannerView> {
                         children: [
                           _buildFilterChip(
                             widget.filters.useCustomTimeWindow
-                                ? "Window: ${widget.filters.customStartHour.toString().padLeft(2, '0')}:${widget.filters.customStartMinute.toString().padLeft(2, '0')} – ${widget.filters.customEndHour.toString().padLeft(2, '0')}:${widget.filters.customEndMinute.toString().padLeft(2, '0')}"
-                                : "Window: Full Night",
+                                ? (l10n?.plannerWindowCustom(
+                                      "${widget.filters.customStartHour.toString().padLeft(2, '0')}:${widget.filters.customStartMinute.toString().padLeft(2, '0')}",
+                                      "${widget.filters.customEndHour.toString().padLeft(2, '0')}:${widget.filters.customEndMinute.toString().padLeft(2, '0')}",
+                                    ) ??
+                                    "Window: ${widget.filters.customStartHour.toString().padLeft(2, '0')}:${widget.filters.customStartMinute.toString().padLeft(2, '0')} – ${widget.filters.customEndHour.toString().padLeft(2, '0')}:${widget.filters.customEndMinute.toString().padLeft(2, '0')}")
+                                : (l10n?.plannerWindowFullNight ?? "Window: Full Night"),
                             Icons.access_time_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            "Direction: ${_quadrantName(widget.filters.quadrant)}",
+                            l10n?.plannerDirectionLabel(_quadrantName(widget.filters.quadrant, l10n)) ??
+                                "Direction: ${_quadrantName(widget.filters.quadrant, l10n)}",
                             Icons.explore_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            "Alt ≥ ${widget.filters.minAltitude.round()}°",
+                            l10n?.plannerAltMinLabel(widget.filters.minAltitude.round().toString()) ??
+                                "Alt ≥ ${widget.filters.minAltitude.round()}°",
                             Icons.north_east_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            "Duration ≥ ${widget.filters.minDurationHours.toStringAsFixed(1)}h",
+                            l10n?.plannerDurationMinLabel(widget.filters.minDurationHours.toStringAsFixed(1)) ??
+                                "Duration ≥ ${widget.filters.minDurationHours.toStringAsFixed(1)}h",
                             Icons.timer_rounded,
                           ),
                         ],
@@ -435,7 +477,7 @@ class _PlannerViewState extends State<PlannerView> {
                           Icon(Icons.tune_rounded, size: 12, color: accentColor),
                           const SizedBox(width: 4),
                           Text(
-                            "Filters",
+                            l10n?.filtersButton ?? "Filters",
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                           ),
                         ],
@@ -472,7 +514,9 @@ class _PlannerViewState extends State<PlannerView> {
                   textAlignVertical: TextAlignVertical.center,
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: isNarrowSearch ? "Search period targets..." : "Search period targets (e.g. M42, Rosette, Nebula)...",
+                    hintText: isNarrowSearch
+                        ? (l10n?.searchPeriodTargetsHintShort ?? "Search period targets...")
+                        : (l10n?.searchPeriodTargetsHint ?? "Search period targets (e.g. M42, Rosette, Nebula)..."),
                     hintStyle: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.4)),
                     prefixIcon: Icon(Icons.search_rounded, size: 16, color: accentColor),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -513,22 +557,22 @@ class _PlannerViewState extends State<PlannerView> {
                     onChanged: (newSort) {
                       if (newSort != null) setState(() => _sortBy = newSort);
                     },
-                    items: const [
+                    items: [
                       DropdownMenuItem(
                         value: PeriodSortBy.days,
-                        child: Text("Most Observable Days", style: TextStyle(fontSize: 12)),
+                        child: Text(l10n?.sortMostObservableDays ?? "Most Observable Days", style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.peakDate,
-                        child: Text("Peak Date", style: TextStyle(fontSize: 12)),
+                        child: Text(l10n?.sortPeakDate ?? "Peak Date", style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.peakAltitude,
-                        child: Text("Highest Altitude", style: TextStyle(fontSize: 12)),
+                        child: Text(l10n?.sortHighestAltitude ?? "Highest Altitude", style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.magnitude,
-                        child: Text("Brightest First", style: TextStyle(fontSize: 12)),
+                        child: Text(l10n?.sortBrightestFirst ?? "Brightest First", style: const TextStyle(fontSize: 12)),
                       ),
                     ],
                   ),
@@ -566,14 +610,14 @@ class _PlannerViewState extends State<PlannerView> {
                       CircularProgressIndicator(color: accentColor),
                       const SizedBox(height: 12),
                       Text(
-                        "Simulating sky across $totalDays nights...",
+                        l10n?.simulatingSkyPeriod(totalDays) ?? "Simulating sky across $totalDays nights...",
                         style: TextStyle(color: textColor.withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
                 )
               : displayTargets.isEmpty
-                  ? _buildEmptyState(textColor, accentColor)
+                  ? _buildEmptyState(textColor, accentColor, l10n)
                   : isWide && _selectedTarget != null
                       ? Row(
                           children: [
@@ -612,7 +656,7 @@ class _PlannerViewState extends State<PlannerView> {
     );
   }
 
-  Widget _buildEmptyState(Color textColor, Color accentColor) {
+  Widget _buildEmptyState(Color textColor, Color accentColor, AppLocalizations? l10n) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -622,13 +666,17 @@ class _PlannerViewState extends State<PlannerView> {
             Icon(Icons.filter_alt_off_rounded, size: 48, color: textColor.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
-              "No Targets Match This Period",
+              l10n?.noTargetsMatchPeriod ?? "No Targets Match This Period",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
             ),
             const SizedBox(height: 8),
             Text(
-              "None of the catalog candidates meet your active limits (Alt ≥ ${widget.filters.minAltitude.round()}°, ${_quadrantName(widget.filters.quadrant)}) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.",
+              l10n?.noTargetsPeriodSubtitle(
+                    widget.filters.minAltitude.round().toString(),
+                    _quadrantName(widget.filters.quadrant, l10n),
+                  ) ??
+                  "None of the catalog candidates meet your active limits (Alt ≥ ${widget.filters.minAltitude.round()}°, ${_quadrantName(widget.filters.quadrant, l10n)}) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6), height: 1.4),
             ),
@@ -636,7 +684,7 @@ class _PlannerViewState extends State<PlannerView> {
             ElevatedButton.icon(
               onPressed: _openFilterDialog,
               icon: const Icon(Icons.tune_rounded, size: 14),
-              label: const Text("Adjust Filters"),
+              label: Text(l10n?.adjustFiltersBtn ?? "Adjust Filters"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor.withValues(alpha: 0.2),
                 foregroundColor: accentColor,
@@ -739,7 +787,7 @@ class _PlannerViewState extends State<PlannerView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${localizeObjectType(target.objectType, l10n)} in ${target.constellation}${target.magnitude != null ? ' • Mag ${target.magnitude!.toStringAsFixed(1)}' : ''}",
+                          "${l10n?.targetInConstellation(localizeObjectType(target.objectType, l10n), target.constellation) ?? '${localizeObjectType(target.objectType, l10n)} in ${target.constellation}'}${target.magnitude != null ? ' • ${l10n?.magnitudeLabel ?? "Mag"} ${target.magnitude!.toStringAsFixed(1)}' : ''}",
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withValues(alpha: 0.6),
@@ -792,8 +840,9 @@ class _PlannerViewState extends State<PlannerView> {
                               Expanded(
                                 child: Text(
                                   isObservable
-                                      ? "${target.observableDaysCount} of ${target.totalPeriodDays} days observable"
-                                      : "Outside active filters in this period",
+                                      ? (l10n?.periodDaysObservableShort(target.observableDaysCount, target.totalPeriodDays) ??
+                                          "${target.observableDaysCount} of ${target.totalPeriodDays} days observable")
+                                      : (l10n?.outsideFiltersInPeriod ?? "Outside active filters in this period"),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -806,7 +855,7 @@ class _PlannerViewState extends State<PlannerView> {
                               if (target.peakDate != null && isObservable) ...[
                                 const SizedBox(width: 6),
                                 Text(
-                                  l10n?.periodPeakDate(DateFormat('MMM d').format(target.peakDate!)) ??
+                                  l10n?.periodPeakDate(DateFormat('MMM d', Localizations.localeOf(context).toString()).format(target.peakDate!)) ??
                                       "Period Peak: ${DateFormat('MMM d').format(target.peakDate!)}",
                                   style: TextStyle(
                                     fontSize: 11,
@@ -848,8 +897,10 @@ class _PlannerViewState extends State<PlannerView> {
                 children: [
                   Text(
                     target.isObservable
-                        ? "Peak Alt: ${target.peakAltitudeDeg.toStringAsFixed(1)}° • Max: ${target.maxHoursObservable.toStringAsFixed(1)}h/night"
-                        : "Never clears ${widget.filters.minAltitude.round()}° in active window",
+                        ? (l10n?.periodPeakAltAndMaxHours(target.peakAltitudeDeg.toStringAsFixed(1), target.maxHoursObservable.toStringAsFixed(1)) ??
+                            "Peak Alt: ${target.peakAltitudeDeg.toStringAsFixed(1)}° • Max: ${target.maxHoursObservable.toStringAsFixed(1)}h/night")
+                        : (l10n?.periodNeverClearsAlt(widget.filters.minAltitude.round().toString()) ??
+                            "Never clears ${widget.filters.minAltitude.round()}° in active window"),
                     style: TextStyle(
                       fontSize: 10,
                       fontStyle: FontStyle.italic,
@@ -858,7 +909,7 @@ class _PlannerViewState extends State<PlannerView> {
                   ),
                   if (target.startMonth > 0 && target.endMonth > 0 && target.isObservable)
                     Text(
-                      target.periodObservabilitySummary,
+                      localizePeriodObservabilitySummary(target, l10n),
                       style: TextStyle(
                         fontSize: 10,
                         color: textColor.withValues(alpha: 0.55),
@@ -874,14 +925,15 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   void _showAddToListDialog(PeriodTargetItem target) {
+    final l10n = AppLocalizations.of(context);
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
     if (widget.availableLists.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("No observing lists exist yet. Create one in the Observing Lists tab first!"),
-          action: SnackBarAction(label: "OK", onPressed: () {}),
+          content: Text(l10n?.noObservingListsFound ?? "No observing lists exist yet. Create one in the Observing Lists tab first!"),
+          action: SnackBarAction(label: l10n?.okBtn ?? "OK", onPressed: () {}),
         ),
       );
       return;
@@ -891,7 +943,7 @@ class _PlannerViewState extends State<PlannerView> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        title: Text("Add to Observing List", style: TextStyle(color: textColor, fontSize: 16)),
+        title: Text(l10n?.addToObservingList ?? "Add to Observing List", style: TextStyle(color: textColor, fontSize: 16)),
         content: SizedBox(
           width: 320,
           child: Column(
@@ -899,7 +951,7 @@ class _PlannerViewState extends State<PlannerView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Add ${target.displayName} to:",
+                l10n?.addNamedTargetTo(target.displayName) ?? "Add ${target.displayName} to:",
                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 10),
@@ -916,7 +968,7 @@ class _PlannerViewState extends State<PlannerView> {
                       leading: Icon(Icons.playlist_play_rounded, color: accentColor),
                       title: Text(list.name, style: TextStyle(color: textColor, fontSize: 13)),
                       subtitle: Text(
-                        "${list.items.length} items${list.sessionDate.isNotEmpty ? ' • ${list.sessionDate}' : ''}",
+                        "${l10n?.observingListItemCount(list.items.length) ?? '${list.items.length} items'}${list.sessionDate.isNotEmpty ? ' • ${list.sessionDate}' : ''}",
                         style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
                       ),
                       onTap: () {
@@ -924,7 +976,7 @@ class _PlannerViewState extends State<PlannerView> {
                         Navigator.of(ctx).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text("Added ${target.displayName} to '${list.name}'!"),
+                            content: Text(l10n?.addedTargetToList(target.displayName, list.name) ?? "Added ${target.displayName} to '${list.name}'!"),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -939,7 +991,7 @@ class _PlannerViewState extends State<PlannerView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text("Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+            child: Text(l10n?.cancel ?? "Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
           ),
         ],
       ),
@@ -1001,17 +1053,11 @@ class _PlannerViewState extends State<PlannerView> {
     );
   }
 
-  String _quadrantName(int q) {
-    switch (q) {
-      case 1: return "North (0°–90°)";
-      case 2: return "East (90°–180°)";
-      case 3: return "South (180°–270°)";
-      case 4: return "West (270°–360°)";
-      case 5: return "North-East (0°–90°)";
-      case 6: return "South-East (90°–180°)";
-      case 7: return "South-West (180°–270°)";
-      case 8: return "North-West (270°–360°)";
-      default: return "Full Sky (360°)";
+  String _quadrantName(int q, AppLocalizations? l10n) {
+    final opts = getQuadrantOptions(l10n);
+    if (q >= 0 && q < opts.length) {
+      return opts[q];
     }
+    return opts.first;
   }
 }

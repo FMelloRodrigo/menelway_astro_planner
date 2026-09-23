@@ -1157,4 +1157,156 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutNameOrigin =>
       '“Menelway” = “Menel” (Elvish/Tolkien for Skies/Heavens) + Arroway (from the Contact book/movie)';
+
+  @override
+  String get futureObservationPlanner => 'Future Observation Planner';
+
+  @override
+  String get presetNext7Days => 'Next 7 Days';
+
+  @override
+  String get presetThisWeekend => 'This Weekend';
+
+  @override
+  String get presetNextMonth => 'Next Month';
+
+  @override
+  String get presetNext30Days => 'Next 30 Days';
+
+  @override
+  String get presetCustomPeriod => 'Custom Period...';
+
+  @override
+  String plannerWindowCustom(String start, String end) {
+    return 'Window: $start – $end';
+  }
+
+  @override
+  String get plannerWindowFullNight => 'Window: Full Night';
+
+  @override
+  String plannerDirectionLabel(String direction) {
+    return 'Direction: $direction';
+  }
+
+  @override
+  String plannerAltMinLabel(String alt) {
+    return 'Alt ≥ $alt°';
+  }
+
+  @override
+  String plannerDurationMinLabel(String hours) {
+    return 'Duration ≥ ${hours}h';
+  }
+
+  @override
+  String get searchPeriodTargetsHint =>
+      'Search period targets (e.g. M42, Rosette, Nebula)...';
+
+  @override
+  String get searchPeriodTargetsHintShort => 'Search period targets...';
+
+  @override
+  String get sortMostObservableDays => 'Most Observable Days';
+
+  @override
+  String get sortPeakDate => 'Peak Date';
+
+  @override
+  String get sortHighestAltitude => 'Highest Altitude';
+
+  @override
+  String get sortBrightestFirst => 'Brightest First';
+
+  @override
+  String simulatingSkyPeriod(int days) {
+    return 'Simulating sky across $days nights...';
+  }
+
+  @override
+  String get noTargetsMatchPeriod => 'No Targets Match This Period';
+
+  @override
+  String noTargetsPeriodSubtitle(String minAlt, String direction) {
+    return 'None of the catalog candidates meet your active limits (Alt ≥ $minAlt°, $direction) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.';
+  }
+
+  @override
+  String get adjustFiltersBtn => 'Adjust Filters';
+
+  @override
+  String errorCalculatingPeriodTargets(String error) {
+    return 'Error calculating period targets: $error';
+  }
+
+  @override
+  String targetInConstellation(String type, String constellation) {
+    return '$type in $constellation';
+  }
+
+  @override
+  String periodDaysObservableShort(int observable, int total) {
+    return '$observable of $total days observable';
+  }
+
+  @override
+  String get outsideFiltersInPeriod => 'Outside active filters in this period';
+
+  @override
+  String periodPeakAltAndMaxHours(String alt, String hours) {
+    return 'Peak Alt: $alt° • Max: ${hours}h/night';
+  }
+
+  @override
+  String periodNeverClearsAlt(String alt) {
+    return 'Never clears $alt° in active window';
+  }
+
+  @override
+  String periodDaysRatio(int observable, int total) {
+    return '$observable / $total days';
+  }
+
+  @override
+  String periodDaysOnlySpan(String ratio, int day) {
+    return '$ratio • Day $day only';
+  }
+
+  @override
+  String addNamedTargetTo(String targetName) {
+    return 'Add $targetName to:';
+  }
+
+  @override
+  String observingListItemCount(int count) {
+    return '$count items';
+  }
+
+  @override
+  String addedTargetToList(String targetName, String listName) {
+    return 'Added $targetName to \'$listName\'!';
+  }
+
+  @override
+  String daysCountSuffix(int days) {
+    return '($days d)';
+  }
+
+  @override
+  String get okBtn => 'OK';
+
+  @override
+  String listItemsPlannedCount(int count) {
+    return '$count targets planned';
+  }
+
+  @override
+  String get exportCsvFramingTooltip => 'Export CSV / Framing';
+
+  @override
+  String get deleteListTooltip => 'Delete list';
+
+  @override
+  String get noTargetsInList =>
+      'No targets in this list. Add targets from the search view!';
 }

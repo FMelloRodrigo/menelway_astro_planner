@@ -1167,4 +1167,156 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get aboutNameOrigin =>
       '“Menelway” = “Menel” (palavra em élfico de Tolkien para Céus/Firmamento) + Arroway (do livro/filme Contato)';
+
+  @override
+  String get futureObservationPlanner => 'Planejador de Observações Futuras';
+
+  @override
+  String get presetNext7Days => 'Próximos 7 Dias';
+
+  @override
+  String get presetThisWeekend => 'Este Fim de Semana';
+
+  @override
+  String get presetNextMonth => 'Próximo Mês';
+
+  @override
+  String get presetNext30Days => 'Próximos 30 Dias';
+
+  @override
+  String get presetCustomPeriod => 'Período Personalizado...';
+
+  @override
+  String plannerWindowCustom(String start, String end) {
+    return 'Janela: $start – $end';
+  }
+
+  @override
+  String get plannerWindowFullNight => 'Janela: Noite Toda';
+
+  @override
+  String plannerDirectionLabel(String direction) {
+    return 'Direção: $direction';
+  }
+
+  @override
+  String plannerAltMinLabel(String alt) {
+    return 'Alt ≥ $alt°';
+  }
+
+  @override
+  String plannerDurationMinLabel(String hours) {
+    return 'Duração ≥ ${hours}h';
+  }
+
+  @override
+  String get searchPeriodTargetsHint =>
+      'Buscar alvos no período (ex: M42, Roseta, Nebulosa)...';
+
+  @override
+  String get searchPeriodTargetsHintShort => 'Buscar alvos no período...';
+
+  @override
+  String get sortMostObservableDays => 'Mais Dias Observáveis';
+
+  @override
+  String get sortPeakDate => 'Data do Pico';
+
+  @override
+  String get sortHighestAltitude => 'Maior Altitude';
+
+  @override
+  String get sortBrightestFirst => 'Mais Brilhantes Primeiro';
+
+  @override
+  String simulatingSkyPeriod(int days) {
+    return 'Simulando o céu ao longo de $days noites...';
+  }
+
+  @override
+  String get noTargetsMatchPeriod => 'Nenhum Alvo Corresponde a Este Período';
+
+  @override
+  String noTargetsPeriodSubtitle(String minAlt, String direction) {
+    return 'Nenhum dos candidatos do catálogo atende aos seus limites ativos (Alt ≥ $minAlt°, $direction) neste intervalo.\nTente selecionar um período mais amplo ou relaxar os limites de direção.';
+  }
+
+  @override
+  String get adjustFiltersBtn => 'Ajustar Filtros';
+
+  @override
+  String errorCalculatingPeriodTargets(String error) {
+    return 'Erro ao calcular alvos do período: $error';
+  }
+
+  @override
+  String targetInConstellation(String type, String constellation) {
+    return '$type em $constellation';
+  }
+
+  @override
+  String periodDaysObservableShort(int observable, int total) {
+    return '$observable de $total dias observáveis';
+  }
+
+  @override
+  String get outsideFiltersInPeriod => 'Fora dos filtros ativos neste período';
+
+  @override
+  String periodPeakAltAndMaxHours(String alt, String hours) {
+    return 'Alt. Máx: $alt° • Máx: ${hours}h/noite';
+  }
+
+  @override
+  String periodNeverClearsAlt(String alt) {
+    return 'Nunca atinge $alt° na janela ativa';
+  }
+
+  @override
+  String periodDaysRatio(int observable, int total) {
+    return '$observable / $total dias';
+  }
+
+  @override
+  String periodDaysOnlySpan(String ratio, int day) {
+    return '$ratio • Apenas dia $day';
+  }
+
+  @override
+  String addNamedTargetTo(String targetName) {
+    return 'Adicionar $targetName a:';
+  }
+
+  @override
+  String observingListItemCount(int count) {
+    return '$count itens';
+  }
+
+  @override
+  String addedTargetToList(String targetName, String listName) {
+    return '$targetName adicionado à lista \'$listName\'!';
+  }
+
+  @override
+  String daysCountSuffix(int days) {
+    return '($days d)';
+  }
+
+  @override
+  String get okBtn => 'OK';
+
+  @override
+  String listItemsPlannedCount(int count) {
+    return '$count alvos planejados';
+  }
+
+  @override
+  String get exportCsvFramingTooltip => 'Exportar CSV / Enquadramento';
+
+  @override
+  String get deleteListTooltip => 'Excluir lista';
+
+  @override
+  String get noTargetsInList =>
+      'Nenhum alvo nesta lista. Adicione alvos pela busca!';
 }
