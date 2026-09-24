@@ -1309,4 +1309,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noTargetsInList =>
       'No targets in this list. Add targets from the search view!';
+
+  @override
+  String tourStepIndicator(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get tourSkip => 'Skip Tour';
+
+  @override
+  String get tourNext => 'Next →';
+
+  @override
+  String get tourBack => '← Back';
+
+  @override
+  String get tourFinish => 'Start Exploring';
+
+  @override
+  String get tourLocationTitle => '1. Set Your Observing Site';
+
+  @override
+  String get tourLocationDesc =>
+      'Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.';
+
+  @override
+  String get tourEquipmentTitle => '2. Configure Equipment & Optics';
+
+  @override
+  String get tourEquipmentDesc =>
+      'Add your telescopes, camera sensors, and focal reducers. Menelway calculates true sensor Field of View (FoV) framing and target suitability.';
+
+  @override
+  String get tourFiltersTitle => '3. Target Filters & Criteria';
+
+  @override
+  String get tourFiltersDesc =>
+      'Filter thousands of deep-sky objects by minimum altitude, moon separation, DSO category, and transit window to plan the best imaging targets.';
+
+  @override
+  String get settingsSectionTour => 'Quick Tour & Guide';
+
+  @override
+  String get settingsTourDesc =>
+      'Revisit the initial walkthrough highlighting location, optics, and filters.';
+
+  @override
+  String get settingsReplayTourBtn => 'Replay Quick Tour';
 }

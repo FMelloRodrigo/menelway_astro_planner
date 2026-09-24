@@ -30,6 +30,7 @@ class TargetSearchView extends StatefulWidget {
   final List<ObservingListModel> availableLists;
   final void Function(FilterState updated) onFilterChanged;
   final void Function(int listId, int dsoId, String notes) onAddToList;
+  final GlobalKey? filterButtonKey;
 
   const TargetSearchView({
     super.key,
@@ -41,6 +42,7 @@ class TargetSearchView extends StatefulWidget {
     required this.availableLists,
     required this.onFilterChanged,
     required this.onAddToList,
+    this.filterButtonKey,
   });
 
   @override
@@ -258,6 +260,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
               );
 
               final filterButton = SizedBox(
+                key: widget.filterButtonKey,
                 height: topBarElementHeight,
                 child: FilledButton.tonalIcon(
                   icon: const Icon(Icons.tune_rounded, size: 18),

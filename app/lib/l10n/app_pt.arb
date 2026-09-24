@@ -409,5 +409,20 @@
   "listItemsPlannedCount": "{count} alvos planejados",
   "exportCsvFramingTooltip": "Exportar CSV / Enquadramento",
   "deleteListTooltip": "Excluir lista",
-  "noTargetsInList": "Nenhum alvo nesta lista. Adicione alvos pela busca!"
+  "noTargetsInList": "Nenhum alvo nesta lista. Adicione alvos pela busca!",
+
+  "tourStepIndicator": "Passo {current} de {total}",
+  "tourSkip": "Pular Tour",
+  "tourNext": "Próximo →",
+  "tourBack": "← Voltar",
+  "tourFinish": "Começar a Explorar",
+  "tourLocationTitle": "1. Defina seu Local de Observação",
+  "tourLocationDesc": "As curvas de altitude, nascer/pôr e horas de escuridão são calculadas para suas coordenadas exatas. Clique aqui para buscar sua cidade ou inserir coordenadas.",
+  "tourEquipmentTitle": "2. Configure Equipamentos e Ópticas",
+  "tourEquipmentDesc": "Cadastre seus telescópios, sensores de câmera e redutores. O Menelway simula o campo de visão (FoV) real do seu sensor e enquadramento.",
+  "tourFiltersTitle": "3. Filtros e Critérios de Alvos",
+  "tourFiltersDesc": "Filtre milhares de objetos do céu profundo por altitude mínima, separação da Lua, tipo de DSO e janela de trânsito para planejar sua sessão.",
+  "settingsSectionTour": "Guia Rápido e Tour",
+  "settingsTourDesc": "Reveja o tour interativo destacando local, equipamentos e filtros.",
+  "settingsReplayTourBtn": "Rever Tour Rápido"
 }

@@ -1319,4 +1319,52 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get noTargetsInList =>
       'Nenhum alvo nesta lista. Adicione alvos pela busca!';
+
+  @override
+  String tourStepIndicator(int current, int total) {
+    return 'Passo $current de $total';
+  }
+
+  @override
+  String get tourSkip => 'Pular Tour';
+
+  @override
+  String get tourNext => 'Próximo →';
+
+  @override
+  String get tourBack => '← Voltar';
+
+  @override
+  String get tourFinish => 'Começar a Explorar';
+
+  @override
+  String get tourLocationTitle => '1. Defina seu Local de Observação';
+
+  @override
+  String get tourLocationDesc =>
+      'As curvas de altitude, nascer/pôr e horas de escuridão são calculadas para suas coordenadas exatas. Clique aqui para buscar sua cidade ou inserir coordenadas.';
+
+  @override
+  String get tourEquipmentTitle => '2. Configure Equipamentos e Ópticas';
+
+  @override
+  String get tourEquipmentDesc =>
+      'Cadastre seus telescópios, sensores de câmera e redutores. O Menelway simula o campo de visão (FoV) real do seu sensor e enquadramento.';
+
+  @override
+  String get tourFiltersTitle => '3. Filtros e Critérios de Alvos';
+
+  @override
+  String get tourFiltersDesc =>
+      'Filtre milhares de objetos do céu profundo por altitude mínima, separação da Lua, tipo de DSO e janela de trânsito para planejar sua sessão.';
+
+  @override
+  String get settingsSectionTour => 'Guia Rápido e Tour';
+
+  @override
+  String get settingsTourDesc =>
+      'Reveja o tour interativo destacando local, equipamentos e filtros.';
+
+  @override
+  String get settingsReplayTourBtn => 'Rever Tour Rápido';
 }

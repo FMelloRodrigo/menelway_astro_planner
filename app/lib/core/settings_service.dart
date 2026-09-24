@@ -19,6 +19,7 @@ class AppSettingsData {
   final String? activeEquipmentProfileId;
   final List<TargetItem>? favorites;
   final String? languageCode;
+  final bool hasCompletedTutorial;
   final int schemaVersion;
 
   AppSettingsData({
@@ -31,6 +32,7 @@ class AppSettingsData {
     this.activeEquipmentProfileId,
     this.favorites,
     this.languageCode,
+    this.hasCompletedTutorial = false,
     this.schemaVersion = SettingsService.currentSchemaVersion,
   });
 }
@@ -213,6 +215,7 @@ class SettingsService {
       }
       final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
       final languageCode = data['languageCode'] as String?;
+      final hasCompletedTutorial = data['hasCompletedTutorial'] as bool? ?? false;
 
       List<TargetItem>? favorites;
       if (data.containsKey('favorites') && data['favorites'] is List) {
@@ -234,6 +237,7 @@ class SettingsService {
         activeEquipmentProfileId: activeEquipmentProfileId,
         favorites: favorites,
         languageCode: languageCode,
+        hasCompletedTutorial: hasCompletedTutorial,
         schemaVersion: schemaVersion,
       );
     } catch (e, st) {
@@ -253,6 +257,7 @@ class SettingsService {
     String? activeEquipmentProfileId,
     List<TargetItem>? favorites,
     String? languageCode,
+    bool? hasCompletedTutorial,
   }) async {
     try {
       final data = await _readSettingsJson();
@@ -281,10 +286,24 @@ class SettingsService {
       if (languageCode != null) {
         data['languageCode'] = languageCode;
       }
+      if (hasCompletedTutorial != null) {
+        data['hasCompletedTutorial'] = hasCompletedTutorial;
+      }
 
       await _writeSettingsJson(data);
     } catch (e, st) {
       AppLogger.error('Failed saving user settings', tag: _tag, error: e, stackTrace: st);
+    }
+  }
+
+  /// Records whether the user has seen or completed the initial interactive onboarding tour.
+  static Future<void> saveTutorialStatus(bool completed) async {
+    try {
+      final data = await _readSettingsJson();
+      data['hasCompletedTutorial'] = completed;
+      await _writeSettingsJson(data);
+    } catch (e, st) {
+      AppLogger.error('Failed saving tutorial completion status', tag: _tag, error: e, stackTrace: st);
     }
   }
 

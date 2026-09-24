@@ -2335,6 +2335,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No targets in this list. Add targets from the search view!'**
   String get noTargetsInList;
+
+  /// No description provided for @tourStepIndicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String tourStepIndicator(int current, int total);
+
+  /// No description provided for @tourSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Tour'**
+  String get tourSkip;
+
+  /// No description provided for @tourNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next →'**
+  String get tourNext;
+
+  /// No description provided for @tourBack.
+  ///
+  /// In en, this message translates to:
+  /// **'← Back'**
+  String get tourBack;
+
+  /// No description provided for @tourFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Exploring'**
+  String get tourFinish;
+
+  /// No description provided for @tourLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Set Your Observing Site'**
+  String get tourLocationTitle;
+
+  /// No description provided for @tourLocationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.'**
+  String get tourLocationDesc;
+
+  /// No description provided for @tourEquipmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'2. Configure Equipment & Optics'**
+  String get tourEquipmentTitle;
+
+  /// No description provided for @tourEquipmentDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your telescopes, camera sensors, and focal reducers. Menelway calculates true sensor Field of View (FoV) framing and target suitability.'**
+  String get tourEquipmentDesc;
+
+  /// No description provided for @tourFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'3. Target Filters & Criteria'**
+  String get tourFiltersTitle;
+
+  /// No description provided for @tourFiltersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter thousands of deep-sky objects by minimum altitude, moon separation, DSO category, and transit window to plan the best imaging targets.'**
+  String get tourFiltersDesc;
+
+  /// No description provided for @settingsSectionTour.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Tour & Guide'**
+  String get settingsSectionTour;
+
+  /// No description provided for @settingsTourDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Revisit the initial walkthrough highlighting location, optics, and filters.'**
+  String get settingsTourDesc;
+
+  /// No description provided for @settingsReplayTourBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay Quick Tour'**
+  String get settingsReplayTourBtn;
 }
 
 class _AppLocalizationsDelegate

@@ -10,12 +10,14 @@ class SettingsDialog extends StatelessWidget {
   final bool isRedNightMode;
   final VoidCallback onResetFilters;
   final VoidCallback onCleanAllData;
+  final VoidCallback? onReplayTour;
 
   const SettingsDialog({
     super.key,
     required this.isRedNightMode,
     required this.onResetFilters,
     required this.onCleanAllData,
+    this.onReplayTour,
   });
 
   @override
@@ -178,6 +180,40 @@ class SettingsDialog extends StatelessWidget {
                           },
                         ),
                       ),
+
+                      if (onReplayTour != null) ...[
+                        const SizedBox(height: 14),
+                        // Section: Quick Tour & Guide
+                        _buildSectionCard(
+                          context: context,
+                          cardBgColor: cardBgColor,
+                          borderColor: borderColor,
+                          textColor: textColor,
+                          textSubColor: textSubColor,
+                          icon: Icons.explore_rounded,
+                          iconColor: accentColor,
+                          title: l10n?.settingsSectionTour ?? "Quick Tour & Guide",
+                          description: l10n?.settingsTourDesc ??
+                              "Revisit the initial walkthrough highlighting location, optics, and filters.",
+                          actionWidget: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: accentColor,
+                              side: BorderSide(color: accentColor.withValues(alpha: 0.6)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: const Icon(Icons.play_circle_outline_rounded, size: 16),
+                            label: Text(
+                              l10n?.settingsReplayTourBtn ?? "Replay Quick Tour",
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              onReplayTour!();
+                            },
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(height: 14),
 

@@ -20,6 +20,7 @@ import 'observing_lists_view.dart';
 import 'planner_view.dart';
 import 'settings_dialog.dart';
 import 'target_search_view.dart';
+import '../widgets/spotlight_tour.dart';
 
 class MainScaffold extends StatefulWidget {
   final bool isRedNightMode;
@@ -47,6 +48,12 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   AstroEngine get _engine => widget.engine ?? AstroEngine.instance;
+
+  final GlobalKey _desktopLocationKey = GlobalKey();
+  final GlobalKey _mobileLocationKey = GlobalKey();
+  final GlobalKey _equipmentDesktopKey = GlobalKey();
+  final GlobalKey _equipmentMobileKey = GlobalKey();
+  final GlobalKey _filtersKey = GlobalKey();
 
   int _selectedTabIndex = 0;
   bool _isInitializing = true;
@@ -116,12 +123,75 @@ class _MainScaffoldState extends State<MainScaffold> {
       });
 
       _runFiltering();
+
+      if (widget.initialSettings?.hasCompletedTutorial != true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 650), () {
+            if (mounted) {
+              _startSpotlightTour();
+            }
+          });
+        });
+      }
     } catch (e) {
       setState(() {
         _isInitializing = false;
         _initError = e.toString();
       });
     }
+  }
+
+  void _startSpotlightTour() {
+    if (_selectedTabIndex != 0) {
+      setState(() => _selectedTabIndex = 0);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      final isDesktopLocation = _desktopLocationKey.currentContext != null;
+      final locKey = isDesktopLocation ? _desktopLocationKey : _mobileLocationKey;
+      final eqKey = (_equipmentDesktopKey.currentContext != null)
+          ? _equipmentDesktopKey
+          : _equipmentMobileKey;
+
+      SpotlightTour.show(
+        context: context,
+        isRedNightMode: widget.isRedNightMode,
+        steps: [
+          SpotlightTourStep(
+            targetKey: locKey,
+            title: l10n?.tourLocationTitle ?? "1. Set Your Observing Site",
+            description: l10n?.tourLocationDesc ??
+                "Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.",
+            icon: Icons.location_on_rounded,
+            borderRadius: 8,
+          ),
+          SpotlightTourStep(
+            targetKey: eqKey,
+            title: l10n?.tourEquipmentTitle ?? "2. Configure Equipment & Optics",
+            description: l10n?.tourEquipmentDesc ??
+                "Add your telescopes, camera sensors, and focal reducers. Menelway calculates true sensor Field of View (FoV) framing and target suitability.",
+            icon: Icons.camera_alt_rounded,
+            borderRadius: 8,
+          ),
+          SpotlightTourStep(
+            targetKey: _filtersKey,
+            title: l10n?.tourFiltersTitle ?? "3. Target Filters & Criteria",
+            description: l10n?.tourFiltersDesc ??
+                "Filter thousands of deep-sky objects by minimum altitude, moon separation, DSO category, and transit window to plan the best imaging targets.",
+            icon: Icons.tune_rounded,
+            borderRadius: 8,
+          ),
+        ],
+        onFinished: () {
+          SettingsService.saveTutorialStatus(true);
+        },
+        onSkipped: () {
+          SettingsService.saveTutorialStatus(true);
+        },
+      );
+    });
   }
 
   void _runFiltering() {
@@ -661,6 +731,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           children: [
             // Observer Location Pill (tappable)
             InkWell(
+              key: _mobileLocationKey,
               onTap: _editLocationDialog,
               borderRadius: BorderRadius.circular(6),
               child: Container(
@@ -871,6 +942,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           if (isWide) ...[
             // Observer Location Pill (Desktop)
             InkWell(
+              key: _desktopLocationKey,
               onTap: _editLocationDialog,
               borderRadius: BorderRadius.circular(8),
               child: Container(
@@ -1138,6 +1210,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             Tooltip(
               message: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
               child: SizedBox(
+                key: _equipmentDesktopKey,
                 height: 32.0,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
@@ -1187,6 +1260,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             )
           else
             SizedBox(
+              key: _equipmentMobileKey,
               width: 32.0,
               height: 32.0,
               child: IconButton(
@@ -1242,6 +1316,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     onCleanAllData: () {
                       _showCleanDataDialog();
                     },
+                    onReplayTour: _startSpotlightTour,
                   ),
                 );
               },
@@ -1385,6 +1460,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           Expanded(
             child: _selectedTabIndex == 0
                 ? TargetSearchView(
+                    filterButtonKey: _filtersKey,
                     targets: _targets,
                     night: _nightSummary!,
                     filters: _filters,
