@@ -521,6 +521,13 @@ def main():
 
     conn.commit()
 
+    # Seed Solar System Planets and Bright Stars
+    try:
+        from seed_planets_and_stars import seed as seed_solar_and_stars
+        seed_solar_and_stars()
+    except Exception as e:
+        print(f"Warning: could not seed planets and stars: {e}")
+
     cur.execute("SELECT count(*) FROM dso_objects;")
     total_objects = cur.fetchone()[0]
 
@@ -538,6 +545,7 @@ def main():
 
     cur.execute("VACUUM;")
     conn.close()
+
 
     db_size_mb = os.path.getsize(OUTPUT_DB) / (1024 * 1024)
     print("Database build complete!")

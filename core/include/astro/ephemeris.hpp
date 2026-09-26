@@ -53,6 +53,32 @@ struct NightWindow {
     bool sun_never_rises{false};
 };
 
+enum class PlanetId {
+    Mercury = 1,
+    Venus = 2,
+    Mars = 3,
+    Jupiter = 4,
+    Saturn = 5,
+    Uranus = 6,
+    Neptune = 7,
+    Moon = 8,
+    Sun = 9,
+    Pluto = 10
+};
+
+struct PlanetInfo {
+    PlanetId id{PlanetId::Mercury};
+    std::string name;
+    coordinates::EquatorialCoordinates coords;
+    coordinates::HorizontalCoordinates horizontal;
+    double visual_magnitude{0.0};
+    double angular_diameter_arcsec{0.0};
+    double phase_angle_deg{0.0};
+    double illuminated_fraction{1.0};
+    double distance_au{1.0};
+    double heliocentric_distance_au{1.0};
+};
+
 /**
  * @brief Computes Equatorial and Horizontal coordinates of the Sun.
  */
@@ -70,6 +96,15 @@ MoonInfo get_moon_info(
 );
 
 /**
+ * @brief Computes Equatorial and Horizontal coordinates, magnitude, and size of a Solar System planet.
+ */
+PlanetInfo get_planet_info(
+    PlanetId planet,
+    time::JulianDate jd,
+    const coordinates::ObserverLocation& obs
+);
+
+/**
  * @brief Computes the twilight transition times for the night starting on the given UTC date.
  * @param date_midnight_utc Start of the local calendar day (or noon).
  * @param obs Observer coordinates.
@@ -80,3 +115,4 @@ NightWindow calculate_night_window(
 );
 
 } // namespace astro::ephemeris
+

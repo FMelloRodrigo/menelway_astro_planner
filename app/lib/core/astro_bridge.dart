@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
-import 'dart:io';
 import 'package:ffi/ffi.dart';
-import 'package:path/path.dart' as p;
 
 import 'astro_ffi_types.dart';
 import 'astro_engine.dart';
@@ -573,7 +571,52 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
+  List<TargetItem> getPlanets({
+    required FilterState filters,
+    required NightSummary night,
+    int stepMinutes = 10,
+  }) {
+    final planetFilters = filters.copyWith(
+      selectedCatalogs: {'Solar System'},
+      selectedObjectTypes: {'Planet', 'Star'},
+      minMagnitude: -30.0,
+      maxMagnitude: 20.0,
+      minSizeArcmin: 0.0,
+      maxSizeArcmin: 100000.0,
+      maxTargets: 50,
+    );
+    return filterTargets(
+      filters: planetFilters,
+      night: night,
+      stepMinutes: stepMinutes,
+    );
+  }
+
+  @override
+  List<TargetItem> getBrightStars({
+    required FilterState filters,
+    required NightSummary night,
+    int stepMinutes = 10,
+  }) {
+    final starFilters = filters.copyWith(
+      selectedCatalogs: {'Stars'},
+      selectedObjectTypes: {'Star', 'Double Star'},
+      minMagnitude: -5.0,
+      maxMagnitude: 10.0,
+      minSizeArcmin: 0.0,
+      maxSizeArcmin: 100000.0,
+      maxTargets: 150,
+    );
+    return filterTargets(
+      filters: starFilters,
+      night: night,
+      stepMinutes: stepMinutes,
+    );
+  }
+
   List<PeriodTargetItem> filterTargetsPeriod({
+
     required FilterState filters,
     required DateTime periodStart,
     required DateTime periodEnd,

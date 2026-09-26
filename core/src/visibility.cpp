@@ -146,7 +146,38 @@ std::vector<AltitudePoint> generate_altitude_curve(
     return points;
 }
 
+std::vector<AltitudePoint> generate_planet_altitude_curve(
+    ephemeris::PlanetId planet,
+    const coordinates::ObserverLocation& obs,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes
+) {
+    std::vector<AltitudePoint> points;
+    if (start_jd.value >= end_jd.value) return points;
+
+    double step_days = (static_cast<double>(step_minutes) / 1440.0);
+    for (double t = start_jd.value; t <= end_jd.value + 1e-6; t += step_days) {
+        time::JulianDate cur_jd{t};
+        auto pinfo = ephemeris::get_planet_info(planet, cur_jd, obs);
+        auto moon = ephemeris::get_moon_info(cur_jd, obs);
+        units::Degrees moon_sep = coordinates::angular_separation(pinfo.coords, moon.coords);
+
+        points.push_back({
+            cur_jd,
+            time::julian_date_to_unix(cur_jd),
+            pinfo.horizontal.altitude,
+            pinfo.horizontal.azimuth,
+            moon_sep,
+            pinfo.horizontal.altitude.value >= 0.0
+        });
+    }
+
+    return points;
+}
+
 YearlyVisibilityResult calculate_yearly_visibility(
+
     const coordinates::EquatorialCoordinates& target,
     const coordinates::ObserverLocation& obs,
     const VisibilityCriteria& criteria,
@@ -405,7 +436,241 @@ YearlyVisibilityResult calculate_yearly_visibility(
     return result;
 }
 
+YearlyVisibilityResult calculate_planet_yearly_visibility(
+    ephemeris::PlanetId planet,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    int year
+) {
+    YearlyVisibilityResult result;
+    static const char* kMonthNames[12] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+
+    bool is_leap = ((year % 4 == 0) && (year % 100 != 0)) || (year % 400 == 0);
+    int days_in_month[12] = {31, is_leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    struct DayRecord {
+        int month{0};
+        int day{0};
+        double hours{0.0};
+        double peak_alt{-90.0};
+        bool is_obs{false};
+    };
+
+    std::vector<DayRecord> all_days;
+    all_days.reserve(366);
+
+    double max_alt_year = -90.0;
+
+    for (int m = 1; m <= 12; ++m) {
+        int num_days = days_in_month[m - 1];
+        for (int d = 1; d <= num_days; ++d) {
+            DayRecord dr;
+            dr.month = m;
+            dr.day = d;
+
+            time::JulianDate jd_midnight_utc = time::datetime_to_julian_date({year, m, d, 0, 0, 0.0});
+            auto night = ephemeris::calculate_night_window(jd_midnight_utc, obs);
+
+            time::JulianDate win_start{0.0};
+            time::JulianDate win_end{0.0};
+
+            if (criteria.use_custom_time_window) {
+                double local_fraction = (criteria.custom_start_hour + criteria.custom_start_minute / 60.0) / 24.0;
+                if (criteria.custom_start_hour < 12) {
+                    local_fraction += 1.0;
+                }
+                double utc_start_jd = jd_midnight_utc.value + local_fraction - (static_cast<double>(criteria.utc_offset_minutes) / 1440.0);
+
+                int start_mins = criteria.custom_start_hour * 60 + criteria.custom_start_minute;
+                int end_mins = criteria.custom_end_hour * 60 + criteria.custom_end_minute;
+                int diff_mins = end_mins - start_mins;
+                if (diff_mins <= 0) diff_mins += 1440;
+
+                double utc_end_jd = utc_start_jd + (static_cast<double>(diff_mins) / 1440.0);
+
+                win_start = time::JulianDate{utc_start_jd};
+                win_end = time::JulianDate{utc_end_jd};
+            } else {
+                if (!night.sun_never_sets) {
+                    win_start = night.astronomical_dusk;
+                    win_end = night.astronomical_dawn;
+                    if (!night.has_astronomical_night) {
+                        win_start = night.nautical_dusk;
+                        win_end = night.nautical_dawn;
+                    }
+                }
+            }
+
+            auto pinfo = ephemeris::get_planet_info(planet, jd_midnight_utc, obs);
+            double theo_max = 90.0 - std::abs(obs.latitude.value - pinfo.coords.dec.value);
+            if (theo_max > max_alt_year) max_alt_year = theo_max;
+
+            if (win_start.value < win_end.value) {
+                VisibilityCriteria day_crit = criteria;
+                day_crit.window_start = win_start;
+                day_crit.window_end = win_end;
+                day_crit.min_moon_separation = units::Degrees{0.0};
+
+                auto vis = evaluate_visibility(pinfo.coords, obs, day_crit, /*step_minutes=*/10, /*include_samples=*/false);
+                dr.hours = vis.max_continuous_hours;
+                dr.peak_alt = vis.peak_altitude.value;
+                dr.is_obs = vis.meets_criteria;
+            }
+
+            all_days.push_back(dr);
+        }
+    }
+
+    result.theoretical_max_altitude_deg = max_alt_year;
+    result.can_ever_reach_min_alt = (max_alt_year >= criteria.min_altitude.value);
+
+    // Monthly aggregation
+    result.months.resize(12);
+    int total_obs_days = 0;
+    int peak_day_idx = 0;
+    double max_h = -1.0;
+
+    int day_cursor = 0;
+    for (int m = 1; m <= 12; ++m) {
+        MonthVisibility mv;
+        mv.month = m;
+        mv.month_name = kMonthNames[m - 1];
+        mv.total_days_in_month = days_in_month[m - 1];
+
+        double month_max_h = 0.0;
+        double month_max_alt = -90.0;
+        int obs_count = 0;
+        int first_obs_day = 0;
+        int last_obs_day = 0;
+
+        for (int d = 1; d <= days_in_month[m - 1]; ++d) {
+            const auto& dr = all_days[day_cursor];
+            if (dr.hours > month_max_h) {
+                month_max_h = dr.hours;
+            }
+            if (dr.peak_alt > month_max_alt) {
+                month_max_alt = dr.peak_alt;
+            }
+            if (dr.is_obs) {
+                obs_count++;
+                if (first_obs_day == 0) {
+                    first_obs_day = d;
+                }
+                last_obs_day = d;
+            }
+
+            if (dr.hours > max_h) {
+                max_h = dr.hours;
+                peak_day_idx = day_cursor;
+            }
+
+            day_cursor++;
+        }
+
+        mv.hours_observable = month_max_h;
+        mv.peak_altitude_deg = month_max_alt;
+        mv.observable_days_count = obs_count;
+        mv.start_day = first_obs_day;
+        mv.end_day = last_obs_day;
+        mv.is_observable = (obs_count > 0);
+
+        total_obs_days += obs_count;
+        result.months[m - 1] = mv;
+    }
+
+    result.total_observable_days = total_obs_days;
+    result.max_hours_in_peak = max_h > 0.0 ? max_h : 0.0;
+    result.peak_month = all_days[peak_day_idx].month;
+    result.peak_day = all_days[peak_day_idx].day;
+
+    int n_days = static_cast<int>(all_days.size());
+
+    if (total_obs_days == n_days) {
+        result.start_month = 1;
+        result.start_day = 1;
+        result.end_month = 12;
+        result.end_day = days_in_month[11];
+        result.best_window_start = 1;
+        result.best_window_end = 12;
+        result.best_window_summary = "Year-Round";
+        return result;
+    }
+
+    if (total_obs_days == 0) {
+        if (result.max_hours_in_peak > 0.0) {
+            char buf[128];
+            snprintf(buf, sizeof(buf), "Peak on %s %d (%.1fh, below %.1fh limit)",
+                     kMonthNames[result.peak_month - 1], result.peak_day,
+                     result.max_hours_in_peak, criteria.min_duration_hours);
+            result.best_window_summary = buf;
+            result.start_month = result.peak_month;
+            result.start_day = result.peak_day;
+            result.end_month = result.peak_month;
+            result.end_day = result.peak_day;
+            result.best_window_start = result.peak_month;
+            result.best_window_end = result.peak_month;
+        } else {
+            result.best_window_summary = "Not observable with current filters";
+            result.start_month = 0;
+            result.start_day = 0;
+            result.end_month = 0;
+            result.end_day = 0;
+            result.peak_month = 0;
+            result.peak_day = 0;
+            result.best_window_start = 0;
+            result.best_window_end = 0;
+        }
+        return result;
+    }
+
+    int start_day_idx = peak_day_idx;
+    int end_day_idx = peak_day_idx;
+
+    for (int step = 1; step < n_days; ++step) {
+        int prev = (peak_day_idx - step + n_days) % n_days;
+        if (all_days[prev].is_obs) {
+            start_day_idx = prev;
+        } else {
+            break;
+        }
+    }
+
+    for (int step = 1; step < n_days; ++step) {
+        int next = (peak_day_idx + step) % n_days;
+        if (all_days[next].is_obs) {
+            end_day_idx = next;
+        } else {
+            break;
+        }
+    }
+
+    result.start_month = all_days[start_day_idx].month;
+    result.start_day = all_days[start_day_idx].day;
+    result.end_month = all_days[end_day_idx].month;
+    result.end_day = all_days[end_day_idx].day;
+    result.best_window_start = result.start_month;
+    result.best_window_end = result.end_month;
+
+    char buf[128];
+    if (start_day_idx == end_day_idx) {
+        snprintf(buf, sizeof(buf), "%s %d only (Peak: %.1fh)",
+                 kMonthNames[result.start_month - 1], result.start_day, result.max_hours_in_peak);
+    } else {
+        snprintf(buf, sizeof(buf), "%s %d – %s %d (Peak: %s %d)",
+                 kMonthNames[result.start_month - 1], result.start_day,
+                 kMonthNames[result.end_month - 1], result.end_day,
+                 kMonthNames[result.peak_month - 1], result.peak_day);
+    }
+    result.best_window_summary = buf;
+
+    return result;
+}
+
 PeriodEvaluationContext prepare_period_context(
+
     const coordinates::ObserverLocation& obs,
     const VisibilityCriteria& criteria,
     time::JulianDate start_jd,

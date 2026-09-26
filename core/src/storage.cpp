@@ -1,4 +1,6 @@
 #include "astro/storage.hpp"
+#include "astro/ephemeris.hpp"
+#include "astro/time.hpp"
 #include "sqlite3.h"
 
 #include <algorithm>
@@ -453,7 +455,19 @@ std::optional<catalog::DsoObject> SqliteStorage::get_object_by_id(std::int64_t i
     sqlite3_bind_int64(stmt.get(), 1, id);
 
     if (sqlite3_step(stmt.get()) == SQLITE_ROW) {
-        return row_to_dso(stmt.get());
+        auto obj = row_to_dso(stmt.get());
+        if (obj.catalog == "Solar System" || (obj.id >= 90001 && obj.id <= 90010)) {
+            auto pid = static_cast<ephemeris::PlanetId>(obj.id - 90000);
+            coordinates::ObserverLocation def_obs{units::Degrees{0.0}, units::Degrees{0.0}, 0.0};
+            auto now_sec = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch()
+            ).count();
+            auto pinfo = ephemeris::get_planet_info(pid, time::unix_to_julian_date(now_sec), def_obs);
+            obj.coordinates = pinfo.coords;
+            obj.magnitude = pinfo.visual_magnitude;
+            obj.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+        }
+        return obj;
     }
 
     return std::nullopt;
@@ -475,8 +489,23 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
 
     std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
     bool has_search_query = !filter_options.search_query.empty();
+    time::JulianDate eval_jd = visibility_criteria.window_start;
+    if (visibility_criteria.window_end.value > visibility_criteria.window_start.value) {
+        eval_jd = time::JulianDate{
+            (visibility_criteria.window_start.value + visibility_criteria.window_end.value) * 0.5
+        };
+    }
 
-    for (const auto& dso : candidates) {
+
+    for (auto dso : candidates) {
+        if (dso.catalog == "Solar System" || (dso.id >= 90001 && dso.id <= 90010)) {
+            auto pid = static_cast<ephemeris::PlanetId>(dso.id - 90000);
+            auto pinfo = ephemeris::get_planet_info(pid, eval_jd, obs);
+            dso.coordinates = pinfo.coords;
+            dso.magnitude = pinfo.visual_magnitude;
+            dso.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+        }
+
         auto vis = visibility::evaluate_visibility(
             dso.coordinates,
             obs,

@@ -19,6 +19,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabTargets => 'Targets';
 
   @override
+  String get tabPlanets => 'Planets';
+
+  @override
+  String get tabBrightStars => 'Bright Stars';
+
+  @override
   String get tabPlanner => 'Planner';
 
   @override
@@ -162,6 +168,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sortMagnitude => 'Magnitude (Brightest)';
+
+  @override
+  String get sortOrderFromSun => 'Distance from Sun';
+
+  @override
+  String get sortBrightness => 'Brightness';
 
   @override
   String get sortVisibleStartTime => 'Visible From';
@@ -322,6 +334,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get objDoubleStar => 'Double Star';
+
+  @override
+  String get objPlanet => 'Planet';
 
   @override
   String get objAsterism => 'Asterism';

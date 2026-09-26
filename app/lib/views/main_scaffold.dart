@@ -14,9 +14,11 @@ import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import 'bright_stars_view.dart';
 import 'equipment_dialog.dart';
 import 'favorites_view.dart';
 import 'observing_lists_view.dart';
+import 'planets_view.dart';
 import 'planner_view.dart';
 import 'settings_dialog.dart';
 import 'target_search_view.dart';
@@ -58,12 +60,16 @@ class _MainScaffoldState extends State<MainScaffold> {
   int _selectedTabIndex = 0;
   bool _isInitializing = true;
   bool _isLoadingTargets = false;
+  bool _isLoadingPlanets = false;
+  bool _isLoadingBrightStars = false;
   String? _initError;
   double _dbSizeMb = 0.0;
 
   late FilterState _filters;
   NightSummary? _nightSummary;
   List<TargetItem> _targets = [];
+  List<TargetItem> _planets = [];
+  List<TargetItem> _brightStars = [];
   List<ObservingListModel> _observingLists = [];
 
   @override
@@ -196,7 +202,11 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _runFiltering() {
     if (_nightSummary == null) return;
-    setState(() => _isLoadingTargets = true);
+    setState(() {
+      _isLoadingTargets = true;
+      _isLoadingPlanets = true;
+      _isLoadingBrightStars = true;
+    });
 
     Future.microtask(() {
       try {
@@ -205,15 +215,33 @@ class _MainScaffoldState extends State<MainScaffold> {
           night: _nightSummary!,
           stepMinutes: 10,
         );
+        final planets = _engine.getPlanets(
+          filters: _filters,
+          night: _nightSummary!,
+          stepMinutes: 10,
+        );
+        final stars = _engine.getBrightStars(
+          filters: _filters,
+          night: _nightSummary!,
+          stepMinutes: 10,
+        );
         if (mounted) {
           setState(() {
             _targets = results;
+            _planets = planets;
+            _brightStars = stars;
             _isLoadingTargets = false;
+            _isLoadingPlanets = false;
+            _isLoadingBrightStars = false;
           });
         }
       } catch (e) {
         if (mounted) {
-          setState(() => _isLoadingTargets = false);
+          setState(() {
+            _isLoadingTargets = false;
+            _isLoadingPlanets = false;
+            _isLoadingBrightStars = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Error calculating targets: $e")),
           );
@@ -396,6 +424,8 @@ class _MainScaffoldState extends State<MainScaffold> {
     setState(() {
       _filters = FilterState();
       _observingLists = [];
+      _planets = [];
+      _brightStars = [];
       _nightSummary = _engine.getNightSummary(
         latitude: _filters.observerLat,
         longitude: _filters.observerLon,
@@ -1430,8 +1460,28 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
                 NavigationRailDestination(
                   icon: Icon(
-                    Icons.calendar_month_rounded,
+                    Icons.public_rounded,
                     color: _selectedTabIndex == 1
+                        ? accentColor
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
+                  selectedIcon: Icon(Icons.public_rounded, color: accentColor),
+                  label: Text(l10n?.tabPlanets ?? "Planets"),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(
+                    Icons.star_rounded,
+                    color: _selectedTabIndex == 2
+                        ? accentColor
+                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                  ),
+                  selectedIcon: Icon(Icons.star_rounded, color: accentColor),
+                  label: Text(l10n?.tabBrightStars ?? "Bright Stars"),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(
+                    Icons.calendar_month_rounded,
+                    color: _selectedTabIndex == 3
                         ? accentColor
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
@@ -1441,7 +1491,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.playlist_play_rounded,
-                    color: _selectedTabIndex == 2
+                    color: _selectedTabIndex == 4
                         ? accentColor
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
@@ -1451,7 +1501,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.favorite_rounded,
-                    color: _selectedTabIndex == 3
+                    color: _selectedTabIndex == 5
                         ? (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
                         : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
                   ),
@@ -1489,6 +1539,48 @@ class _MainScaffoldState extends State<MainScaffold> {
                     },
                   )
                 : _selectedTabIndex == 1
+                    ? PlanetsView(
+                        planets: _planets,
+                        night: _nightSummary!,
+                        filters: _filters,
+                        isLoading: _isLoadingPlanets,
+                        isRedNightMode: widget.isRedNightMode,
+                        availableLists: _observingLists,
+                        onFilterChanged: (updated) {
+                          setState(() {
+                            _filters = updated;
+                          });
+                          _saveSettings();
+                          _runFiltering();
+                        },
+                        onAddToList: (listId, dsoId, notes) {
+                          _engine.addTargetToList(listId, dsoId, notes);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                      )
+                : _selectedTabIndex == 2
+                    ? BrightStarsView(
+                        stars: _brightStars,
+                        night: _nightSummary!,
+                        filters: _filters,
+                        isLoading: _isLoadingBrightStars,
+                        isRedNightMode: widget.isRedNightMode,
+                        availableLists: _observingLists,
+                        onFilterChanged: (updated) {
+                          setState(() {
+                            _filters = updated;
+                          });
+                          _saveSettings();
+                          _runFiltering();
+                        },
+                        onAddToList: (listId, dsoId, notes) {
+                          _engine.addTargetToList(listId, dsoId, notes);
+                          _refreshObservingLists();
+                          _saveSettings();
+                        },
+                      )
+                : _selectedTabIndex == 3
                     ? PlannerView(
                         filters: _filters,
                         night: _nightSummary!,
@@ -1508,7 +1600,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                           _runFiltering();
                         },
                       )
-                    : _selectedTabIndex == 2
+                    : _selectedTabIndex == 4
                         ? ObservingListsView(
                         lists: _observingLists,
                         isRedNightMode: widget.isRedNightMode,
@@ -1562,6 +1654,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.radar_rounded),
                   label: l10n?.tabTargets ?? "Targets",
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.public_rounded),
+                  label: l10n?.tabPlanets ?? "Planets",
+                ),
+                BottomNavigationBarItem(
+                  icon: const Icon(Icons.star_rounded),
+                  label: l10n?.tabBrightStars ?? "Bright Stars",
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.calendar_month_rounded),

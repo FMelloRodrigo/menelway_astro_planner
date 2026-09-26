@@ -76,6 +76,69 @@ void main() {
       expect(desc.extract, contains('nearest major galaxy'));
     });
 
+    test('TargetDescriptionService returns pre-baked offline description for bright star Sirius', () async {
+      final target = TargetItem(
+        id: 91001,
+        name: 'Sirius',
+        catalog: 'Stars',
+        objectType: 'Double Star',
+        constellation: 'CMa',
+        raHours: 6.75,
+        decDegrees: -16.72,
+        magnitude: -1.46,
+        commonName: 'Alpha Canis Majoris',
+        peakAltitudeDeg: 72.0,
+        visibleDurationHours: 7.5,
+        transitTime: DateTime(2026, 9, 21, 1, 0),
+        visibleStartTime: DateTime(2026, 9, 20, 21, 0),
+        visibleEndTime: DateTime(2026, 9, 21, 4, 30),
+        minMoonSepDeg: 55.0,
+        meetsCriteria: true,
+      );
+
+      final desc = await TargetDescriptionService.instance.getDescription(
+        target,
+        engine: fakeEngine,
+        allowOnline: false,
+      );
+
+      expect(desc, isNotNull);
+      expect(desc!.title, 'Sirius');
+      expect(desc.extract, contains('brightest star'));
+    });
+
+    test('TargetDescriptionService returns pre-baked offline description for planet Jupiter', () async {
+      final target = TargetItem(
+        id: 90005,
+        name: 'Jupiter',
+        catalog: 'Solar System',
+        objectType: 'Planet',
+        constellation: 'Tau',
+        raHours: 4.85,
+        decDegrees: 22.1,
+        magnitude: -2.4,
+        majorAxisArcmin: 0.75,
+        commonName: 'Jupiter',
+        peakAltitudeDeg: 68.0,
+        visibleDurationHours: 6.2,
+        transitTime: DateTime(2026, 9, 21, 23, 0),
+        visibleStartTime: DateTime(2026, 9, 20, 20, 0),
+        visibleEndTime: DateTime(2026, 9, 21, 4, 0),
+        minMoonSepDeg: 45.0,
+        meetsCriteria: true,
+      );
+
+      final desc = await TargetDescriptionService.instance.getDescription(
+        target,
+        engine: fakeEngine,
+        allowOnline: false,
+      );
+
+      expect(desc, isNotNull);
+      expect(desc!.title, 'Jupiter');
+      expect(desc.extract, contains('fifth planet'));
+    });
+
     test('TargetDescriptionService returns null when target not in cache and offline', () async {
       final target = TargetItem(
         id: 999,

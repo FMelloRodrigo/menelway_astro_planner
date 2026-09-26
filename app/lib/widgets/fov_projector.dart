@@ -113,12 +113,16 @@ class FovProjector {
     );
   }
 
-  /// Formats apparent target dimensions as degrees, arcminutes, or point source.
+  /// Formats apparent target dimensions as degrees, arcminutes, or arcseconds.
   static String formatApparentSize(double? majorAxisArcmin) {
     if (majorAxisArcmin != null && majorAxisArcmin > 0) {
-      return majorAxisArcmin >= 60.0
-          ? "Size: ${(majorAxisArcmin / 60.0).toStringAsFixed(1)}°"
-          : "Size: ${majorAxisArcmin.toStringAsFixed(1)}'";
+      if (majorAxisArcmin >= 60.0) {
+        return "Size: ${(majorAxisArcmin / 60.0).toStringAsFixed(1)}°";
+      } else if (majorAxisArcmin >= 1.0) {
+        return "Size: ${majorAxisArcmin.toStringAsFixed(1)}'";
+      } else {
+        return "Size: ${(majorAxisArcmin * 60.0).toStringAsFixed(1)}\"";
+      }
     }
     return "Point Source";
   }

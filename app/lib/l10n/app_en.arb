@@ -4,6 +4,8 @@
   "appSubtitle": "Astro Target & Session Planner",
 
   "tabTargets": "Targets",
+  "tabPlanets": "Planets",
+  "tabBrightStars": "Bright Stars",
   "tabPlanner": "Planner",
   "tabObservingLists": "Observing Lists",
   "tabFavorites": "Favorites",
@@ -60,6 +62,8 @@
   "sortBy": "Sort by",
   "sortPeakAltitude": "Peak Altitude",
   "sortMagnitude": "Magnitude (Brightest)",
+  "sortOrderFromSun": "Distance from Sun",
+  "sortBrightness": "Brightness",
   "sortVisibleStartTime": "Visible From",
   "sortTransitTime": "Transit Time",
   "sortVisibleDuration": "Visible Duration",
@@ -164,6 +168,7 @@
   "objSupernovaRemnant": "Supernova Remnant",
   "objStar": "Star",
   "objDoubleStar": "Double Star",
+  "objPlanet": "Planet",
   "objAsterism": "Asterism",
   "objOther": "Other",
 

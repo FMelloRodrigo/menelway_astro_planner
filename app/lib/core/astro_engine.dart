@@ -54,7 +54,22 @@ abstract class AstroEngine {
     int stepMinutes = 10,
   });
 
+  /// Evaluates and filters Solar System planets and bodies for the given night.
+  List<TargetItem> getPlanets({
+    required FilterState filters,
+    required NightSummary night,
+    int stepMinutes = 10,
+  });
+
+  /// Evaluates and filters Bright Stars for the given night.
+  List<TargetItem> getBrightStars({
+    required FilterState filters,
+    required NightSummary night,
+    int stepMinutes = 10,
+  });
+
   /// Filters targets across an extended multi-night period.
+
   List<PeriodTargetItem> filterTargetsPeriod({
     required FilterState filters,
     required DateTime periodStart,

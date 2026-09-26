@@ -116,6 +116,18 @@ abstract class AppLocalizations {
   /// **'Targets'**
   String get tabTargets;
 
+  /// No description provided for @tabPlanets.
+  ///
+  /// In en, this message translates to:
+  /// **'Planets'**
+  String get tabPlanets;
+
+  /// No description provided for @tabBrightStars.
+  ///
+  /// In en, this message translates to:
+  /// **'Bright Stars'**
+  String get tabBrightStars;
+
   /// No description provided for @tabPlanner.
   ///
   /// In en, this message translates to:
@@ -391,6 +403,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Magnitude (Brightest)'**
   String get sortMagnitude;
+
+  /// No description provided for @sortOrderFromSun.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance from Sun'**
+  String get sortOrderFromSun;
+
+  /// No description provided for @sortBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get sortBrightness;
 
   /// No description provided for @sortVisibleStartTime.
   ///
@@ -673,6 +697,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Double Star'**
   String get objDoubleStar;
+
+  /// No description provided for @objPlanet.
+  ///
+  /// In en, this message translates to:
+  /// **'Planet'**
+  String get objPlanet;
 
   /// No description provided for @objAsterism.
   ///

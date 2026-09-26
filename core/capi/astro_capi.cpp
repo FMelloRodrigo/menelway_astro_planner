@@ -404,9 +404,17 @@ AstroCurveData* astro_generate_curve(
         auto end_jd = astro::time::unix_to_julian_date(end_utc);
 
         int step = step_minutes > 0 ? step_minutes : 5;
-        auto points = astro::visibility::generate_altitude_curve(
-            dso->coordinates, obs, start_jd, end_jd, step
-        );
+        std::vector<astro::visibility::AltitudePoint> points;
+        if (dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
+            auto pid = static_cast<astro::ephemeris::PlanetId>(target_id - 90000);
+            points = astro::visibility::generate_planet_altitude_curve(
+                pid, obs, start_jd, end_jd, step
+            );
+        } else {
+            points = astro::visibility::generate_altitude_curve(
+                dso->coordinates, obs, start_jd, end_jd, step
+            );
+        }
 
         auto impl = std::make_unique<AstroCurveDataImpl>();
         impl->points.reserve(points.size());
@@ -588,7 +596,13 @@ const char* astro_get_target_yearly_visibility_json(
         }
 
         int sim_year = year > 1900 ? year : 2026;
-        auto res = astro::visibility::calculate_yearly_visibility(opt_dso->coordinates, obs, crit, sim_year);
+        astro::visibility::YearlyVisibilityResult res;
+        if (opt_dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
+            auto pid = static_cast<astro::ephemeris::PlanetId>(target_id - 90000);
+            res = astro::visibility::calculate_planet_yearly_visibility(pid, obs, crit, sim_year);
+        } else {
+            res = astro::visibility::calculate_yearly_visibility(opt_dso->coordinates, obs, crit, sim_year);
+        }
 
         std::ostringstream ss;
         ss << "{"

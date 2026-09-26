@@ -67,6 +67,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     if (_isFramingEnabled) {
       final rig = EquipmentManager.instance.activeProfile;
       _fovDeg = (rig.sensorFovDiagonalDeg * 1.35).clamp(0.15, 14.0);
+    } else if (widget.target.catalog == 'Solar System') {
+      _displayMode = PreviewDisplayMode.vectorOnly;
+      _fovDeg = (widget.target.name == 'Sun' || widget.target.name == 'Moon') ? 1.5 : 0.25;
     } else {
       _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
     }
@@ -1170,7 +1173,6 @@ class TargetVectorPainter extends CustomPainter {
       panOffsetArcminY: panOffsetArcminY,
     );
     final center = projector.viewportCenter;
-    final pixelsPerArcmin = projector.pixelsPerArcmin;
     final targetCenter = projector.targetCenter;
     final minDim = projector.minDim;
 
@@ -1209,11 +1211,313 @@ class TargetVectorPainter extends CustomPainter {
       }
     }
 
-    // 2. Draw Target Apparent Dimensions (Ellipse / Cloud / Cluster)
+    // 2. Draw Target Apparent Dimensions (Ellipse / Cloud / Cluster / Planet / Star)
     // Only in Vector mode or Photo + Reticle mode; in Photo Mode, do not draw target apparent vectors or circles.
     if (!isPhotoOnly) {
       final radii = projector.calculateTargetRadii(target.majorAxisArcmin, target.surfaceBrightness);
-      if (radii != Size.zero) {
+      final lowerType = target.objectType.toLowerCase();
+      final isPlanet = target.catalog == 'Solar System' || (lowerType.contains('planet') && !lowerType.contains('planetary'));
+      final isStar = lowerType.contains('star') && !lowerType.contains('cluster');
+
+      if (isPlanet) {
+        // Render Planetary disk with authentic physical features
+        final radPixels = radii.width > 0 ? radii.width : 14.0;
+        final planetR = radPixels.clamp(9.0, 140.0);
+
+        canvas.save();
+        canvas.translate(targetCenter.dx, targetCenter.dy);
+
+        final pName = target.name;
+        if (pName == 'Saturn') {
+          // 3D Ring System:
+          final ringAngle = -26.0 * math.pi / 180.0;
+          final ringOuterW = planetR * 4.6;
+          final ringOuterH = planetR * 1.7;
+          final ringInnerW = planetR * 2.8;
+          final ringInnerH = planetR * 1.05;
+
+          // 1. Back half of rings: clip to top half (y <= 0)
+          canvas.save();
+          canvas.rotate(ringAngle);
+          canvas.save();
+          canvas.clipRect(Rect.fromLTRB(-ringOuterW, -ringOuterH, ringOuterW, 0));
+          final ringBackPaint = Paint()
+            ..color = (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFD4B26F)).withValues(alpha: 0.7)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = (ringOuterH - ringInnerH) * 0.45;
+          canvas.drawOval(
+            Rect.fromCenter(center: Offset.zero, width: (ringOuterW + ringInnerW) / 2, height: (ringOuterH + ringInnerH) / 2),
+            ringBackPaint,
+          );
+          canvas.restore();
+          canvas.restore();
+
+          // 2. Planet Sphere
+          final bodyPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.9,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF350A0A)]
+                  : [const Color(0xFFF3E5AB), const Color(0xFFC29B38), const Color(0xFF785E23)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, bodyPaint);
+
+          // Subtle Saturn atmospheric belt
+          final beltPaint = Paint()
+            ..color = (isRedNightMode ? Colors.black : const Color(0xFF8B6B23)).withValues(alpha: 0.3)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = planetR * 0.22;
+          canvas.drawArc(Rect.fromCenter(center: Offset.zero, width: planetR * 2, height: planetR * 0.8), -0.2, 3.5, false, beltPaint);
+
+          // 3. Front half of rings: clip to bottom half (y > 0)
+          canvas.save();
+          canvas.rotate(ringAngle);
+          canvas.save();
+          canvas.clipRect(Rect.fromLTRB(-ringOuterW, 0, ringOuterW, ringOuterH));
+          final ringFrontPaint = Paint()
+            ..color = (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFE2C485)).withValues(alpha: 0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = (ringOuterH - ringInnerH) * 0.45;
+          canvas.drawOval(
+            Rect.fromCenter(center: Offset.zero, width: (ringOuterW + ringInnerW) / 2, height: (ringOuterH + ringInnerH) / 2),
+            ringFrontPaint,
+          );
+          // Cassini division gap line
+          final cassiniPaint = Paint()
+            ..color = Colors.black.withValues(alpha: 0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.2;
+          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: ringOuterW * 0.84, height: ringOuterH * 0.84), cassiniPaint);
+          canvas.restore();
+          canvas.restore();
+
+        } else if (pName == 'Jupiter') {
+          // Jovian sphere with atmospheric belts & Red Spot
+          final jupPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.3, -0.3),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF380808)]
+                  : [const Color(0xFFFFF8E7), const Color(0xFFE0B984), const Color(0xFF9E6B38)],
+              stops: const [0.0, 0.7, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, jupPaint);
+
+          canvas.save();
+          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
+
+          final beltColor = (isRedNightMode ? Colors.black : const Color(0xFF8B4513)).withValues(alpha: 0.45);
+          final beltPaint = Paint()
+            ..color = beltColor
+            ..style = PaintingStyle.fill;
+          canvas.drawRect(Rect.fromLTRB(-planetR, -planetR * 0.38, planetR, -planetR * 0.12), beltPaint);
+          canvas.drawRect(Rect.fromLTRB(-planetR, planetR * 0.12, planetR, planetR * 0.38), beltPaint);
+
+          final faintBelt = Paint()
+            ..color = beltColor.withValues(alpha: 0.25)
+            ..style = PaintingStyle.fill;
+          canvas.drawRect(Rect.fromLTRB(-planetR, planetR * 0.52, planetR, planetR * 0.65), faintBelt);
+          canvas.drawRect(Rect.fromLTRB(-planetR, -planetR * 0.65, planetR, -planetR * 0.52), faintBelt);
+
+          // Great Red Spot
+          final grsPaint = Paint()
+            ..color = (isRedNightMode ? Colors.white : const Color(0xFFCC4422)).withValues(alpha: 0.75)
+            ..style = PaintingStyle.fill;
+          canvas.drawOval(Rect.fromCenter(center: Offset(planetR * 0.35, planetR * 0.25), width: planetR * 0.4, height: planetR * 0.22), grsPaint);
+
+          canvas.restore();
+
+        } else if (pName == 'Mars') {
+          // Mars: terracotta sphere with polar ice cap
+          final marsPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF400A0A)]
+                  : [const Color(0xFFFF7A45), const Color(0xFFC84B20), const Color(0xFF6B1D0B)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, marsPaint);
+
+          canvas.save();
+          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
+          final capPaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.85)
+            ..style = PaintingStyle.fill;
+          canvas.drawOval(Rect.fromCenter(center: Offset(0, -planetR * 0.82), width: planetR * 0.7, height: planetR * 0.3), capPaint);
+          canvas.restore();
+
+        } else if (pName == 'Moon') {
+          // Moon: cratered lunar sphere
+          final moonPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.3, -0.3),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF300808)]
+                  : [const Color(0xFFF0F2F5), const Color(0xFFB0B4BC), const Color(0xFF4A4E57)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, moonPaint);
+
+          canvas.save();
+          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
+          final mariaPaint = Paint()
+            ..color = Colors.black.withValues(alpha: 0.22)
+            ..style = PaintingStyle.fill;
+          canvas.drawCircle(Offset(-planetR * 0.28, -planetR * 0.25), planetR * 0.32, mariaPaint);
+          canvas.drawCircle(Offset(planetR * 0.22, -planetR * 0.15), planetR * 0.25, mariaPaint);
+          canvas.drawCircle(Offset(planetR * 0.15, planetR * 0.3), planetR * 0.28, mariaPaint);
+          canvas.restore();
+
+        } else if (pName == 'Sun') {
+          // Radiant Sun disk with corona flares
+          final coronaPaint = Paint()
+            ..shader = RadialGradient(
+              colors: [
+                (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFFFB300)).withValues(alpha: 0.35),
+                (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFFF6D00)).withValues(alpha: 0.1),
+                Colors.transparent,
+              ],
+              stops: const [0.5, 0.8, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR * 1.6));
+          canvas.drawCircle(Offset.zero, planetR * 1.6, coronaPaint);
+
+          final sunPaint = Paint()
+            ..shader = RadialGradient(
+              center: Alignment.center,
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [Colors.white, AstroColors.nightVisionRed]
+                  : [const Color(0xFFFFFFE0), const Color(0xFFFFD700), const Color(0xFFFF8C00)],
+              stops: const [0.0, 0.55, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, sunPaint);
+
+        } else if (pName == 'Venus') {
+          // Venus: brilliant pearlescent sphere
+          final venusPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF350A0A)]
+                  : [const Color(0xFFFFFDF5), const Color(0xFFEADBBE), const Color(0xFF9E8E72)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, venusPaint);
+
+        } else if (pName == 'Uranus') {
+          // Uranus: soft aquamarine sphere
+          final uranusPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF280808)]
+                  : [const Color(0xFFD6F9FA), const Color(0xFF7CE4EC), const Color(0xFF2C7D88)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, uranusPaint);
+
+        } else if (pName == 'Neptune') {
+          // Neptune: deep azure/cobalt sphere
+          final nepPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF200505)]
+                  : [const Color(0xFF8AB8FD), const Color(0xFF386FE0), const Color(0xFF142B75)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, nepPaint);
+
+        } else {
+          // Mercury / Pluto / Default
+          final defPaint = Paint()
+            ..shader = RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: isRedNightMode
+                  ? [AstroColors.nightVisionRed, const Color(0xFF200505)]
+                  : [const Color(0xFFD8D8D8), const Color(0xFF8A8A8A), const Color(0xFF3B3B3B)],
+              stops: const [0.0, 0.65, 1.0],
+            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
+          canvas.drawCircle(Offset.zero, planetR, defPaint);
+        }
+
+        // Precision outline ring
+        final borderPaint = Paint()
+          ..color = (isRedNightMode ? AstroColors.nightVisionRed : primaryColor).withValues(alpha: 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        canvas.drawCircle(Offset.zero, planetR, borderPaint);
+
+        canvas.restore();
+
+      } else if (isStar) {
+        // Bright Stellar Object: diffraction spikes + stellar glow halo + brilliant core
+        final mag = target.magnitude ?? 2.0;
+        final coreR = (4.0 - (mag * 0.35)).clamp(2.5, 6.0);
+        final spikeLen = (32.0 - (mag * 2.8)).clamp(12.0, 42.0);
+
+        canvas.save();
+        canvas.translate(targetCenter.dx, targetCenter.dy);
+
+        // 1. Soft stellar halo glow
+        final haloPaint = Paint()
+          ..shader = RadialGradient(
+            colors: [
+              (isRedNightMode ? AstroColors.nightVisionRed : goldColor).withValues(alpha: 0.55),
+              (isRedNightMode ? AstroColors.nightVisionRed : primaryColor).withValues(alpha: 0.15),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.45, 1.0],
+          ).createShader(Rect.fromCircle(center: Offset.zero, radius: spikeLen * 0.9));
+        canvas.drawCircle(Offset.zero, spikeLen * 0.9, haloPaint);
+
+        // 2. 4-point Diffraction Cross (Telescope Spider Spikes)
+        final spikePaint = Paint()
+          ..color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.1;
+        canvas.drawLine(Offset(-spikeLen, 0), Offset(spikeLen, 0), spikePaint);
+        canvas.drawLine(Offset(0, -spikeLen), Offset(0, spikeLen), spikePaint);
+
+        // Diagonal soft micro-spikes for 1st magnitude stars
+        if (mag < 1.5) {
+          final diagLen = spikeLen * 0.45;
+          final diagPaint = Paint()
+            ..color = (isRedNightMode ? AstroColors.nightVisionRed : goldColor).withValues(alpha: 0.5)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.8;
+          canvas.drawLine(Offset(-diagLen, -diagLen), Offset(diagLen, diagLen), diagPaint);
+          canvas.drawLine(Offset(-diagLen, diagLen), Offset(diagLen, -diagLen), diagPaint);
+        }
+
+        // 3. Central Brilliant White Star Core
+        final corePaint = Paint()
+          ..color = isRedNightMode ? AstroColors.nightVisionRed : Colors.white
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(Offset.zero, coreR, corePaint);
+
+        // 4. Secondary companion for double stars
+        if (lowerType.contains('double')) {
+          final compOffset = Offset(coreR * 3.2, -coreR * 2.2);
+          final compSpike = spikeLen * 0.5;
+          canvas.drawLine(compOffset + Offset(-compSpike, 0), compOffset + Offset(compSpike, 0), spikePaint);
+          canvas.drawLine(compOffset + Offset(0, -compSpike), compOffset + Offset(0, compSpike), spikePaint);
+          canvas.drawCircle(compOffset, coreR * 0.65, corePaint);
+        }
+
+        canvas.restore();
+
+      } else if (radii != Size.zero) {
         final radX = radii.width;
         final radY = radii.height;
 
@@ -1223,8 +1527,6 @@ class TargetVectorPainter extends CustomPainter {
             ? (target.positionAngleDeg! * math.pi / 180.0)
             : (math.pi / 5.0);
         canvas.rotate(paRad);
-
-        final lowerType = target.objectType.toLowerCase();
 
         if (lowerType.contains('galaxy')) {
           // GALAXY

@@ -4,6 +4,8 @@
   "appSubtitle": "Planejador de Alvos e Sessões Astronômicas",
 
   "tabTargets": "Alvos",
+  "tabPlanets": "Planetas",
+  "tabBrightStars": "Estrelas Brilhantes",
   "tabPlanner": "Planejador",
   "tabObservingLists": "Listas de Observação",
   "tabFavorites": "Favoritos",
@@ -55,6 +57,8 @@
   "sortBy": "Ordenar por",
   "sortPeakAltitude": "Altitude Máxima",
   "sortMagnitude": "Magnitude (Mais Brilho)",
+  "sortOrderFromSun": "Distância do Sol",
+  "sortBrightness": "Brilho",
   "sortVisibleStartTime": "Início da Visibilidade",
   "sortTransitTime": "Horário de Trânsito",
   "sortVisibleDuration": "Duração Visível",
@@ -122,6 +126,7 @@
   "objSupernovaRemnant": "Remanescente de Supernova",
   "objStar": "Estrela",
   "objDoubleStar": "Estrela Dupla",
+  "objPlanet": "Planeta",
   "objAsterism": "Asterismo",
   "objOther": "Outro",
 

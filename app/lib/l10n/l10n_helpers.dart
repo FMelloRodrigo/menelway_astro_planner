@@ -24,6 +24,8 @@ String localizeObjectType(String rawType, AppLocalizations? l10n) {
       return l10n.objStar;
     case 'Double Star':
       return l10n.objDoubleStar;
+    case 'Planet':
+      return l10n.objPlanet;
     case 'Asterism':
       return l10n.objAsterism;
     default:

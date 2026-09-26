@@ -1,6 +1,7 @@
 #pragma once
 
 #include "astro/coordinates.hpp"
+#include "astro/ephemeris.hpp"
 #include "astro/horizon.hpp"
 #include "astro/time.hpp"
 #include "astro/units.hpp"
@@ -117,7 +118,29 @@ YearlyVisibilityResult calculate_yearly_visibility(
     int year = 2026
 );
 
+/**
+ * @brief Computes 12-month visibility simulation for a planet given observer & criteria.
+ */
+YearlyVisibilityResult calculate_planet_yearly_visibility(
+    ephemeris::PlanetId planet,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    int year = 2026
+);
+
+/**
+ * @brief Generates high-density altitude curve samples for a Solar System planet.
+ */
+std::vector<AltitudePoint> generate_planet_altitude_curve(
+    ephemeris::PlanetId planet,
+    const coordinates::ObserverLocation& obs,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes = 5
+);
+
 struct PeriodVisibilityResult {
+
     bool is_observable{false};
     int total_observable_days{0};
     int total_period_days{0};
