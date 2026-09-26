@@ -5,6 +5,7 @@ import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/period_target_item.dart';
+import '../models/target_description.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
 import 'astro_engine.dart';
@@ -302,6 +303,53 @@ class FakeAstroEngine implements AstroEngine {
       bestWindowSummary: 'Sep to Dec',
       months: months,
     );
+  }
+
+  final Map<String, TargetDescription> _targetDescriptions = {
+    'm 31': const TargetDescription(
+      title: 'Andromeda Galaxy',
+      description: 'Barred spiral galaxy in the Local Group',
+      extract: 'The Andromeda Galaxy is a barred spiral galaxy and is the nearest major galaxy to the Milky Way.',
+      pageUrl: 'https://en.wikipedia.org/wiki/Andromeda_Galaxy',
+      source: 'Wikipedia',
+    ),
+    'ngc 224': const TargetDescription(
+      title: 'Andromeda Galaxy',
+      description: 'Barred spiral galaxy in the Local Group',
+      extract: 'The Andromeda Galaxy is a barred spiral galaxy and is the nearest major galaxy to the Milky Way.',
+      pageUrl: 'https://en.wikipedia.org/wiki/Andromeda_Galaxy',
+      source: 'Wikipedia',
+    ),
+    'm 42': const TargetDescription(
+      title: 'Orion Nebula',
+      description: 'Diffuse nebula in the constellation Orion',
+      extract: 'The Orion Nebula is a diffuse nebula situated south of Orion\'s Belt in the constellation of Orion.',
+      pageUrl: 'https://en.wikipedia.org/wiki/Orion_Nebula',
+      source: 'Wikipedia',
+    ),
+    'ngc 1976': const TargetDescription(
+      title: 'Orion Nebula',
+      description: 'Diffuse nebula in the constellation Orion',
+      extract: 'The Orion Nebula is a diffuse nebula situated south of Orion\'s Belt in the constellation of Orion.',
+      pageUrl: 'https://en.wikipedia.org/wiki/Orion_Nebula',
+      source: 'Wikipedia',
+    ),
+  };
+
+  @override
+  TargetDescription? getTargetDescription(String targetName) {
+    return _targetDescriptions[targetName.toLowerCase().trim()];
+  }
+
+  @override
+  bool saveTargetDescription(TargetDescription desc, {List<String>? aliases}) {
+    _targetDescriptions[desc.title.toLowerCase().trim()] = desc;
+    if (aliases != null) {
+      for (final a in aliases) {
+        _targetDescriptions[a.toLowerCase().trim()] = desc;
+      }
+    }
+    return true;
   }
 
   static final List<TargetItem> defaultMockTargets = [

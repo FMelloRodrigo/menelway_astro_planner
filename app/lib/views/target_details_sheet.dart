@@ -12,12 +12,15 @@ import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
 import '../models/period_target_item.dart';
+import '../models/target_description.dart';
 import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 import 'equipment_dialog.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../core/target_description_service.dart';
+import '../core/url_service.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -66,6 +69,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   bool _isLoadingYearly = true;
   String? _onlineInfo;
   bool _showFilteredYearly = true;
+  TargetDescription? _targetDescription;
+  bool _isLoadingDescription = true;
 
   @override
   void initState() {
@@ -73,6 +78,22 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     FavoritesManager.instance.addListener(_onFavoritesChanged);
     _loadCurve();
     _loadYearlyVisibility();
+    _loadDescription();
+  }
+
+  void _loadDescription({bool allowOnline = false}) async {
+    setState(() => _isLoadingDescription = true);
+    final desc = await TargetDescriptionService.instance.getDescription(
+      widget.target,
+      engine: _engine,
+      allowOnline: allowOnline,
+    );
+    if (mounted) {
+      setState(() {
+        _targetDescription = desc;
+        _isLoadingDescription = false;
+      });
+    }
   }
 
   @override
@@ -108,6 +129,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   @override
   void didUpdateWidget(covariant TargetDetailsSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.target.id != widget.target.id) {
+      _loadDescription();
+    }
     if (oldWidget.target.id != widget.target.id ||
         oldWidget.night.sunset != widget.night.sunset) {
       _loadCurve();
@@ -639,6 +663,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
             const SizedBox(height: 18),
 
+            // Target Overview / Description (Readable Prose)
+            _buildDescriptionCard(),
+
+            const SizedBox(height: 18),
+
             // Visual Sky Preview & Apparent Size
             _buildVisualPreviewCard(),
 
@@ -720,6 +749,186 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionCard() {
+    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final isRed = widget.isRedNightMode;
+
+    if (_isLoadingDescription) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isRed
+              ? AstroColors.nightVisionSurfaceVariant
+              : AstroColors.spaceDarkSurfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                "Loading target overview...",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withValues(alpha: 0.7),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_targetDescription == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isRed
+              ? AstroColors.nightVisionSurfaceVariant
+              : AstroColors.spaceDarkSurfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.menu_book_outlined,
+              size: 16,
+              color: textColor.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "No local description available.",
+                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6)),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            TextButton.icon(
+              icon: const Icon(Icons.cloud_download_outlined, size: 14),
+              label: const Text("Fetch (Wiki)", style: TextStyle(fontSize: 11)),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: accentColor,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => _loadDescription(allowOnline: true),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final desc = _targetDescription!;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isRed
+            ? AstroColors.nightVisionSurfaceVariant
+            : AstroColors.spaceDarkSurfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_stories_rounded,
+                size: 16,
+                color: accentColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  desc.title.isNotEmpty ? desc.title : "Target Overview",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (desc.pageUrl != null && desc.pageUrl!.isNotEmpty)
+                Tooltip(
+                  message: "View full article on Wikipedia",
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => UrlService.openUrl(desc.pageUrl!),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            desc.source,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: accentColor.withValues(alpha: 0.85),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.open_in_new_rounded,
+                            size: 12,
+                            color: accentColor.withValues(alpha: 0.85),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (desc.description.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              desc.description,
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: accentColor.withValues(alpha: 0.9),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            desc.extract,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: textColor.withValues(alpha: 0.88),
+            ),
+          ),
+        ],
       ),
     );
   }

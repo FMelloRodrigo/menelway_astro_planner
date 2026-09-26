@@ -270,7 +270,24 @@ void SqliteStorage::init_schema() {
         "  PRIMARY KEY (list_id, dso_id),"
         "  FOREIGN KEY (list_id) REFERENCES user_lists(id) ON DELETE CASCADE,"
         "  FOREIGN KEY (dso_id) REFERENCES dso_objects(id)"
-        ");";
+        ");"
+        "CREATE TABLE IF NOT EXISTS target_descriptions ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  title TEXT NOT NULL,"
+        "  description TEXT,"
+        "  extract TEXT NOT NULL,"
+        "  thumbnail_url TEXT,"
+        "  page_url TEXT,"
+        "  source TEXT DEFAULT 'Wikipedia',"
+        "  created_at INTEGER"
+        ");"
+        "CREATE TABLE IF NOT EXISTS target_description_aliases ("
+        "  target_name TEXT PRIMARY KEY,"
+        "  description_id INTEGER NOT NULL,"
+        "  FOREIGN KEY (description_id) REFERENCES target_descriptions(id) ON DELETE CASCADE"
+        ");"
+        "CREATE INDEX IF NOT EXISTS idx_tda_name ON target_description_aliases(target_name COLLATE NOCASE);"
+        "CREATE INDEX IF NOT EXISTS idx_td_title ON target_descriptions(title COLLATE NOCASE);";
 
     char* err_msg = nullptr;
     sqlite3_exec(db_, schema_sql, nullptr, nullptr, &err_msg);
@@ -743,6 +760,128 @@ bool SqliteStorage::clear_all_lists() {
         return false;
     }
     return rc == SQLITE_OK;
+}
+
+std::optional<TargetDescriptionRecord> SqliteStorage::get_target_description(const std::string& target_name) {
+    if (!db_ || target_name.empty()) return std::nullopt;
+
+    const char* sql =
+        "SELECT d.title, d.description, d.extract, d.thumbnail_url, d.page_url, d.source "
+        "FROM target_descriptions d "
+        "LEFT JOIN target_description_aliases a ON d.id = a.description_id "
+        "WHERE a.target_name = ? COLLATE NOCASE OR d.title = ? COLLATE NOCASE "
+        "LIMIT 1;";
+
+    sqlite3_stmt* raw_stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, sql, -1, &raw_stmt, nullptr) != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return std::nullopt;
+    }
+    UniqueStmt stmt(raw_stmt);
+    sqlite3_bind_text(stmt.get(), 1, target_name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt.get(), 2, target_name.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+        TargetDescriptionRecord rec;
+        const auto* ti = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 0));
+        if (ti) rec.title = ti;
+        const auto* de = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
+        if (de) rec.description = de;
+        const auto* ex = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+        if (ex) rec.extract = ex;
+        const auto* th = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+        if (th) rec.thumbnail_url = th;
+        const auto* pu = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 4));
+        if (pu) rec.page_url = pu;
+        const auto* so = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 5));
+        if (so) rec.source = so;
+        return rec;
+    }
+    return std::nullopt;
+}
+
+bool SqliteStorage::save_target_description(
+    const std::string& title,
+    const std::string& description,
+    const std::string& extract,
+    const std::string& thumbnail_url,
+    const std::string& page_url,
+    const std::string& source,
+    const std::vector<std::string>& aliases
+) {
+    if (!db_ || title.empty() || extract.empty()) return false;
+
+    // Check if title already exists in target_descriptions
+    int64_t desc_id = 0;
+    const char* find_sql = "SELECT id FROM target_descriptions WHERE title = ? COLLATE NOCASE LIMIT 1;";
+    sqlite3_stmt* f_stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, find_sql, -1, &f_stmt, nullptr) == SQLITE_OK) {
+        UniqueStmt stmt(f_stmt);
+        sqlite3_bind_text(stmt.get(), 1, title.c_str(), -1, SQLITE_TRANSIENT);
+        if (sqlite3_step(stmt.get()) == SQLITE_ROW) {
+            desc_id = sqlite3_column_int64(stmt.get(), 0);
+        }
+    }
+
+    if (desc_id > 0) {
+        const char* upd_sql =
+            "UPDATE target_descriptions SET description = ?, extract = ?, thumbnail_url = ?, page_url = ?, source = ? WHERE id = ?;";
+        sqlite3_stmt* u_stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, upd_sql, -1, &u_stmt, nullptr) == SQLITE_OK) {
+            UniqueStmt stmt(u_stmt);
+            sqlite3_bind_text(stmt.get(), 1, description.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 2, extract.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 3, thumbnail_url.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 4, page_url.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 5, source.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int64(stmt.get(), 6, desc_id);
+            sqlite3_step(stmt.get());
+        }
+    } else {
+        const char* ins_sql =
+            "INSERT INTO target_descriptions (title, description, extract, thumbnail_url, page_url, source, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        sqlite3_stmt* i_stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, ins_sql, -1, &i_stmt, nullptr) == SQLITE_OK) {
+            UniqueStmt stmt(i_stmt);
+            sqlite3_bind_text(stmt.get(), 1, title.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 2, description.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 3, extract.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 4, thumbnail_url.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 5, page_url.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt.get(), 6, source.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int64(stmt.get(), 7, static_cast<int64_t>(std::time(nullptr)));
+            if (sqlite3_step(stmt.get()) == SQLITE_DONE) {
+                desc_id = sqlite3_last_insert_rowid(db_);
+            }
+        }
+    }
+
+    if (desc_id <= 0) return false;
+
+    // Link aliases
+    const char* alias_sql = "INSERT OR REPLACE INTO target_description_aliases (target_name, description_id) VALUES (?, ?);";
+    for (const auto& alias : aliases) {
+        if (alias.empty()) continue;
+        sqlite3_stmt* a_stmt = nullptr;
+        if (sqlite3_prepare_v2(db_, alias_sql, -1, &a_stmt, nullptr) == SQLITE_OK) {
+            UniqueStmt stmt(a_stmt);
+            sqlite3_bind_text(stmt.get(), 1, alias.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int64(stmt.get(), 2, desc_id);
+            sqlite3_step(stmt.get());
+        }
+    }
+
+    // Also link the title itself as an alias
+    sqlite3_stmt* t_stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, alias_sql, -1, &t_stmt, nullptr) == SQLITE_OK) {
+        UniqueStmt stmt(t_stmt);
+        sqlite3_bind_text(stmt.get(), 1, title.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(stmt.get(), 2, desc_id);
+        sqlite3_step(stmt.get());
+    }
+
+    return true;
 }
 
 } // namespace astro::storage

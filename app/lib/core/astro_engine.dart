@@ -3,6 +3,7 @@ import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/period_target_item.dart';
+import '../models/target_description.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
 import 'astro_bridge.dart';
@@ -101,4 +102,10 @@ abstract class AstroEngine {
     double minDurationHours = 2.0,
     int year = 2026,
   });
+
+  /// Retrieves the pre-baked or cached descriptive prose for a celestial target.
+  TargetDescription? getTargetDescription(String targetName);
+
+  /// Saves a target description and its associated lookup aliases into the local cache database.
+  bool saveTargetDescription(TargetDescription desc, {List<String>? aliases});
 }

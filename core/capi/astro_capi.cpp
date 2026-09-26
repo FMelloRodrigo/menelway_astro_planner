@@ -632,6 +632,64 @@ const char* astro_get_target_yearly_visibility_json(
     }
 }
 
+const char* astro_get_target_description_json(AstroEngine* engine, const char* target_name) {
+    auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
+    if (!ctx || !ctx->storage || !target_name) return nullptr;
+
+    try {
+        auto rec = ctx->storage->get_target_description(target_name);
+        if (!rec.has_value()) {
+            return nullptr;
+        }
+
+        std::ostringstream ss;
+        ss << "{"
+           << "\"title\":\"" << escape_json(rec->title) << "\","
+           << "\"description\":\"" << escape_json(rec->description) << "\","
+           << "\"extract\":\"" << escape_json(rec->extract) << "\","
+           << "\"thumbnail_url\":\"" << escape_json(rec->thumbnail_url) << "\","
+           << "\"page_url\":\"" << escape_json(rec->page_url) << "\","
+           << "\"source\":\"" << escape_json(rec->source) << "\""
+           << "}";
+
+        return duplicate_string(ss.str());
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return nullptr;
+    }
+}
+
+int32_t astro_save_target_description(
+    AstroEngine* engine,
+    const char* title,
+    const char* description,
+    const char* extract,
+    const char* thumbnail_url,
+    const char* page_url,
+    const char* source,
+    const char* aliases_csv
+) {
+    auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
+    if (!ctx || !ctx->storage || !title || !extract) return 0;
+
+    try {
+        std::vector<std::string> aliases = split_csv(aliases_csv);
+        bool ok = ctx->storage->save_target_description(
+            title,
+            description ? description : "",
+            extract,
+            thumbnail_url ? thumbnail_url : "",
+            page_url ? page_url : "",
+            source ? source : "Wikipedia",
+            aliases
+        );
+        return ok ? 1 : 0;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return 0;
+    }
+}
+
 void astro_free_string(const char* str) {
     if (str) {
         free(const_cast<char*>(str));

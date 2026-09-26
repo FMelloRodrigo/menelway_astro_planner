@@ -30,6 +30,15 @@ struct ObservingList {
     std::vector<ObservingListItem> items;
 };
 
+struct TargetDescriptionRecord {
+    std::string title;
+    std::string description;
+    std::string extract;
+    std::string thumbnail_url;
+    std::string page_url;
+    std::string source{"Wikipedia"};
+};
+
 class ICatalogRepository {
 public:
     virtual ~ICatalogRepository() = default;
@@ -147,6 +156,18 @@ public:
 
     std::vector<ObservingListItem> get_items_in_list(std::int64_t list_id) override;
     bool clear_all_lists() override;
+
+    // Target description cache
+    std::optional<TargetDescriptionRecord> get_target_description(const std::string& target_name);
+    bool save_target_description(
+        const std::string& title,
+        const std::string& description,
+        const std::string& extract,
+        const std::string& thumbnail_url,
+        const std::string& page_url,
+        const std::string& source,
+        const std::vector<std::string>& aliases
+    );
 
 private:
     sqlite3* db_{nullptr};

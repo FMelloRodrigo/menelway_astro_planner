@@ -228,6 +228,23 @@ ASTRO_API const char* astro_get_target_yearly_visibility_json(
     int32_t year
 );
 
+// Target Descriptions (JSON exchange)
+ASTRO_API const char* astro_get_target_description_json(
+    AstroEngine* engine,
+    const char* target_name
+);
+
+ASTRO_API int32_t astro_save_target_description(
+    AstroEngine* engine,
+    const char* title,
+    const char* description,
+    const char* extract,
+    const char* thumbnail_url,
+    const char* page_url,
+    const char* source,
+    const char* aliases_csv
+);
+
 ASTRO_API void astro_free_string(const char* str);
 
 #ifdef __cplusplus

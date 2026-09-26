@@ -124,12 +124,49 @@ void test_sqlite_catalog() {
     std::cout << "  ✓ Observing list test passed.\n";
 }
 
+void test_target_descriptions() {
+    std::cout << "[TEST] Target Description Storage & Aliases...\n";
+    astro::storage::SqliteStorage storage("core/data/catalogs.db");
+    assert(storage.is_open());
+
+    // Save description for M 31 with aliases
+    std::vector<std::string> aliases = {"M 31", "Messier 31", "NGC 224", "Andromeda Galaxy"};
+    bool saved = storage.save_target_description(
+        "Andromeda Galaxy",
+        "Barred spiral galaxy in the Local Group",
+        "The Andromeda Galaxy is a barred spiral galaxy and is the nearest major galaxy to the Milky Way.",
+        "https://upload.wikimedia.org/thumb/m31.jpg",
+        "https://en.wikipedia.org/wiki/Andromeda_Galaxy",
+        "Wikipedia",
+        aliases
+    );
+    assert(saved);
+
+    // Query by alias 'M 31'
+    auto desc1 = storage.get_target_description("M 31");
+    assert(desc1.has_value());
+    assert(desc1->title == "Andromeda Galaxy");
+    assert(!desc1->extract.empty());
+
+    // Query by alias 'NGC 224' (case insensitive)
+    auto desc2 = storage.get_target_description("ngc 224");
+    assert(desc2.has_value());
+    assert(desc2->title == "Andromeda Galaxy");
+
+    // Query non-existent
+    auto desc3 = storage.get_target_description("NonExistentObject9999");
+    assert(!desc3.has_value());
+
+    std::cout << "  ✓ Target descriptions test passed.\n";
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  RUNNING SQLITE STORAGE TESTS          \n";
     std::cout << "========================================\n";
 
     test_sqlite_catalog();
+    test_target_descriptions();
 
     std::cout << "\n>>> ALL STORAGE TESTS PASSED! <<<\n";
     return 0;

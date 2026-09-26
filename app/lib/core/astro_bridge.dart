@@ -15,6 +15,7 @@ import '../models/filter_state.dart';
 import '../models/observing_list.dart';
 import '../models/yearly_visibility.dart';
 import '../models/period_target_item.dart';
+import '../models/target_description.dart';
 
 // Typedefs for Native and Dart functions
 typedef _AstroEngineCreateC = Pointer<AstroEngineContext> Function(Pointer<Utf8> dbPath);
@@ -165,6 +166,36 @@ typedef _AstroGetTargetYearlyVisibilityJsonDart = Pointer<Utf8> Function(
 typedef _AstroFreeStringC = Void Function(Pointer<Utf8> str);
 typedef _AstroFreeStringDart = void Function(Pointer<Utf8> str);
 
+typedef _AstroGetTargetDescriptionJsonC = Pointer<Utf8> Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<Utf8> targetName,
+);
+typedef _AstroGetTargetDescriptionJsonDart = Pointer<Utf8> Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<Utf8> targetName,
+);
+
+typedef _AstroSaveTargetDescriptionC = Int32 Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<Utf8> title,
+  Pointer<Utf8> description,
+  Pointer<Utf8> extract,
+  Pointer<Utf8> thumbnailUrl,
+  Pointer<Utf8> pageUrl,
+  Pointer<Utf8> source,
+  Pointer<Utf8> aliasesCsv,
+);
+typedef _AstroSaveTargetDescriptionDart = int Function(
+  Pointer<AstroEngineContext> engine,
+  Pointer<Utf8> title,
+  Pointer<Utf8> description,
+  Pointer<Utf8> extract,
+  Pointer<Utf8> thumbnailUrl,
+  Pointer<Utf8> pageUrl,
+  Pointer<Utf8> source,
+  Pointer<Utf8> aliasesCsv,
+);
+
 class AstroBridge implements AstroEngine {
   static AstroBridge? _instance;
   late final DynamicLibrary _lib;
@@ -187,6 +218,8 @@ class AstroBridge implements AstroEngine {
   late final _AstroGetListsJsonDart _getListsJson;
   late final _AstroClearAllObservingListsDart _clearAllLists;
   late final _AstroGetTargetYearlyVisibilityJsonDart _getTargetYearlyVisibilityJson;
+  late final _AstroGetTargetDescriptionJsonDart _getTargetDescriptionJson;
+  late final _AstroSaveTargetDescriptionDart _saveTargetDescription;
   late final _AstroFreeStringDart _freeString;
 
   AstroBridge._({DynamicLibrary? library}) {
@@ -256,6 +289,12 @@ class AstroBridge implements AstroEngine {
     _getTargetYearlyVisibilityJson = _lib
         .lookup<NativeFunction<_AstroGetTargetYearlyVisibilityJsonC>>('astro_get_target_yearly_visibility_json')
         .asFunction<_AstroGetTargetYearlyVisibilityJsonDart>();
+    _getTargetDescriptionJson = _lib
+        .lookup<NativeFunction<_AstroGetTargetDescriptionJsonC>>('astro_get_target_description_json')
+        .asFunction<_AstroGetTargetDescriptionJsonDart>();
+    _saveTargetDescription = _lib
+        .lookup<NativeFunction<_AstroSaveTargetDescriptionC>>('astro_save_target_description')
+        .asFunction<_AstroSaveTargetDescriptionDart>();
     _freeString = _lib
         .lookup<NativeFunction<_AstroFreeStringC>>('astro_free_string')
         .asFunction<_AstroFreeStringDart>();
@@ -843,6 +882,67 @@ class AstroBridge implements AstroEngine {
       }
       calloc.free(obsPtr);
       calloc.free(critPtr);
+    }
+  }
+
+  @override
+  TargetDescription? getTargetDescription(String targetName) {
+    if (_engine == null || targetName.trim().isEmpty) return null;
+    final namePtr = targetName.toNativeUtf8();
+    try {
+      final jsonPtr = _getTargetDescriptionJson(_engine!, namePtr);
+      if (jsonPtr == nullptr) return null;
+      try {
+        final jsonStr = jsonPtr.toDartString();
+        if (jsonStr.isEmpty || jsonStr == '{}') return null;
+        final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+        return TargetDescription.fromJson(decoded);
+      } finally {
+        _freeString(jsonPtr);
+      }
+    } catch (e, st) {
+      AppLogger.warning('Failed to query target description for $targetName: $e', tag: 'AstroBridge', error: e, stackTrace: st);
+      return null;
+    } finally {
+      calloc.free(namePtr);
+    }
+  }
+
+  @override
+  bool saveTargetDescription(TargetDescription desc, {List<String>? aliases}) {
+    if (_engine == null || desc.title.isEmpty || desc.extract.isEmpty) return false;
+    final titlePtr = desc.title.toNativeUtf8();
+    final descPtr = desc.description.toNativeUtf8();
+    final extractPtr = desc.extract.toNativeUtf8();
+    final thumbPtr = (desc.thumbnailUrl ?? '').toNativeUtf8();
+    final pagePtr = (desc.pageUrl ?? '').toNativeUtf8();
+    final sourcePtr = desc.source.toNativeUtf8();
+    final aliasesCsv = (aliases ?? []).join(',');
+    final aliasesPtr = aliasesCsv.toNativeUtf8();
+
+    try {
+      final res = _saveTargetDescription(
+        _engine!,
+        titlePtr,
+        descPtr,
+        extractPtr,
+        thumbPtr,
+        pagePtr,
+        sourcePtr,
+        aliasesPtr,
+      );
+      return res == 1;
+    } catch (e, st) {
+      AppLogger.warning('Failed to save target description for ${desc.title}: $e', tag: 'AstroBridge', error: e, stackTrace: st);
+      return false;
+    } finally {
+      calloc.free(titlePtr);
+      calloc.free(descPtr);
+      calloc.free(extractPtr);
+      calloc.free(thumbPtr);
+      calloc.free(pagePtr);
+      calloc.free(sourcePtr);
+      calloc.free(aliasesPtr);
     }
   }
 }
