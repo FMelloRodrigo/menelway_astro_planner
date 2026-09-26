@@ -160,6 +160,39 @@ void test_target_descriptions() {
     std::cout << "  ✓ Target descriptions test passed.\n";
 }
 
+void test_period_performance() {
+    std::cout << "[BENCHMARK] Period Visibility Filter Performance...\n";
+    astro::storage::SqliteStorage storage("core/data/catalogs.db");
+    assert(storage.is_open());
+
+    astro::coordinates::ObserverLocation obs{
+        astro::units::Degrees{51.4769},
+        astro::units::Degrees{0.0},
+        10.0
+    };
+
+    auto start_jd = astro::time::datetime_to_julian_date({2026, 9, 21, 0, 0, 0.0});
+    auto end_jd = astro::time::datetime_to_julian_date({2026, 10, 5, 0, 0, 0.0});
+
+    astro::visibility::VisibilityCriteria crit;
+    crit.min_altitude = astro::units::Degrees{30.0};
+    crit.min_duration_hours = 2.0;
+
+    astro::catalog::DsoFilterOptions opts;
+    // Test with all catalogs (comprehensive 13,000+ objects)
+    opts.limit = 500;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    auto results = storage.filter_targets_period(obs, opts, crit, start_jd, end_jd, /*step_minutes=*/10);
+    auto t1 = std::chrono::high_resolution_clock::now();
+
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    std::cout << "  filter_targets_period for 15 nights returned " << results.size() << " targets in " << ms << " ms\n";
+    assert(results.size() > 0);
+    assert(ms < 1500);
+    std::cout << "  ✓ Period visibility filter performance benchmark passed (" << ms << " ms)\n";
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  RUNNING SQLITE STORAGE TESTS          \n";
@@ -167,6 +200,7 @@ int main() {
 
     test_sqlite_catalog();
     test_target_descriptions();
+    test_period_performance();
 
     std::cout << "\n>>> ALL STORAGE TESTS PASSED! <<<\n";
     return 0;

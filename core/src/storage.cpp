@@ -6,6 +6,7 @@
 #include <chrono>
 #include <regex>
 #include <sstream>
+#include <thread>
 
 namespace astro::storage {
 
@@ -534,20 +535,68 @@ std::vector<catalog::TargetWithPeriodVisibility> SqliteStorage::filter_targets_p
     candidate_opts.offset = 0;
 
     std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
+    if (candidates.empty()) return results;
+
     bool has_search_query = !filter_options.search_query.empty();
+    auto period_ctx = visibility::prepare_period_context(obs, visibility_criteria, start_jd, end_jd, step_minutes);
 
-    for (const auto& dso : candidates) {
-        auto vis = visibility::evaluate_period_visibility(
-            dso.coordinates,
-            obs,
-            visibility_criteria,
-            start_jd,
-            end_jd,
-            step_minutes
-        );
+    unsigned int num_threads = std::max(1u, std::thread::hardware_concurrency());
+    if (candidates.size() <= 64 || num_threads <= 1) {
+        results.reserve(std::min<size_t>(candidates.size(), 1000));
+        for (const auto& dso : candidates) {
+            auto vis = visibility::evaluate_period_visibility_fast(
+                dso.coordinates,
+                obs,
+                visibility_criteria,
+                period_ctx,
+                step_minutes
+            );
 
-        if (vis.is_observable || has_search_query) {
-            results.push_back({dso, vis});
+            if (vis.is_observable || has_search_query) {
+                results.push_back({dso, vis});
+            }
+        }
+    } else {
+        std::vector<std::vector<catalog::TargetWithPeriodVisibility>> thread_results(num_threads);
+        std::vector<std::thread> workers;
+        workers.reserve(num_threads);
+
+        size_t chunk_size = (candidates.size() + num_threads - 1) / num_threads;
+        for (unsigned int t = 0; t < num_threads; ++t) {
+            size_t start_idx = t * chunk_size;
+            size_t end_idx = std::min(start_idx + chunk_size, candidates.size());
+            if (start_idx >= end_idx) continue;
+
+            workers.emplace_back([&, t, start_idx, end_idx]() {
+                thread_results[t].reserve((end_idx - start_idx) / 4);
+                for (size_t i = start_idx; i < end_idx; ++i) {
+                    const auto& dso = candidates[i];
+                    auto vis = visibility::evaluate_period_visibility_fast(
+                        dso.coordinates,
+                        obs,
+                        visibility_criteria,
+                        period_ctx,
+                        step_minutes
+                    );
+
+                    if (vis.is_observable || has_search_query) {
+                        thread_results[t].push_back({dso, vis});
+                    }
+                }
+            });
+        }
+
+        for (auto& w : workers) {
+            w.join();
+        }
+
+        size_t total_count = 0;
+        for (const auto& tr : thread_results) {
+            total_count += tr.size();
+        }
+        results.reserve(total_count);
+        for (auto& tr : thread_results) {
+            results.insert(results.end(), std::make_move_iterator(tr.begin()), std::make_move_iterator(tr.end()));
         }
     }
 

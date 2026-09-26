@@ -44,9 +44,12 @@ TargetVisibilityResult evaluate_visibility(
             peak_t = cur_jd;
         }
 
-        // Moon separation
-        auto moon = ephemeris::get_moon_info(cur_jd, obs);
-        units::Degrees moon_sep = coordinates::angular_separation(target, moon.coords);
+        // Moon separation (only computed if criteria filters on moon or samples are requested)
+        units::Degrees moon_sep{180.0};
+        if (criteria.min_moon_separation.value > 0.0 || include_samples) {
+            auto moon = ephemeris::get_moon_info(cur_jd, obs);
+            moon_sep = coordinates::angular_separation(target, moon.coords);
+        }
 
         // Check criteria
         bool passes_alt = horiz.altitude.value >= criteria.min_altitude.value &&
@@ -402,34 +405,38 @@ YearlyVisibilityResult calculate_yearly_visibility(
     return result;
 }
 
-PeriodVisibilityResult evaluate_period_visibility(
-    const coordinates::EquatorialCoordinates& target,
+PeriodEvaluationContext prepare_period_context(
     const coordinates::ObserverLocation& obs,
     const VisibilityCriteria& criteria,
     time::JulianDate start_jd,
     time::JulianDate end_jd,
     int step_minutes
 ) {
-    PeriodVisibilityResult result;
-
-    double max_alt = 90.0 - std::abs(obs.latitude.value - target.dec.value);
-    if (max_alt < criteria.min_altitude.value) {
-        return result;
-    }
-
-    // Determine total days in the period
+    PeriodEvaluationContext ctx;
     int total_days = static_cast<int>(std::round(end_jd.value - start_jd.value)) + 1;
     if (total_days < 1) total_days = 1;
-    result.total_period_days = total_days;
+    ctx.total_days = total_days;
+
+    double lat_rad = units::to_radians(obs.latitude).value;
+    ctx.sin_lat = std::sin(lat_rad);
+    ctx.cos_lat = std::cos(lat_rad);
+    ctx.lat_deg = obs.latitude.value;
 
     int step = step_minutes > 0 ? step_minutes : 10;
-    bool found_first = false;
+    double step_days = static_cast<double>(step) / 1440.0;
+
+    ctx.nights.resize(total_days);
 
     for (int i = 0; i < total_days; ++i) {
+        auto& night_data = ctx.nights[i];
         double cur_jd_val = start_jd.value + static_cast<double>(i);
         auto dt = time::julian_date_to_datetime(time::JulianDate{cur_jd_val});
         time::JulianDate jd_midnight_utc = time::datetime_to_julian_date({dt.year, dt.month, dt.day, 0, 0, 0.0});
         auto night = ephemeris::calculate_night_window(jd_midnight_utc, obs);
+
+        night_data.jd_midnight_utc = jd_midnight_utc;
+        night_data.month = dt.month;
+        night_data.day = dt.day;
 
         time::JulianDate win_start{0.0};
         time::JulianDate win_end{0.0};
@@ -460,29 +467,153 @@ PeriodVisibilityResult evaluate_period_visibility(
             }
         }
 
+        night_data.win_start = win_start;
+        night_data.win_end = win_end;
+
         if (win_start.value < win_end.value) {
-            VisibilityCriteria day_crit = criteria;
-            day_crit.window_start = win_start;
-            day_crit.window_end = win_end;
-            day_crit.min_moon_separation = units::Degrees{0.0};
+            night_data.valid = true;
+            int estimated_steps = static_cast<int>((win_end.value - win_start.value) / step_days) + 2;
+            night_data.steps.reserve(estimated_steps);
 
-            auto vis = evaluate_visibility(target, obs, day_crit, step, false);
-            if (vis.meets_criteria) {
-                result.total_observable_days++;
-                if (!found_first) {
-                    result.start_month = dt.month;
-                    result.start_day = dt.day;
-                    found_first = true;
-                }
-                result.end_month = dt.month;
-                result.end_day = dt.day;
+            for (double t = win_start.value; t <= win_end.value + 1e-6; t += step_days) {
+                time::JulianDate step_jd{t};
+                units::Hours lmst = time::local_mean_sidereal_time(step_jd, obs.longitude);
+                double lmst_rad = units::to_radians(units::hours_to_degrees(lmst)).value;
+                night_data.steps.push_back({step_jd, lmst_rad});
+            }
+        } else {
+            night_data.valid = false;
+        }
+    }
 
-                if (vis.max_continuous_hours > result.max_hours_observable ||
-                    (vis.max_continuous_hours == result.max_hours_observable && vis.peak_altitude.value > result.peak_altitude_deg)) {
-                    result.max_hours_observable = vis.max_continuous_hours;
-                    result.peak_altitude_deg = vis.peak_altitude.value;
-                    result.peak_date = jd_midnight_utc;
+    return ctx;
+}
+
+PeriodVisibilityResult evaluate_period_visibility_fast(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    const PeriodEvaluationContext& context,
+    int step_minutes
+) {
+    (void)obs;
+    (void)step_minutes;
+    PeriodVisibilityResult result;
+    result.total_period_days = context.total_days;
+
+    double max_alt = 90.0 - std::abs(context.lat_deg - target.dec.value);
+    if (max_alt < criteria.min_altitude.value) {
+        return result;
+    }
+
+    double dec_rad = units::to_radians(target.dec).value;
+    double sin_dec = std::sin(dec_rad);
+    double cos_dec = std::cos(dec_rad);
+    double ra_rad = units::to_radians(units::hours_to_degrees(target.ra)).value;
+
+    double term_a = context.sin_lat * sin_dec;
+    double term_b = context.cos_lat * cos_dec;
+
+    if (std::abs(term_b) > 1e-7) {
+        double sin_min_alt = std::sin(units::to_radians(criteria.min_altitude).value);
+        double cos_H = (sin_min_alt - term_a) / term_b;
+        if (cos_H > 1.0) {
+            return result;
+        }
+        if (cos_H >= -1.0) {
+            double H_max_rad = std::acos(cos_H);
+            double max_possible_hours = 2.0 * H_max_rad * (12.0 / std::numbers::pi);
+            if (max_possible_hours + 0.25 < criteria.min_duration_hours) {
+                return result;
+            }
+        }
+    }
+
+    bool need_az = (criteria.azimuth_range.min_az.value > 0.0 || criteria.azimuth_range.max_az.value < 360.0) || 
+                   criteria.quadrant != horizon::Quadrant::All || 
+                   criteria.custom_horizon.has_value();
+    double tan_dec = need_az ? std::tan(dec_rad) : 0.0;
+    double az_term_c = tan_dec * context.cos_lat;
+    double az_term_d = context.sin_lat;
+
+    bool found_first = false;
+
+    for (const auto& night : context.nights) {
+        if (!night.valid || night.steps.empty()) continue;
+
+        double night_max_alt = -999.0;
+        time::JulianDate cur_block_start{0.0};
+        time::JulianDate cur_block_end{0.0};
+        double longest_continuous_hours = 0.0;
+
+        for (const auto& step : night.steps) {
+            double H = step.lmst_rad - ra_rad;
+            double cos_H = std::cos(H);
+
+            // sin(alt) = sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(H)
+            double sin_a = term_a + term_b * cos_H;
+            sin_a = std::clamp(sin_a, -1.0, 1.0);
+            double alt_deg = std::asin(sin_a) * (180.0 / std::numbers::pi);
+
+            // Saemundsson atmospheric refraction
+            alt_deg += coordinates::atmospheric_refraction(units::Degrees{alt_deg}).value;
+
+            if (alt_deg > night_max_alt) {
+                night_max_alt = alt_deg;
+            }
+
+            bool passes_alt = alt_deg >= criteria.min_altitude.value &&
+                              alt_deg <= criteria.max_altitude.value;
+
+            bool instant_pass = passes_alt;
+            if (instant_pass && need_az) {
+                double sin_H = std::sin(H);
+                double y = -sin_H;
+                double x = az_term_c - az_term_d * cos_H;
+                double az_rad = std::atan2(y, x);
+                double az_deg = units::normalize_degrees_360(units::Degrees{az_rad * (180.0 / std::numbers::pi)}).value;
+                units::Degrees az{az_deg};
+
+                bool passes_az = criteria.azimuth_range.contains(az);
+                bool passes_quad = horizon::is_in_quadrant(az, criteria.quadrant);
+                bool passes_custom_horizon = true;
+                if (criteria.custom_horizon.has_value()) {
+                    passes_custom_horizon = criteria.custom_horizon->is_visible(units::Degrees{alt_deg}, az);
                 }
+                instant_pass = passes_az && passes_quad && passes_custom_horizon;
+            }
+
+            if (instant_pass) {
+                if (cur_block_start.value == 0.0) {
+                    cur_block_start = step.jd;
+                }
+                cur_block_end = step.jd;
+                double block_hours = (cur_block_end.value - cur_block_start.value) * 24.0;
+                if (block_hours > longest_continuous_hours) {
+                    longest_continuous_hours = block_hours;
+                }
+            } else {
+                cur_block_start = time::JulianDate{0.0};
+                cur_block_end = time::JulianDate{0.0};
+            }
+        }
+
+        bool meets_criteria = (longest_continuous_hours >= criteria.min_duration_hours);
+        if (meets_criteria) {
+            result.total_observable_days++;
+            if (!found_first) {
+                result.start_month = night.month;
+                result.start_day = night.day;
+                found_first = true;
+            }
+            result.end_month = night.month;
+            result.end_day = night.day;
+
+            if (longest_continuous_hours > result.max_hours_observable ||
+                (longest_continuous_hours == result.max_hours_observable && night_max_alt > result.peak_altitude_deg)) {
+                result.max_hours_observable = longest_continuous_hours;
+                result.peak_altitude_deg = night_max_alt;
+                result.peak_date = night.jd_midnight_utc;
             }
         }
     }
@@ -492,6 +623,18 @@ PeriodVisibilityResult evaluate_period_visibility(
     }
 
     return result;
+}
+
+PeriodVisibilityResult evaluate_period_visibility(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes
+) {
+    auto ctx = prepare_period_context(obs, criteria, start_jd, end_jd, step_minutes);
+    return evaluate_period_visibility_fast(target, obs, criteria, ctx, step_minutes);
 }
 
 } // namespace astro::visibility

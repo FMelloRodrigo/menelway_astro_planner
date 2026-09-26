@@ -130,6 +130,52 @@ struct PeriodVisibilityResult {
     int end_day{0};
 };
 
+struct PeriodNightData {
+    time::JulianDate jd_midnight_utc{0.0};
+    int month{0};
+    int day{0};
+    time::JulianDate win_start{0.0};
+    time::JulianDate win_end{0.0};
+    bool valid{false};
+
+    struct StepPoint {
+        time::JulianDate jd;
+        double lmst_rad{0.0};
+    };
+    std::vector<StepPoint> steps;
+};
+
+struct PeriodEvaluationContext {
+    int total_days{0};
+    std::vector<PeriodNightData> nights;
+    double sin_lat{0.0};
+    double cos_lat{0.0};
+    double lat_deg{0.0};
+};
+
+/**
+ * @brief Precomputes solar ephemeris, night windows, and sidereal time steps for a period.
+ * Reusable across thousands of candidate targets for massive speedups.
+ */
+PeriodEvaluationContext prepare_period_context(
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    time::JulianDate start_jd,
+    time::JulianDate end_jd,
+    int step_minutes = 10
+);
+
+/**
+ * @brief Fast evaluation of target visibility across a period using a precomputed context.
+ */
+PeriodVisibilityResult evaluate_period_visibility_fast(
+    const coordinates::EquatorialCoordinates& target,
+    const coordinates::ObserverLocation& obs,
+    const VisibilityCriteria& criteria,
+    const PeriodEvaluationContext& context,
+    int step_minutes = 10
+);
+
 /**
  * @brief Computes visibility metrics for a target across a specific Julian Date range [start_jd, end_jd].
  */
