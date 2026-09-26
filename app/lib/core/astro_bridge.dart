@@ -447,7 +447,7 @@ class AstroBridge implements AstroEngine {
       searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
       critPtr.ref.searchQuery = searchUtf8;
 
-      critPtr.ref.limit = 200;
+      critPtr.ref.limit = filters.maxTargets;
       critPtr.ref.offset = 0;
       critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
       critPtr.ref.customStartHour = filters.customStartHour;
@@ -577,7 +577,7 @@ class AstroBridge implements AstroEngine {
       searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
       critPtr.ref.searchQuery = searchUtf8;
 
-      critPtr.ref.limit = 300;
+      critPtr.ref.limit = filters.maxTargets;
       critPtr.ref.offset = 0;
       critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
       critPtr.ref.customStartHour = filters.customStartHour;

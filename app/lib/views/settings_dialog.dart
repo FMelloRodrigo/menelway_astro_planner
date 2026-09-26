@@ -6,11 +6,13 @@ import 'about_dialog.dart';
 
 /// A dedicated Settings & Data window dialog that houses target filter
 /// resets, storage maintenance, and provides an extensible foundation for future settings.
-class SettingsDialog extends StatelessWidget {
+class SettingsDialog extends StatefulWidget {
   final bool isRedNightMode;
   final VoidCallback onResetFilters;
   final VoidCallback onCleanAllData;
   final VoidCallback? onReplayTour;
+  final int maxTargets;
+  final ValueChanged<int>? onMaxTargetsChanged;
 
   const SettingsDialog({
     super.key,
@@ -18,12 +20,36 @@ class SettingsDialog extends StatelessWidget {
     required this.onResetFilters,
     required this.onCleanAllData,
     this.onReplayTour,
+    this.maxTargets = 20,
+    this.onMaxTargetsChanged,
   });
+
+  @override
+  State<SettingsDialog> createState() => _SettingsDialogState();
+}
+
+class _SettingsDialogState extends State<SettingsDialog> {
+  late int _selectedMaxTargets;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMaxTargets = widget.maxTargets;
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.maxTargets != widget.maxTargets) {
+      _selectedMaxTargets = widget.maxTargets;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isNarrow = MediaQuery.of(context).size.width < 600;
+    final isRedNightMode = widget.isRedNightMode;
 
     final bgColor = isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface;
     final cardBgColor = isRedNightMode
@@ -141,8 +167,61 @@ class SettingsDialog extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                           onPressed: () {
-                            onResetFilters();
+                            setState(() {
+                              _selectedMaxTargets = 20;
+                            });
+                            widget.onResetFilters();
                           },
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Section: Maximum Targets Displayed
+                      _buildSectionCard(
+                        context: context,
+                        cardBgColor: cardBgColor,
+                        borderColor: borderColor,
+                        textColor: textColor,
+                        textSubColor: textSubColor,
+                        icon: Icons.filter_list_rounded,
+                        iconColor: accentColor,
+                        title: l10n?.settingsSectionTargetLimits ?? "Target Display Limits",
+                        description: l10n?.maxTargetsDesc ??
+                            "Controls the maximum number of visible targets calculated and shown in Targets and Planner (Default: 20).",
+                        actionWidget: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [10, 20, 50, 100, 200].map((count) {
+                            final isSelected = _selectedMaxTargets == count;
+                            return ChoiceChip(
+                              label: Text(count == 20 ? "$count (Default)" : "$count"),
+                              selected: isSelected,
+                              onSelected: widget.onMaxTargetsChanged != null
+                                  ? (selected) {
+                                      if (selected) {
+                                        setState(() {
+                                          _selectedMaxTargets = count;
+                                        });
+                                        widget.onMaxTargetsChanged!(count);
+                                      }
+                                    }
+                                  : null,
+                              selectedColor: accentColor.withValues(alpha: 0.22),
+                              backgroundColor: isRedNightMode
+                                  ? AstroColors.nightVisionSurface
+                                  : AstroColors.spaceDarkSurface,
+                              side: BorderSide(
+                                color: isSelected ? accentColor : borderColor,
+                                width: isSelected ? 1.5 : 1.0,
+                              ),
+                              labelStyle: TextStyle(
+                                color: isSelected ? accentColor : textColor,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
 
@@ -176,12 +255,12 @@ class SettingsDialog extends StatelessWidget {
                           onPressed: () {
                             // Close settings window before showing confirmation dialog
                             Navigator.of(context).pop();
-                            onCleanAllData();
+                            widget.onCleanAllData();
                           },
                         ),
                       ),
 
-                      if (onReplayTour != null) ...[
+                      if (widget.onReplayTour != null) ...[
                         const SizedBox(height: 14),
                         // Section: Quick Tour & Guide
                         _buildSectionCard(
@@ -209,7 +288,7 @@ class SettingsDialog extends StatelessWidget {
                             ),
                             onPressed: () {
                               Navigator.of(context).pop();
-                              onReplayTour!();
+                              widget.onReplayTour!();
                             },
                           ),
                         ),

@@ -568,6 +568,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsSectionFilters => 'Filtros de Alvos';
 
   @override
+  String get settingsSectionTargetLimits => 'Limite de Alvos Exibidos';
+
+  @override
+  String get maxTargetsLabel => 'Máximo de alvos exibidos';
+
+  @override
+  String get maxTargetsDesc =>
+      'Limita o número de alvos visíveis calculados e exibidos em Alvos e Planejador (Padrão: 20).';
+
+  @override
   String get settingsSectionData => 'Armazenamento e Dados Locais';
 
   @override

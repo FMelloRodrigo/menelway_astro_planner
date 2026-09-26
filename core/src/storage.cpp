@@ -450,11 +450,10 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
     std::vector<catalog::TargetWithVisibility> results;
     if (!db_) return results;
 
-    // Fetch matching objects from catalog (up to e.g. 2000 candidates)
+    // Fetch matching objects from catalog (evaluate comprehensive candidate pool)
     catalog::DsoFilterOptions candidate_opts = filter_options;
-    if (candidate_opts.limit <= 0 || candidate_opts.limit > 2000) {
-        candidate_opts.limit = 2000;
-    }
+    candidate_opts.limit = 15000;
+    candidate_opts.offset = 0;
 
     std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
     bool has_search_query = !filter_options.search_query.empty();
@@ -475,13 +474,28 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
         }
     }
 
-    // Sort: objects meeting criteria tonight first, then by peak altitude descending
+    // Sort: objects meeting criteria tonight first, then by brightness (magnitude ASC, nulls last), then peak altitude descending
     std::sort(results.begin(), results.end(), [](const auto& a, const auto& b) {
         if (a.visibility.meets_criteria != b.visibility.meets_criteria) {
             return a.visibility.meets_criteria > b.visibility.meets_criteria;
         }
+        bool a_has_mag = a.dso.magnitude.has_value();
+        bool b_has_mag = b.dso.magnitude.has_value();
+        if (a_has_mag != b_has_mag) {
+            return a_has_mag > b_has_mag;
+        }
+        if (a_has_mag && b_has_mag) {
+            double diff = *a.dso.magnitude - *b.dso.magnitude;
+            if (std::abs(diff) > 1e-4) {
+                return diff < 0.0;
+            }
+        }
         return a.visibility.peak_altitude.value > b.visibility.peak_altitude.value;
     });
+
+    if (filter_options.limit > 0 && results.size() > static_cast<size_t>(filter_options.limit)) {
+        results.resize(filter_options.limit);
+    }
 
     return results;
 }
@@ -497,11 +511,10 @@ std::vector<catalog::TargetWithPeriodVisibility> SqliteStorage::filter_targets_p
     std::vector<catalog::TargetWithPeriodVisibility> results;
     if (!db_) return results;
 
-    // Fetch matching objects from catalog (up to e.g. 2000 candidates)
+    // Fetch matching objects from catalog (evaluate comprehensive candidate pool)
     catalog::DsoFilterOptions candidate_opts = filter_options;
-    if (candidate_opts.limit <= 0 || candidate_opts.limit > 2000) {
-        candidate_opts.limit = 2000;
-    }
+    candidate_opts.limit = 15000;
+    candidate_opts.offset = 0;
 
     std::vector<catalog::DsoObject> candidates = query_objects(candidate_opts);
     bool has_search_query = !filter_options.search_query.empty();
@@ -531,6 +544,10 @@ std::vector<catalog::TargetWithPeriodVisibility> SqliteStorage::filter_targets_p
         }
         return a.visibility.peak_altitude_deg > b.visibility.peak_altitude_deg;
     });
+
+    if (filter_options.limit > 0 && results.size() > static_cast<size_t>(filter_options.limit)) {
+        results.resize(filter_options.limit);
+    }
 
     return results;
 }

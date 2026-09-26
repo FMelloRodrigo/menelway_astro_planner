@@ -563,6 +563,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionFilters => 'Target Filters';
 
   @override
+  String get settingsSectionTargetLimits => 'Target Display Limits';
+
+  @override
+  String get maxTargetsLabel => 'Max targets displayed';
+
+  @override
+  String get maxTargetsDesc =>
+      'Controls the maximum number of visible targets calculated and shown in Targets and Planner (Default: 20).';
+
+  @override
   String get settingsSectionData => 'Storage & Local Data';
 
   @override

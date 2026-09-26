@@ -50,7 +50,7 @@ class TargetSearchView extends StatefulWidget {
 }
 
 class _TargetSearchViewState extends State<TargetSearchView> {
-  SortMode _sortMode = SortMode.peakAltitude;
+  SortMode _sortMode = SortMode.brightness;
   final TextEditingController _searchController = TextEditingController();
   TargetItem? _selectedTarget;
   Timer? _debounceTimer;

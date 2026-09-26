@@ -1310,6 +1310,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                   context: context,
                   builder: (ctx) => SettingsDialog(
                     isRedNightMode: widget.isRedNightMode,
+                    maxTargets: _filters.maxTargets,
+                    onMaxTargetsChanged: (newLimit) {
+                      setState(() {
+                        _filters.maxTargets = newLimit;
+                      });
+                      _saveSettings();
+                      _runFiltering();
+                    },
                     onResetFilters: () {
                       _resetFiltersOnly();
                     },

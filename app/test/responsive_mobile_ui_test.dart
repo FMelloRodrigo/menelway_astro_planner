@@ -78,9 +78,9 @@ void main() {
       final RenderBox searchBox = tester.renderObject(searchFieldFinder);
       expect(searchBox.size.width, greaterThan(300.0));
 
-      // Verify "Filters" button and Sort dropdown are present in row 2 on mobile
+      // Verify "Filters" button and Sort dropdown are present in row 2 on mobile (defaulting to Brightness)
       expect(find.text("Filters"), findsOneWidget);
-      expect(find.text("Peak Altitude"), findsOneWidget);
+      expect(find.text("Brightness (Mag)"), findsOneWidget);
 
       // Type search text into search bar
       await tester.enterText(searchFieldFinder, "TestSearchQuery");

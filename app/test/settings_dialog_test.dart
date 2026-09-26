@@ -56,10 +56,11 @@ void main() {
     // Verify window elements
     expect(find.text('Settings & Data'), findsOneWidget);
     expect(find.text('Target Filters'), findsOneWidget);
+    expect(find.text('Target Display Limits'), findsOneWidget);
+    expect(find.text('20 (Default)'), findsOneWidget);
     expect(find.text('Storage & Local Data'), findsOneWidget);
     expect(find.text('About Menelway'), findsWidgets);
     expect(find.text('Reset Target Filters'), findsOneWidget);
-    expect(find.text('Clean All Saved Data...'), findsOneWidget);
 
     // Verify description above About button is removed
     expect(find.text('Project story, background, and design philosophy.'), findsNothing);
@@ -69,8 +70,10 @@ void main() {
     await tester.pump();
     expect(resetCalled, isTrue);
 
-    // Tap clean data
-    await tester.tap(find.text('Clean All Saved Data...'));
+    // Tap clean data (scroll into view if needed)
+    final cleanFinder = find.text('Clean All Saved Data...');
+    await tester.ensureVisible(cleanFinder);
+    await tester.tap(cleanFinder);
     await tester.pumpAndSettle();
     expect(cleanCalled, isTrue);
   });
@@ -145,5 +148,62 @@ void main() {
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
     expect(find.text('Target Filters'), findsNothing);
+  });
+
+  testWidgets('SettingsDialog updates ChoiceChip selection and highlight when tapped', (tester) async {
+    int updatedLimit = -1;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => SettingsDialog(
+                    isRedNightMode: false,
+                    maxTargets: 20,
+                    onMaxTargetsChanged: (count) {
+                      updatedLimit = count;
+                    },
+                    onResetFilters: () {},
+                    onCleanAllData: () {},
+                  ),
+                );
+              },
+              child: const Text('Open Settings'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    final defaultChip = tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '20 (Default)'));
+    expect(defaultChip.selected, isTrue);
+
+    final chip50Finder = find.widgetWithText(ChoiceChip, '50');
+    expect(tester.widget<ChoiceChip>(chip50Finder).selected, isFalse);
+
+    // Tap '50'
+    await tester.tap(chip50Finder);
+    await tester.pumpAndSettle();
+
+    expect(updatedLimit, equals(50));
+    expect(tester.widget<ChoiceChip>(chip50Finder).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '20 (Default)')).selected, isFalse);
+
+    // Tap 'Reset Target Filters'
+    await tester.tap(find.text('Reset Target Filters'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '20 (Default)')).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(chip50Finder).selected, isFalse);
   });
 }

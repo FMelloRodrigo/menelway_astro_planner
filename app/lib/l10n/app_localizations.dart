@@ -1070,6 +1070,24 @@ abstract class AppLocalizations {
   /// **'Target Filters'**
   String get settingsSectionFilters;
 
+  /// No description provided for @settingsSectionTargetLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Display Limits'**
+  String get settingsSectionTargetLimits;
+
+  /// No description provided for @maxTargetsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max targets displayed'**
+  String get maxTargetsLabel;
+
+  /// No description provided for @maxTargetsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls the maximum number of visible targets calculated and shown in Targets and Planner (Default: 20).'**
+  String get maxTargetsDesc;
+
   /// No description provided for @settingsSectionData.
   ///
   /// In en, this message translates to:

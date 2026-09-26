@@ -43,6 +43,7 @@ class FilterState {
   Set<String> selectedCatalogs;
   Set<String> selectedObjectTypes;
   String searchQuery;
+  int maxTargets;
 
   // Custom Horizon Profile
   bool useCustomHorizon;
@@ -82,6 +83,7 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     this.searchQuery = '',
+    this.maxTargets = 20,
     this.useCustomHorizon = false,
     List<HorizonPointModel>? horizonPoints,
     this.panoramaImagePath,
@@ -175,6 +177,7 @@ class FilterState {
     Set<String>? selectedCatalogs,
     Set<String>? selectedObjectTypes,
     String? searchQuery,
+    int? maxTargets,
     bool? useCustomHorizon,
     List<HorizonPointModel>? horizonPoints,
     String? panoramaImagePath,
@@ -208,6 +211,7 @@ class FilterState {
       selectedCatalogs: selectedCatalogs ?? Set.from(this.selectedCatalogs),
       selectedObjectTypes: selectedObjectTypes ?? Set.from(this.selectedObjectTypes),
       searchQuery: searchQuery ?? this.searchQuery,
+      maxTargets: maxTargets ?? this.maxTargets,
       useCustomHorizon: useCustomHorizon ?? this.useCustomHorizon,
       horizonPoints: horizonPoints ?? List.from(this.horizonPoints),
       panoramaImagePath: panoramaImagePath ?? this.panoramaImagePath,
@@ -242,6 +246,7 @@ class FilterState {
     'selectedCatalogs': selectedCatalogs.toList(),
     'selectedObjectTypes': selectedObjectTypes.toList(),
     'searchQuery': searchQuery,
+    'maxTargets': maxTargets,
     'useCustomHorizon': useCustomHorizon,
     'horizonPoints': horizonPoints.map((p) => p.toJson()).toList(),
     'panoramaImagePath': panoramaImagePath,
@@ -281,6 +286,7 @@ class FilterState {
           ?.map((e) => e.toString())
           .toSet(),
       searchQuery: json['searchQuery'] as String? ?? '',
+      maxTargets: (json['maxTargets'] as num?)?.toInt() ?? 20,
       useCustomHorizon: json['useCustomHorizon'] as bool? ?? false,
       horizonPoints: (json['horizonPoints'] as List<dynamic>?)
               ?.map((p) => HorizonPointModel.fromJson(p as Map<String, dynamic>))
