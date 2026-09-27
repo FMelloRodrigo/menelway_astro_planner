@@ -1,3 +1,5 @@
+import 'terrain_profile_model.dart';
+
 class HorizonPointModel {
   final double azimuth; // 0..360 deg
   final double altitude; // 0..90 deg
@@ -54,6 +56,10 @@ class FilterState {
   double panoramaAltitudeScale; // 0.5..2.0 vertical stretch
   double panoramaOpacity; // 0.1..1.0 transparency
 
+  // Mountain Silhouette / Terrain Horizon
+  bool showTerrainSilhouette;
+  TerrainProfileModel? terrainProfile;
+
   // Observing Time Window (Telescopius rule)
   bool useCustomTimeWindow;
   int customStartHour;
@@ -91,6 +97,8 @@ class FilterState {
     this.panoramaAltitudeOffset = 0.0,
     this.panoramaAltitudeScale = 1.0,
     this.panoramaOpacity = 0.6,
+    this.showTerrainSilhouette = true,
+    this.terrainProfile,
     this.useCustomTimeWindow = false,
     this.customStartHour = 21,
     this.customStartMinute = 0,
@@ -185,6 +193,8 @@ class FilterState {
     double? panoramaAltitudeOffset,
     double? panoramaAltitudeScale,
     double? panoramaOpacity,
+    bool? showTerrainSilhouette,
+    TerrainProfileModel? terrainProfile,
     bool? useCustomTimeWindow,
     int? customStartHour,
     int? customStartMinute,
@@ -219,6 +229,8 @@ class FilterState {
       panoramaAltitudeOffset: panoramaAltitudeOffset ?? this.panoramaAltitudeOffset,
       panoramaAltitudeScale: panoramaAltitudeScale ?? this.panoramaAltitudeScale,
       panoramaOpacity: panoramaOpacity ?? this.panoramaOpacity,
+      showTerrainSilhouette: showTerrainSilhouette ?? this.showTerrainSilhouette,
+      terrainProfile: terrainProfile ?? this.terrainProfile,
       useCustomTimeWindow: useCustomTimeWindow ?? this.useCustomTimeWindow,
       customStartHour: customStartHour ?? this.customStartHour,
       customStartMinute: customStartMinute ?? this.customStartMinute,
@@ -254,6 +266,8 @@ class FilterState {
     'panoramaAltitudeOffset': panoramaAltitudeOffset,
     'panoramaAltitudeScale': panoramaAltitudeScale,
     'panoramaOpacity': panoramaOpacity,
+    'showTerrainSilhouette': showTerrainSilhouette,
+    'terrainProfile': terrainProfile?.toJson(),
     'useCustomTimeWindow': useCustomTimeWindow,
     'customStartHour': customStartHour,
     'customStartMinute': customStartMinute,
@@ -283,8 +297,8 @@ class FilterState {
               .toSet() ??
           {'Messier', 'Caldwell'},
       selectedObjectTypes: (json['selectedObjectTypes'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toSet(),
+              ?.map((e) => e.toString())
+              .toSet(),
       searchQuery: json['searchQuery'] as String? ?? '',
       maxTargets: (json['maxTargets'] as num?)?.toInt() ?? 20,
       useCustomHorizon: json['useCustomHorizon'] as bool? ?? false,
@@ -297,6 +311,10 @@ class FilterState {
       panoramaAltitudeOffset: (json['panoramaAltitudeOffset'] as num?)?.toDouble() ?? 0.0,
       panoramaAltitudeScale: (json['panoramaAltitudeScale'] as num?)?.toDouble() ?? 1.0,
       panoramaOpacity: (json['panoramaOpacity'] as num?)?.toDouble() ?? 0.6,
+      showTerrainSilhouette: json['showTerrainSilhouette'] as bool? ?? true,
+      terrainProfile: json['terrainProfile'] != null
+          ? TerrainProfileModel.fromJson(json['terrainProfile'] as Map<String, dynamic>)
+          : null,
       useCustomTimeWindow: json['useCustomTimeWindow'] as bool? ?? false,
       customStartHour: json['customStartHour'] as int? ?? 21,
       customStartMinute: json['customStartMinute'] as int? ?? 0,

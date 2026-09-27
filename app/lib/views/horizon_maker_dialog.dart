@@ -1,10 +1,14 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../core/file_picker_service.dart';
 import '../models/filter_state.dart';
+import '../models/terrain_profile_model.dart';
+import '../services/terrain_elevation_service.dart';
+import '../services/terrain_cache_service.dart';
 import '../theme/astro_theme.dart';
 
 /// Modal dialog providing an interactive Az-Alt chart (0°-360° azimuth x 0°-90° altitude)
@@ -42,6 +46,18 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   late double _imageOpacity;
   bool _calibrateMode = false; // true = dragging pans image, false = edits horizon points
 
+  // Mountain Silhouette / Terrain Horizon state
+  TerrainProfileModel? _terrainProfile;
+  late bool _showTerrainSilhouette;
+  bool _isFetchingTerrain = false;
+  double _fetchFraction = 0.0;
+  String _fetchStatus = '';
+
+  // Point Visibility & Zoom/Pan state
+  bool _showPoints = true;
+  double _zoomLevel = 1.0;
+  double _viewStartAzimuth = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -55,9 +71,137 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
     _altitudeScale = _state.panoramaAltitudeScale;
     _imageOpacity = _state.panoramaOpacity;
 
+    _terrainProfile = _state.terrainProfile;
+    _showTerrainSilhouette = _state.showTerrainSilhouette;
+
     if (_panoramaPath != null && _panoramaPath!.isNotEmpty) {
       _loadDecodedImage(_panoramaPath!);
     }
+
+    if (_terrainProfile == null) {
+      _loadCachedTerrainProfile();
+    }
+  }
+
+  Future<void> _loadCachedTerrainProfile() async {
+    final cached = await TerrainCacheService.loadProfile(
+      _state.observerLat,
+      _state.observerLon,
+    );
+    if (cached != null && mounted) {
+      setState(() {
+        _terrainProfile = cached;
+      });
+    }
+  }
+
+  Future<void> _detectMountainHorizon() async {
+    setState(() {
+      _isFetchingTerrain = true;
+      _fetchFraction = 0.0;
+      _fetchStatus = 'Connecting to AWS elevation tiles...';
+    });
+
+    try {
+      final profile = await TerrainElevationService.generateProfile(
+        latitude: _state.observerLat,
+        longitude: _state.observerLon,
+        observerKnownElevation: _state.observerElevation,
+        onProgress: (frac, status) {
+          if (mounted) {
+            setState(() {
+              _fetchFraction = frac;
+              _fetchStatus = status;
+            });
+          }
+        },
+      );
+
+      await TerrainCacheService.saveProfile(profile);
+
+      if (mounted) {
+        setState(() {
+          _terrainProfile = profile;
+          _showTerrainSilhouette = true;
+          _isFetchingTerrain = false;
+        });
+
+        _promptApplyTerrainPoints(profile);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isFetchingTerrain = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error fetching mountain horizon: please check internet connection ($e)"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  void _promptApplyTerrainPoints(TerrainProfileModel profile) {
+    final simplified = profile.toSimplifiedHorizonPoints(epsilonDeg: 0.25);
+    final count = simplified.length;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            Icon(Icons.terrain_rounded, color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan),
+            const SizedBox(width: 8),
+            const Text("Mountain Skyline Detected", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          "Successfully generated 360° mountain topography for ${_state.observerLocationName}!\n\n"
+          "Would you like to apply these $count landmark peaks as your active horizon obstacle points? You can still adjust individual points afterwards.",
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text("Keep Silhouette Only"),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+              foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+            ),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text("Apply as Horizon Points", style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                _points = List.from(simplified);
+                _sortPoints();
+                _selectedPointIndex = null;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applySimplifiedMountainPoints() {
+    if (_terrainProfile == null) return;
+    final simplified = _terrainProfile!.toSimplifiedHorizonPoints(epsilonDeg: 0.25);
+    setState(() {
+      _points = List.from(simplified);
+      _sortPoints();
+      _selectedPointIndex = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Applied ${simplified.length} mountain landmark points to active horizon"),
+        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+      ),
+    );
   }
 
   void _sortPoints() {
@@ -162,7 +306,71 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       final updated = _points[_selectedPointIndex!];
       _sortPoints();
       _selectedPointIndex = _points.indexOf(updated);
+      _ensurePointVisible(_selectedPointIndex!);
     });
+  }
+
+  void _selectPreviousPoint() {
+    if (_points.isEmpty || _selectedPointIndex == null) return;
+    final newIdx = (_selectedPointIndex! - 1 + _points.length) % _points.length;
+    setState(() {
+      _selectedPointIndex = newIdx;
+      _ensurePointVisible(newIdx);
+    });
+  }
+
+  void _selectNextPoint() {
+    if (_points.isEmpty || _selectedPointIndex == null) return;
+    final newIdx = (_selectedPointIndex! + 1) % _points.length;
+    setState(() {
+      _selectedPointIndex = newIdx;
+      _ensurePointVisible(newIdx);
+    });
+  }
+
+  void _setZoom(double newZoom, {double? centerAzimuth}) {
+    final clampedZoom = newZoom.clamp(1.0, 8.0);
+    final oldSpan = 360.0 / _zoomLevel;
+    final newSpan = 360.0 / clampedZoom;
+    final center = centerAzimuth ?? (_viewStartAzimuth + oldSpan / 2.0);
+    final newStart = (center - newSpan / 2.0).clamp(0.0, 360.0 - newSpan);
+    setState(() {
+      _zoomLevel = clampedZoom;
+      _viewStartAzimuth = clampedZoom == 1.0 ? 0.0 : newStart;
+    });
+  }
+
+  void _zoomIn() => _setZoom(_zoomLevel * 1.4);
+  void _zoomOut() => _setZoom(_zoomLevel / 1.4);
+  void _resetZoom() => setState(() {
+    _zoomLevel = 1.0;
+    _viewStartAzimuth = 0.0;
+  });
+
+  void _panView(double deltaAz) {
+    if (_zoomLevel <= 1.0) return;
+    final span = 360.0 / _zoomLevel;
+    setState(() {
+      _viewStartAzimuth = (_viewStartAzimuth + deltaAz).clamp(0.0, 360.0 - span);
+    });
+  }
+
+  void _jumpToAzimuth(double targetAz) {
+    final span = 360.0 / _zoomLevel;
+    setState(() {
+      _viewStartAzimuth = (targetAz - span / 2.0).clamp(0.0, 360.0 - span);
+    });
+  }
+
+  void _ensurePointVisible(int idx) {
+    if (_zoomLevel <= 1.0 || idx < 0 || idx >= _points.length) return;
+    final p = _points[idx];
+    final span = 360.0 / _zoomLevel;
+    if (p.azimuth < _viewStartAzimuth + 15.0 || p.azimuth > _viewStartAzimuth + span - 15.0) {
+      setState(() {
+        _viewStartAzimuth = (p.azimuth - span / 2.0).clamp(0.0, 360.0 - span);
+      });
+    }
   }
 
   void _applyPreset(String preset) {
@@ -214,6 +422,8 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       panoramaAltitudeOffset: _altitudeOffset,
       panoramaAltitudeScale: _altitudeScale,
       panoramaOpacity: _imageOpacity,
+      showTerrainSilhouette: _showTerrainSilhouette,
+      terrainProfile: _terrainProfile,
     );
     widget.onApply(updated);
     Navigator.of(context).pop();
@@ -279,6 +489,56 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           _buildToolbar(textColor, accentColor, isNarrow),
           const SizedBox(height: 8),
 
+          // Active Terrain Scan Progress Bar
+          if (_isFetchingTerrain) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: widget.isRedNightMode ? const Color(0xFF200606) : const Color(0xFF0F1B2B),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          value: _fetchFraction > 0 ? _fetchFraction : null,
+                          color: accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _fetchStatus,
+                          style: TextStyle(fontSize: 11, color: textColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${(_fetchFraction * 100).toInt()}%',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: accentColor),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(
+                    value: _fetchFraction > 0 ? _fetchFraction : null,
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    color: accentColor,
+                    minHeight: 3,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Main Interactive Horizon Chart
           Expanded(
             child: Container(
@@ -307,6 +567,11 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                       altitudeScale: _altitudeScale,
                       imageOpacity: _imageOpacity,
                       calibrateMode: _calibrateMode,
+                      terrainProfile: _terrainProfile,
+                      showTerrainSilhouette: _showTerrainSilhouette,
+                      showPoints: _showPoints,
+                      zoomLevel: _zoomLevel,
+                      viewStartAzimuth: _viewStartAzimuth,
                       onAddPoint: _addPoint,
                       onSelectPoint: (idx) => setState(() => _selectedPointIndex = idx),
                       onPointMoved: (idx, az, alt) {
@@ -329,12 +594,19 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                           _altitudeOffset = (_altitudeOffset + dAlt).clamp(-25.0, 35.0);
                         });
                       },
+                      onZoomChange: (newZoom, centerAz) => _setZoom(newZoom, centerAzimuth: centerAz),
+                      onPanView: _panView,
+                      onZoomIn: _zoomIn,
+                      onZoomOut: _zoomOut,
+                      onResetZoom: _resetZoom,
                     );
                   },
                 ),
               ),
             ),
           ),
+          if (_zoomLevel > 1.0)
+            _buildViewportScrubber(textColor, accentColor),
           const SizedBox(height: 10),
 
           // Panorama Calibration Controls (visible if image is loaded)
@@ -451,11 +723,177 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
     }
   }
 
+  Widget _buildViewportScrubber(Color textColor, Color accentColor) {
+    final span = 360.0 / _zoomLevel;
+    final minAz = _viewStartAzimuth.round();
+    final maxAz = (_viewStartAzimuth + span).round();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: widget.isRedNightMode
+            ? AstroColors.nightVisionSurfaceVariant
+            : AstroColors.spaceDarkSurfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.pan_tool_alt_rounded, size: 14, color: accentColor),
+          const SizedBox(width: 6),
+          Text(
+            "Viewing: $minAz° – $maxAz° (${_zoomLevel.toStringAsFixed(1)}x)",
+            style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: textColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              ),
+              child: Slider(
+                value: _viewStartAzimuth.clamp(0.0, 360.0 - span),
+                min: 0.0,
+                max: (360.0 - span).clamp(0.0, 360.0),
+                activeColor: accentColor,
+                onChanged: (val) => setState(() => _viewStartAzimuth = val),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _cardinalJumpBtn("N", 0.0, accentColor),
+          _cardinalJumpBtn("NE", 45.0, accentColor),
+          _cardinalJumpBtn("E", 90.0, accentColor),
+          _cardinalJumpBtn("SE", 135.0, accentColor),
+          _cardinalJumpBtn("S", 180.0, accentColor),
+          _cardinalJumpBtn("SW", 225.0, accentColor),
+          _cardinalJumpBtn("W", 270.0, accentColor),
+          _cardinalJumpBtn("NW", 315.0, accentColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardinalJumpBtn(String label, double az, Color accentColor) {
+    return InkWell(
+      onTap: () => _jumpToAzimuth(az),
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolbar(Color textColor, Color accentColor, bool isNarrow) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          // Point Handles Visibility Toggle
+          FilterChip(
+            selected: _showPoints,
+            label: Text(
+              _showPoints ? "Points: ON" : "Points: OFF",
+              style: TextStyle(fontSize: 11, color: textColor),
+            ),
+            avatar: Icon(
+              _showPoints ? Icons.scatter_plot_rounded : Icons.visibility_off_outlined,
+              size: 14,
+              color: accentColor,
+            ),
+            selectedColor: accentColor.withValues(alpha: 0.25),
+            onSelected: (val) => setState(() => _showPoints = val),
+          ),
+          const SizedBox(width: 8),
+
+          // Mountain Profile Button & Controls (Online DEM)
+          if (_isFetchingTerrain) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
+                  ),
+                  const SizedBox(width: 8),
+                  Text("Scanning Horizon...", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+                ],
+              ),
+            ),
+          ] else if (_terrainProfile == null) ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: accentColor.withValues(alpha: 0.18),
+                foregroundColor: accentColor,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
+              ),
+              icon: Icon(Icons.terrain_rounded, size: 16, color: accentColor),
+              label: Text(
+                "Detect Mountains (Online DEM)",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+              ),
+              onPressed: _detectMountainHorizon,
+            ),
+          ] else ...[
+            FilterChip(
+              selected: _showTerrainSilhouette,
+              label: Text(
+                _showTerrainSilhouette ? "Mountain Silhouette: ON" : "Mountain Silhouette: OFF",
+                style: TextStyle(fontSize: 11, color: textColor),
+              ),
+              avatar: Icon(Icons.landscape_rounded, size: 14, color: accentColor),
+              selectedColor: accentColor.withValues(alpha: 0.25),
+              onSelected: (val) => setState(() => _showTerrainSilhouette = val),
+            ),
+            const SizedBox(width: 6),
+            ActionChip(
+              avatar: Icon(Icons.auto_fix_high_rounded, size: 14, color: accentColor),
+              label: const Text("Apply Peaks to Points", style: TextStyle(fontSize: 11)),
+              onPressed: _applySimplifiedMountainPoints,
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: "Clear Mountain Data",
+              icon: const Icon(Icons.layers_clear_rounded, size: 17, color: Colors.white54),
+              onPressed: () => setState(() => _terrainProfile = null),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: "Re-scan Mountain Profile",
+              icon: Icon(Icons.refresh_rounded, size: 17, color: accentColor),
+              onPressed: _detectMountainHorizon,
+            ),
+          ],
+          const SizedBox(width: 12),
+          Container(width: 1, height: 24, color: textColor.withValues(alpha: 0.2)),
+          const SizedBox(width: 12),
+
           // Background Image Button
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
@@ -687,6 +1125,22 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
+          tooltip: "Previous Point (<)",
+          icon: const Icon(Icons.navigate_before_rounded, size: 22),
+          onPressed: _points.length > 1 ? _selectPreviousPoint : null,
+        ),
+        IconButton(
+          tooltip: "Next Point (>)",
+          icon: const Icon(Icons.navigate_next_rounded, size: 22),
+          onPressed: _points.length > 1 ? _selectNextPoint : null,
+        ),
+        Container(
+          width: 1,
+          height: 18,
+          color: textColor.withValues(alpha: 0.2),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+        ),
+        IconButton(
           tooltip: "-1° Azimuth",
           icon: const Icon(Icons.arrow_left_rounded, size: 20),
           onPressed: () => _adjustSelectedPoint(-1.0, 0.0),
@@ -737,7 +1191,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                     Icon(Icons.adjust_rounded, size: 15, color: accentColor),
                     const SizedBox(width: 6),
                     Text(
-                      "Point #${_selectedPointIndex! + 1}: ",
+                      "Point #${_selectedPointIndex! + 1} of ${_points.length}: ",
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
                     ),
                     Expanded(
@@ -762,7 +1216,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                 Icon(Icons.adjust_rounded, size: 15, color: accentColor),
                 const SizedBox(width: 6),
                 Text(
-                  "Point #${_selectedPointIndex! + 1}: ",
+                  "Point #${_selectedPointIndex! + 1} of ${_points.length}: ",
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 Text(
@@ -792,7 +1246,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
 /// Canvas widget handling coordinates, rendering background panorama,
 /// rendering grid, active azimuth range corridor, min/max altitude guides,
-/// and obstacle mask with interactive point dragging.
+/// and obstacle mask with interactive point dragging and sector zoom/pan.
 class _InteractiveHorizonCanvas extends StatefulWidget {
   final List<HorizonPointModel> points;
   final int? selectedIndex;
@@ -807,11 +1261,21 @@ class _InteractiveHorizonCanvas extends StatefulWidget {
   final double altitudeScale;
   final double imageOpacity;
   final bool calibrateMode;
+  final TerrainProfileModel? terrainProfile;
+  final bool showTerrainSilhouette;
+  final bool showPoints;
+  final double zoomLevel;
+  final double viewStartAzimuth;
   final void Function(double az, double alt) onAddPoint;
   final void Function(int index) onSelectPoint;
   final void Function(int index, double az, double alt) onPointMoved;
   final VoidCallback onPointDragEnd;
   final void Function(double dAz, double dAlt) onPanImage;
+  final void Function(double newZoom, double? centerAz) onZoomChange;
+  final void Function(double deltaAz) onPanView;
+  final VoidCallback onZoomIn;
+  final VoidCallback onZoomOut;
+  final VoidCallback onResetZoom;
 
   const _InteractiveHorizonCanvas({
     required this.points,
@@ -827,11 +1291,21 @@ class _InteractiveHorizonCanvas extends StatefulWidget {
     required this.altitudeScale,
     required this.imageOpacity,
     required this.calibrateMode,
+    this.terrainProfile,
+    this.showTerrainSilhouette = true,
+    this.showPoints = true,
+    this.zoomLevel = 1.0,
+    this.viewStartAzimuth = 0.0,
     required this.onAddPoint,
     required this.onSelectPoint,
     required this.onPointMoved,
     required this.onPointDragEnd,
     required this.onPanImage,
+    required this.onZoomChange,
+    required this.onPanView,
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.onResetZoom,
   });
 
   @override
@@ -841,6 +1315,7 @@ class _InteractiveHorizonCanvas extends StatefulWidget {
 class _InteractiveHorizonCanvasState extends State<_InteractiveHorizonCanvas> {
   int? _draggedIndex;
   Offset? _hoverPos;
+  bool _isPanningView = false;
 
   // Margin definitions
   static const double leftMargin = 40.0;
@@ -858,11 +1333,13 @@ class _InteractiveHorizonCanvasState extends State<_InteractiveHorizonCanvas> {
   }
 
   double _azToX(double az, Rect r) {
-    return r.left + (az / 360.0) * r.width;
+    final span = 360.0 / widget.zoomLevel;
+    return r.left + ((az - widget.viewStartAzimuth) / span) * r.width;
   }
 
   double _xToAz(double x, Rect r) {
-    return ((x - r.left) / r.width * 360.0).clamp(0.0, 360.0);
+    final span = 360.0 / widget.zoomLevel;
+    return (widget.viewStartAzimuth + ((x - r.left) / r.width) * span).clamp(0.0, 360.0);
   }
 
   double _altToY(double alt, Rect r) {
@@ -875,17 +1352,25 @@ class _InteractiveHorizonCanvasState extends State<_InteractiveHorizonCanvas> {
 
   int? _hitTestPoint(Offset localPos, Size size) {
     final r = _chartRect(size);
-    const hitRadius = 24.0; // touch-friendly hit radius
-    for (int i = 0; i < widget.points.length; i++) {
+    const hitRadius = 24.0;
+    int? bestIndex;
+    double bestDistance = hitRadius;
+
+    final indicesToCheck = widget.showPoints
+        ? List.generate(widget.points.length, (i) => i)
+        : (widget.selectedIndex != null ? [widget.selectedIndex!] : <int>[]);
+
+    for (final i in indicesToCheck) {
       final p = widget.points[i];
       final px = _azToX(p.azimuth, r);
       final py = _altToY(p.altitude, r);
       final dist = (Offset(px, py) - localPos).distance;
-      if (dist <= hitRadius) {
-        return i;
+      if (dist <= bestDistance) {
+        bestDistance = dist;
+        bestIndex = i;
       }
     }
-    return null;
+    return bestIndex;
   }
 
   @override
@@ -895,84 +1380,190 @@ class _InteractiveHorizonCanvasState extends State<_InteractiveHorizonCanvas> {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
         final r = _chartRect(size);
 
-        return GestureDetector(
-          onTapDown: (details) {
-            final hit = _hitTestPoint(details.localPosition, size);
-            if (hit != null) {
-              widget.onSelectPoint(hit);
-            } else if (r.contains(details.localPosition) && !widget.calibrateMode) {
-              final az = _xToAz(details.localPosition.dx, r);
-              final alt = _yToAlt(details.localPosition.dy, r);
-              widget.onAddPoint(az, alt);
+        return Listener(
+          onPointerSignal: (pointerSignal) {
+            if (pointerSignal is PointerScrollEvent) {
+              if (r.contains(pointerSignal.localPosition)) {
+                final cursorAz = _xToAz(pointerSignal.localPosition.dx, r);
+                final factor = pointerSignal.scrollDelta.dy < 0 ? 1.25 : 0.80;
+                final newZoom = (widget.zoomLevel * factor).clamp(1.0, 8.0);
+                widget.onZoomChange(newZoom, cursorAz);
+              }
             }
           },
-          onDoubleTapDown: (details) {
-            final hit = _hitTestPoint(details.localPosition, size);
-            if (hit != null) {
-              widget.onSelectPoint(hit);
-              // Selecting point allows delete button to remove it
-            }
-          },
-          onPanStart: (details) {
-            if (widget.calibrateMode) {
-              return;
-            }
-            final hit = _hitTestPoint(details.localPosition, size);
-            if (hit != null) {
-              _draggedIndex = hit;
-              widget.onSelectPoint(hit);
-              setState(() {});
-            }
-          },
-          onPanUpdate: (details) {
-            if (widget.calibrateMode) {
-              // Dragging pans background image
-              final dAz = (details.delta.dx / r.width) * 360.0;
-              final dAlt = -(details.delta.dy / r.height) * 90.0;
-              widget.onPanImage(dAz, dAlt);
-              return;
-            }
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTapDown: (details) {
+                  final hit = _hitTestPoint(details.localPosition, size);
+                  if (hit != null) {
+                    widget.onSelectPoint(hit);
+                  } else if (r.contains(details.localPosition) && !widget.calibrateMode) {
+                    final az = _xToAz(details.localPosition.dx, r);
+                    final alt = _yToAlt(details.localPosition.dy, r);
+                    widget.onAddPoint(az, alt);
+                  }
+                },
+                onDoubleTapDown: (details) {
+                  final hit = _hitTestPoint(details.localPosition, size);
+                  if (hit != null) {
+                    widget.onSelectPoint(hit);
+                  }
+                },
+                onPanStart: (details) {
+                  if (widget.calibrateMode) {
+                    return;
+                  }
+                  final hit = _hitTestPoint(details.localPosition, size);
+                  if (hit != null) {
+                    _draggedIndex = hit;
+                    widget.onSelectPoint(hit);
+                    setState(() {});
+                  } else if (widget.zoomLevel > 1.0) {
+                    _isPanningView = true;
+                    setState(() {});
+                  }
+                },
+                onPanUpdate: (details) {
+                  if (widget.calibrateMode) {
+                    final dAz = (details.delta.dx / r.width) * 360.0;
+                    final dAlt = -(details.delta.dy / r.height) * 90.0;
+                    widget.onPanImage(dAz, dAlt);
+                    return;
+                  }
 
-            if (_draggedIndex != null && _draggedIndex! < widget.points.length) {
-              final newAz = _xToAz(details.localPosition.dx, r);
-              final newAlt = _yToAlt(details.localPosition.dy, r);
-              widget.onPointMoved(_draggedIndex!, newAz, newAlt);
-            }
-          },
-          onPanEnd: (_) {
-            if (_draggedIndex != null) {
-              _draggedIndex = null;
-              widget.onPointDragEnd();
-              setState(() {});
-            }
-          },
-          child: MouseRegion(
-            onHover: (event) => setState(() => _hoverPos = event.localPosition),
-            onExit: (_) => setState(() => _hoverPos = null),
-            cursor: widget.calibrateMode
-                ? SystemMouseCursors.move
-                : (_hitTestPoint(_hoverPos ?? Offset.zero, size) != null
-                    ? SystemMouseCursors.click
-                    : SystemMouseCursors.precise),
-            child: CustomPaint(
-              size: size,
-              painter: _HorizonChartPainter(
-                points: widget.points,
-                selectedIndex: widget.selectedIndex,
-                draggedIndex: _draggedIndex,
-                hoverPos: _hoverPos,
-                isRedNightMode: widget.isRedNightMode,
-                minAzimuth: widget.minAzimuth,
-                maxAzimuth: widget.maxAzimuth,
-                minAltitude: widget.minAltitude,
-                maxAltitude: widget.maxAltitude,
-                decodedImage: widget.decodedImage,
-                azimuthOffset: widget.azimuthOffset,
-                altitudeOffset: widget.altitudeOffset,
-                altitudeScale: widget.altitudeScale,
-                imageOpacity: widget.imageOpacity,
+                  if (_draggedIndex != null && _draggedIndex! < widget.points.length) {
+                    final newAz = _xToAz(details.localPosition.dx, r);
+                    final newAlt = _yToAlt(details.localPosition.dy, r);
+                    widget.onPointMoved(_draggedIndex!, newAz, newAlt);
+                  } else if (_isPanningView && widget.zoomLevel > 1.0) {
+                    final span = 360.0 / widget.zoomLevel;
+                    final deltaAz = -(details.delta.dx / r.width) * span;
+                    widget.onPanView(deltaAz);
+                  }
+                },
+                onPanEnd: (_) {
+                  if (_draggedIndex != null) {
+                    _draggedIndex = null;
+                    widget.onPointDragEnd();
+                  }
+                  if (_isPanningView) {
+                    _isPanningView = false;
+                  }
+                  setState(() {});
+                },
+                child: MouseRegion(
+                  onHover: (event) => setState(() => _hoverPos = event.localPosition),
+                  onExit: (_) => setState(() => _hoverPos = null),
+                  cursor: widget.calibrateMode
+                      ? SystemMouseCursors.move
+                      : (_hitTestPoint(_hoverPos ?? Offset.zero, size) != null
+                          ? SystemMouseCursors.click
+                          : (_isPanningView
+                              ? SystemMouseCursors.grabbing
+                              : (widget.zoomLevel > 1.0 ? SystemMouseCursors.grab : SystemMouseCursors.precise))),
+                  child: CustomPaint(
+                    size: size,
+                    painter: _HorizonChartPainter(
+                      points: widget.points,
+                      selectedIndex: widget.selectedIndex,
+                      draggedIndex: _draggedIndex,
+                      hoverPos: _hoverPos,
+                      isRedNightMode: widget.isRedNightMode,
+                      minAzimuth: widget.minAzimuth,
+                      maxAzimuth: widget.maxAzimuth,
+                      minAltitude: widget.minAltitude,
+                      maxAltitude: widget.maxAltitude,
+                      decodedImage: widget.decodedImage,
+                      azimuthOffset: widget.azimuthOffset,
+                      altitudeOffset: widget.altitudeOffset,
+                      altitudeScale: widget.altitudeScale,
+                      imageOpacity: widget.imageOpacity,
+                      terrainProfile: widget.terrainProfile,
+                      showTerrainSilhouette: widget.showTerrainSilhouette,
+                      showPoints: widget.showPoints,
+                      zoomLevel: widget.zoomLevel,
+                      viewStartAzimuth: widget.viewStartAzimuth,
+                    ),
+                  ),
+                ),
               ),
-            ),
+
+              // Floating Zoom Control Overlay (Top-Right)
+              Positioned(
+                top: 8,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (widget.isRedNightMode ? Colors.black : const Color(0xFF0B132B)).withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: widget.isRedNightMode
+                          ? AstroColors.nightVisionBorder
+                          : Colors.white.withValues(alpha: 0.20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        icon: const Icon(Icons.remove_rounded, size: 15),
+                        tooltip: "Zoom Out (Wheel Down)",
+                        onPressed: widget.zoomLevel > 1.0 ? widget.onZoomOut : null,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          "${widget.zoomLevel.toStringAsFixed(1)}x",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            color: widget.zoomLevel > 1.0
+                                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
+                                : Colors.white70,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        icon: const Icon(Icons.add_rounded, size: 15),
+                        tooltip: "Zoom In (Wheel Up)",
+                        onPressed: widget.zoomLevel < 8.0 ? widget.onZoomIn : null,
+                      ),
+                      if (widget.zoomLevel > 1.0) ...[
+                        const SizedBox(width: 2),
+                        InkWell(
+                          onTap: widget.onResetZoom,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
+                                  .withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              "1x",
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -995,6 +1586,11 @@ class _HorizonChartPainter extends CustomPainter {
   final double altitudeOffset;
   final double altitudeScale;
   final double imageOpacity;
+  final TerrainProfileModel? terrainProfile;
+  final bool showTerrainSilhouette;
+  final bool showPoints;
+  final double zoomLevel;
+  final double viewStartAzimuth;
 
   _HorizonChartPainter({
     required this.points,
@@ -1011,6 +1607,11 @@ class _HorizonChartPainter extends CustomPainter {
     required this.altitudeOffset,
     required this.altitudeScale,
     required this.imageOpacity,
+    this.terrainProfile,
+    this.showTerrainSilhouette = true,
+    this.showPoints = true,
+    this.zoomLevel = 1.0,
+    this.viewStartAzimuth = 0.0,
   });
 
   @override
@@ -1022,7 +1623,8 @@ class _HorizonChartPainter extends CustomPainter {
       math.max(10.0, size.height - _InteractiveHorizonCanvasState.topMargin - _InteractiveHorizonCanvasState.bottomMargin),
     );
 
-    double azToX(double az) => r.left + (az / 360.0) * r.width;
+    final visibleAzSpan = 360.0 / zoomLevel;
+    double azToX(double az) => r.left + ((az - viewStartAzimuth) / visibleAzSpan) * r.width;
     double altToY(double alt) => r.bottom - (alt / 90.0) * r.height;
 
     // 1. Draw Panorama Image Backdrop (wrapped cyclically across 360°)
@@ -1042,24 +1644,26 @@ class _HorizonChartPainter extends CustomPainter {
       final destH = r.height * altitudeScale;
       final destY = baseAltY - destH;
 
-      // Horizontal cyclic wrapping: draw image shifted by azimuth offset
-      final shiftX = (azimuthOffset / 360.0) * r.width;
+      // Full 360 cycle width at current zoom
+      final fullCycleWidth = r.width * zoomLevel;
+      final startX = azToX(0.0) - (azimuthOffset / 360.0) * fullCycleWidth;
 
       final srcRect = Rect.fromLTWH(0, 0, imgW, imgH);
 
-      // Tile 1 (primary)
-      final dest1 = Rect.fromLTWH(r.left - shiftX, destY, r.width, destH);
-      canvas.drawImageRect(decodedImage!, srcRect, dest1, paintImg);
+      final minTile = ((r.left - startX) / fullCycleWidth).floor() - 1;
+      final maxTile = ((r.right - startX) / fullCycleWidth).ceil() + 1;
 
-      // Tile 2 (wrapped right)
-      final dest2 = Rect.fromLTWH(r.left - shiftX + r.width, destY, r.width, destH);
-      canvas.drawImageRect(decodedImage!, srcRect, dest2, paintImg);
-
-      // Tile 3 (wrapped left)
-      final dest3 = Rect.fromLTWH(r.left - shiftX - r.width, destY, r.width, destH);
-      canvas.drawImageRect(decodedImage!, srcRect, dest3, paintImg);
+      for (int t = minTile; t <= maxTile; t++) {
+        final dest = Rect.fromLTWH(startX + t * fullCycleWidth, destY, fullCycleWidth, destH);
+        canvas.drawImageRect(decodedImage!, srcRect, dest, paintImg);
+      }
 
       canvas.restore();
+    }
+
+    // 1.5. Draw Mountain Silhouette Backdrop (Vector Topography)
+    if (showTerrainSilhouette && terrainProfile != null && terrainProfile!.altitudes.isNotEmpty) {
+      _drawMountainSilhouette(canvas, r, azToX, altToY);
     }
 
     // 2. Active Azimuth Corridor Shading (Visual Conjunction with Azimuth Range Filter)
@@ -1076,6 +1680,76 @@ class _HorizonChartPainter extends CustomPainter {
 
     // 6. Point Handles and Interactive Highlights
     _drawPointHandles(canvas, r, azToX, altToY);
+  }
+
+  void _drawMountainSilhouette(
+    Canvas canvas,
+    Rect r,
+    double Function(double) azToX,
+    double Function(double) altToY,
+  ) {
+    if (terrainProfile == null || terrainProfile!.altitudes.isEmpty) return;
+
+    canvas.save();
+    canvas.clipRect(r);
+
+    final path = Path();
+    final fillPath = Path();
+
+    final n = terrainProfile!.altitudes.length;
+    final step = terrainProfile!.stepDeg;
+
+    final firstAlt = terrainProfile!.altitudes[0];
+    final lastAlt = terrainProfile!.altitudes.first;
+
+    path.moveTo(azToX(0.0), altToY(firstAlt));
+    fillPath.moveTo(azToX(0.0), r.bottom);
+    fillPath.lineTo(azToX(0.0), altToY(firstAlt));
+
+    for (int i = 0; i < n; i++) {
+      final az = i * step;
+      final alt = terrainProfile!.altitudes[i];
+      final px = azToX(az);
+      final py = altToY(alt);
+      path.lineTo(px, py);
+      fillPath.lineTo(px, py);
+    }
+
+    path.lineTo(azToX(360.0), altToY(lastAlt));
+    fillPath.lineTo(azToX(360.0), altToY(lastAlt));
+    fillPath.lineTo(azToX(360.0), r.bottom);
+    fillPath.close();
+
+    // Twilight mountain gradient fill (dark midnight slate into mountain ridge)
+    final fillGradient = LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: isRedNightMode
+          ? [
+              const Color(0xFF140303).withValues(alpha: 0.95),
+              const Color(0xFF2E0808).withValues(alpha: 0.90),
+            ]
+          : [
+              const Color(0xFF070E1A).withValues(alpha: 0.95),
+              const Color(0xFF16253B).withValues(alpha: 0.90),
+            ],
+    );
+
+    final fillPaint = Paint()
+      ..shader = fillGradient.createShader(r)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Mountain ridge highlight stroke
+    final strokePaint = Paint()
+      ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan).withValues(alpha: 0.70)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, strokePaint);
+
+    canvas.restore();
   }
 
   void _drawAzimuthCorridor(Canvas canvas, Rect r, double Function(double) azToX) {
@@ -1100,11 +1774,11 @@ class _HorizonChartPainter extends CustomPainter {
       final xMax = azToX(maxAzimuth);
 
       if (minAzimuth > 0) {
-        canvas.drawRect(Rect.fromLTRB(r.left, r.top, xMin, r.bottom), dimPaint);
+        canvas.drawRect(Rect.fromLTRB(azToX(0.0), r.top, xMin, r.bottom), dimPaint);
         canvas.drawLine(Offset(xMin, r.top), Offset(xMin, r.bottom), boundLinePaint);
       }
       if (maxAzimuth < 360) {
-        canvas.drawRect(Rect.fromLTRB(xMax, r.top, r.right, r.bottom), dimPaint);
+        canvas.drawRect(Rect.fromLTRB(xMax, r.top, azToX(360.0), r.bottom), dimPaint);
         canvas.drawLine(Offset(xMax, r.top), Offset(xMax, r.bottom), boundLinePaint);
       }
     } else {
@@ -1155,37 +1829,66 @@ class _HorizonChartPainter extends CustomPainter {
       tp.paint(canvas, Offset(r.left - tp.width - 4, y - tp.height / 2));
     }
 
-    // Azimuth vertical grid with cardinal labels (N, NE, E, SE, S, SW, W, NW, N)
-    const cardinals = [
-      (0.0, "N"),
-      (45.0, "NE"),
-      (90.0, "E"),
-      (135.0, "SE"),
-      (180.0, "S"),
-      (225.0, "SW"),
-      (270.0, "W"),
-      (315.0, "NW"),
-      (360.0, "N"),
-    ];
+    // Determine grid step based on zoomLevel
+    final double azStep;
+    if (zoomLevel >= 4.5) {
+      azStep = 5.0;
+    } else if (zoomLevel >= 2.2) {
+      azStep = 15.0;
+    } else {
+      azStep = 45.0;
+    }
 
-    for (final c in cardinals) {
-      final x = azToX(c.$1);
+    final visibleAzSpan = 360.0 / zoomLevel;
+    final firstAz = (viewStartAzimuth / azStep).floor() * azStep;
+    final lastAz = ((viewStartAzimuth + visibleAzSpan) / azStep).ceil() * azStep;
+
+    for (double az = firstAz; az <= lastAz; az += azStep) {
+      final x = azToX(az);
+      if (x < r.left - 1 || x > r.right + 1) continue;
+
       canvas.drawLine(Offset(x, r.top), Offset(x, r.bottom), gridPaint);
 
-      // Cardinal tag
-      final isMajor = c.$2 == "N" || c.$2 == "E" || c.$2 == "S" || c.$2 == "W";
-      final tp = TextPainter(
-        text: TextSpan(text: c.$2, style: isMajor ? cardinalLabelStyle : axisLabelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(x - tp.width / 2, r.bottom + 4));
+      // Check cardinal label
+      final cardinal = _cardinalForAz(az);
+      if (cardinal != null) {
+        final tpCard = TextPainter(
+          text: TextSpan(text: cardinal, style: cardinalLabelStyle),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tpCard.paint(canvas, Offset(x - tpCard.width / 2, r.bottom + 4));
+      }
 
-      // Degrees
+      // Degree label
       final tpDeg = TextPainter(
-        text: TextSpan(text: "${c.$1.toInt()}°", style: axisLabelStyle.copyWith(fontSize: 8)),
+        text: TextSpan(text: "${az.round()}°", style: axisLabelStyle.copyWith(fontSize: 8)),
         textDirection: TextDirection.ltr,
       )..layout();
       tpDeg.paint(canvas, Offset(x - tpDeg.width / 2, r.bottom + 16));
+    }
+  }
+
+  String? _cardinalForAz(double az) {
+    final a = (az.round() % 360 + 360) % 360;
+    switch (a) {
+      case 0:
+        return "N";
+      case 45:
+        return "NE";
+      case 90:
+        return "E";
+      case 135:
+        return "SE";
+      case 180:
+        return "S";
+      case 225:
+        return "SW";
+      case 270:
+        return "W";
+      case 315:
+        return "NW";
+      default:
+        return null;
     }
   }
 
@@ -1257,9 +1960,9 @@ class _HorizonChartPainter extends CustomPainter {
     final altAt0 = _interpolatedAlt(0.0);
     final altAt360 = _interpolatedAlt(360.0);
 
-    path.moveTo(r.left, altToY(altAt0));
-    fillPath.moveTo(r.left, r.bottom);
-    fillPath.lineTo(r.left, altToY(altAt0));
+    path.moveTo(azToX(0.0), altToY(altAt0));
+    fillPath.moveTo(azToX(0.0), r.bottom);
+    fillPath.lineTo(azToX(0.0), altToY(altAt0));
 
     for (final p in points) {
       final px = azToX(p.azimuth);
@@ -1268,9 +1971,9 @@ class _HorizonChartPainter extends CustomPainter {
       fillPath.lineTo(px, py);
     }
 
-    path.lineTo(r.right, altToY(altAt360));
-    fillPath.lineTo(r.right, altToY(altAt360));
-    fillPath.lineTo(r.right, r.bottom);
+    path.lineTo(azToX(360.0), altToY(altAt360));
+    fillPath.lineTo(azToX(360.0), altToY(altAt360));
+    fillPath.lineTo(azToX(360.0), r.bottom);
     fillPath.close();
 
     // Fill underneath horizon line (Obstructed area)
@@ -1315,10 +2018,19 @@ class _HorizonChartPainter extends CustomPainter {
 
     for (int i = 0; i < points.length; i++) {
       final p = points[i];
-      final px = azToX(p.azimuth);
-      final py = altToY(p.altitude);
       final isSelected = selectedIndex == i;
       final isDragging = draggedIndex == i;
+
+      // If point visibility is toggled off, only draw the currently selected/dragged point
+      if (!showPoints && !isSelected && !isDragging) {
+        continue;
+      }
+
+      final px = azToX(p.azimuth);
+      final py = altToY(p.altitude);
+
+      // Skip drawing if outside chart bounds with margin
+      if (px < r.left - 30 || px > r.right + 30) continue;
 
       // Outer Selection / Dragging Ring
       if (isSelected || isDragging) {
