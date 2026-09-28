@@ -458,6 +458,13 @@ class _MainScaffoldState extends State<MainScaffold> {
     bool isSearching = false;
     String? searchError;
 
+    // Optional Precise Street / Neighborhood search state
+    final addressController = TextEditingController();
+    bool isAddressSearchExpanded = false;
+    List<GeoLocationResult> addressResults = [];
+    bool isSearchingAddress = false;
+    String? addressError;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -488,6 +495,32 @@ class _MainScaffoldState extends State<MainScaffold> {
               setDialogState(() {
                 isSearching = false;
                 searchError = l10n?.connectionError ?? "Connection error. Check internet connection.";
+              });
+            }
+          }
+
+          Future<void> doAddressSearch() async {
+            final q = addressController.text.trim();
+            if (q.length < 2) return;
+
+            setDialogState(() {
+              isSearchingAddress = true;
+              addressError = null;
+            });
+
+            try {
+              final results = await GeocodingService.searchPreciseAddress(q);
+              setDialogState(() {
+                addressResults = results;
+                isSearchingAddress = false;
+                if (results.isEmpty) {
+                  addressError = "No matching street or neighborhood found for '$q'.";
+                }
+              });
+            } catch (e) {
+              setDialogState(() {
+                isSearchingAddress = false;
+                addressError = "Connection error. Check internet connection.";
               });
             }
           }
@@ -652,7 +685,119 @@ class _MainScaffoldState extends State<MainScaffold> {
                       ),
                     ],
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+
+                    // Optional Precise Street / Neighborhood / Landmark lookup (OSM Nominatim)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => setDialogState(() => isAddressSearchExpanded = !isAddressSearchExpanded),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isAddressSearchExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              size: 18,
+                              color: accentColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.signpost_rounded, size: 14, color: accentColor),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Precise Street / Neighborhood (Optional for Horizon)",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: accentColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (isAddressSearchExpanded) ...[
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: addressController,
+                        decoration: InputDecoration(
+                          hintText: "e.g. Rua Alberto Braune, Nova Friburgo or Cônego",
+                          prefixIcon: const Icon(Icons.add_location_alt_rounded, size: 18),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                            tooltip: "Search precise street/neighborhood (worldwide)",
+                            onPressed: doAddressSearch,
+                          ),
+                        ),
+                        onSubmitted: (_) => doAddressSearch(),
+                      ),
+                      if (isSearchingAddress) ...[
+                        const SizedBox(height: 6),
+                        const LinearProgressIndicator(),
+                      ],
+                      if (addressError != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          addressError!,
+                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                        ),
+                      ],
+                      if (addressResults.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 180),
+                          decoration: BoxDecoration(
+                            color: widget.isRedNightMode
+                                ? AstroColors.nightVisionSurfaceVariant
+                                : AstroColors.spaceDarkSurfaceVariant,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: widget.isRedNightMode
+                                  ? AstroColors.nightVisionBorder
+                                  : AstroColors.spaceDarkBorder,
+                            ),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: addressResults.length,
+                            separatorBuilder: (_, index) => const Divider(height: 1),
+                            itemBuilder: (ctx, idx) {
+                              final r = addressResults[idx];
+                              return ListTile(
+                                dense: true,
+                                leading: Icon(Icons.pin_drop_rounded, size: 18, color: accentColor),
+                                title: Text(
+                                  r.displayName,
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: textColor),
+                                ),
+                                subtitle: Text(
+                                  "Lat: ${r.latitude.toStringAsFixed(4)}° | Lon: ${r.longitude.toStringAsFixed(4)}°",
+                                  style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                                ),
+                                trailing: Icon(Icons.check_circle_outline_rounded, size: 16, color: accentColor),
+                                onTap: () async {
+                                  setDialogState(() {
+                                    latController.text = r.latitude.toStringAsFixed(4);
+                                    lonController.text = r.longitude.toStringAsFixed(4);
+                                    currentLocationName = r.displayName;
+                                    addressResults = [];
+                                  });
+                                  // Auto-fetch precise elevation
+                                  final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
+                                  if (elev != null) {
+                                    setDialogState(() {
+                                      eleController.text = elev.round().toString();
+                                    });
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+
+                    const SizedBox(height: 12),
                     const Divider(),
                     const SizedBox(height: 8),
 

@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../core/file_picker_service.dart';
+import '../core/geocoding_service.dart';
 import '../models/filter_state.dart';
 import '../models/terrain_profile_model.dart';
 import '../services/terrain_elevation_service.dart';
@@ -139,6 +140,246 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
         );
       }
     }
+  }
+
+  void _openRefineLocationDialog() {
+    final searchCtrl = TextEditingController();
+    final latCtrl = TextEditingController(text: _state.observerLat.toStringAsFixed(4));
+    final lonCtrl = TextEditingController(text: _state.observerLon.toStringAsFixed(4));
+    final eleCtrl = TextEditingController(text: _state.observerElevation.round().toString());
+    String locName = _state.observerLocationName;
+    List<GeoLocationResult> results = [];
+    bool isSearching = false;
+    String? searchError;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) {
+          final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+          final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+
+          Future<void> doSearch() async {
+            final q = searchCtrl.text.trim();
+            if (q.length < 2) return;
+            setDlgState(() {
+              isSearching = true;
+              searchError = null;
+            });
+            try {
+              final res = await GeocodingService.searchPreciseAddress(q);
+              setDlgState(() {
+                results = res;
+                isSearching = false;
+                if (res.isEmpty) {
+                  searchError = "No matching street or neighborhood found for '$q'.";
+                }
+              });
+            } catch (e) {
+              setDlgState(() {
+                isSearching = false;
+                searchError = "Connection error. Check internet connection.";
+              });
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.pin_drop_rounded, color: accentColor, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Refine Observer Location",
+                    style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: textColor.withValues(alpha: 0.6)),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Pinpointing your exact observing site (street, neighborhood, or rural site) ensures mountain viewshed raymarching matches your visual horizon.",
+                      style: TextStyle(fontSize: 12, height: 1.3, color: textColor.withValues(alpha: 0.7)),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Search Street / Neighborhood / Landmark:",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: "e.g. Cônego, Nova Friburgo or Rua...",
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                          tooltip: "Search address worldwide",
+                          onPressed: doSearch,
+                        ),
+                      ),
+                      onSubmitted: (_) => doSearch(),
+                    ),
+                    if (isSearching) ...[
+                      const SizedBox(height: 6),
+                      const LinearProgressIndicator(),
+                    ],
+                    if (searchError != null) ...[
+                      const SizedBox(height: 6),
+                      Text(searchError!, style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6))),
+                    ],
+                    if (results.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 160),
+                        decoration: BoxDecoration(
+                          color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                          ),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: results.length,
+                          separatorBuilder: (ctx, index) => const Divider(height: 1),
+                          itemBuilder: (context, idx) {
+                            final r = results[idx];
+                            return ListTile(
+                              dense: true,
+                              leading: Icon(Icons.location_on_outlined, size: 16, color: accentColor),
+                              title: Text(r.displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+                              subtitle: Text(
+                                "Lat: ${r.latitude.toStringAsFixed(4)}° | Lon: ${r.longitude.toStringAsFixed(4)}°",
+                                style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                              ),
+                              onTap: () async {
+                                setDlgState(() {
+                                  latCtrl.text = r.latitude.toStringAsFixed(4);
+                                  lonCtrl.text = r.longitude.toStringAsFixed(4);
+                                  locName = r.displayName;
+                                  results = [];
+                                });
+                                final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
+                                if (elev != null) {
+                                  setDlgState(() {
+                                    eleCtrl.text = elev.round().toString();
+                                  });
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Exact Coordinates & Elevation (Meters):",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor.withValues(alpha: 0.8)),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: latCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: const InputDecoration(labelText: "Latitude (°)"),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: lonCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: const InputDecoration(labelText: "Longitude (°)"),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 90,
+                          child: TextField(
+                            controller: eleCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(labelText: "Elev (m)"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text("Cancel"),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  final lat = double.tryParse(latCtrl.text) ?? _state.observerLat;
+                  final lon = double.tryParse(lonCtrl.text) ?? _state.observerLon;
+                  final ele = double.tryParse(eleCtrl.text) ?? _state.observerElevation;
+                  Navigator.of(ctx).pop();
+                  setState(() {
+                    _state = _state.copyWith(
+                      observerLocationName: locName,
+                      observerLat: lat,
+                      observerLon: lon,
+                      observerElevation: ele,
+                    );
+                  });
+                  _loadCachedTerrainProfile();
+                },
+                child: const Text("Apply Location"),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+                ),
+                icon: const Icon(Icons.radar_rounded, size: 16),
+                label: const Text("Apply & Re-scan Mountains", style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () {
+                  final lat = double.tryParse(latCtrl.text) ?? _state.observerLat;
+                  final lon = double.tryParse(lonCtrl.text) ?? _state.observerLon;
+                  final ele = double.tryParse(eleCtrl.text) ?? _state.observerElevation;
+                  Navigator.of(ctx).pop();
+                  setState(() {
+                    _state = _state.copyWith(
+                      observerLocationName: locName,
+                      observerLat: lat,
+                      observerLon: lon,
+                      observerElevation: ele,
+                    );
+                  });
+                  _detectMountainHorizon();
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _promptApplyTerrainPoints(TerrainProfileModel profile) {
@@ -424,6 +665,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       panoramaOpacity: _imageOpacity,
       showTerrainSilhouette: _showTerrainSilhouette,
       terrainProfile: _terrainProfile,
+      observerLocationName: _state.observerLocationName,
+      observerLat: _state.observerLat,
+      observerLon: _state.observerLon,
+      observerElevation: _state.observerElevation,
     );
     widget.onApply(updated);
     Navigator.of(context).pop();
@@ -821,6 +1066,19 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
             ),
             selectedColor: accentColor.withValues(alpha: 0.25),
             onSelected: (val) => setState(() => _showPoints = val),
+          ),
+          const SizedBox(width: 8),
+
+          // Observer Location Display & Refine Button
+          ActionChip(
+            avatar: Icon(Icons.pin_drop_rounded, size: 14, color: accentColor),
+            label: Text(
+              _state.observerLocationName.split(',').first.trim(),
+              style: TextStyle(fontSize: 11, color: textColor),
+              overflow: TextOverflow.ellipsis,
+            ),
+            tooltip: "Observer site: ${_state.observerLocationName}\n(${_state.observerLat.toStringAsFixed(4)}°, ${_state.observerLon.toStringAsFixed(4)}°, ${_state.observerElevation.round()}m)\nClick to refine street or neighborhood",
+            onPressed: _openRefineLocationDialog,
           ),
           const SizedBox(width: 8),
 

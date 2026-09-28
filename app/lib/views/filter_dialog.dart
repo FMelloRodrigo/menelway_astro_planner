@@ -37,8 +37,6 @@ class _FilterDialogState extends State<FilterDialog> {
 
   int _getPresetIndex() => _controller.presetIndex;
 
-  void _applyPreset(int index) => _controller.applyPreset(index);
-
   String _cardinalName(double az, [AppLocalizations? l10n]) {
     final isPt = l10n?.localeName == 'pt';
     return FilterDialogController.cardinalName(az, isPt: isPt);
