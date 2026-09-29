@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/models/altitude_point.dart';
@@ -80,7 +81,7 @@ void main() {
   });
 
   group('AltitudeCurveChart Widget Tests', () {
-    testWidgets('Renders Horizon toggle chip and Zoom controls', (tester) async {
+    testWidgets('Skyline 360 mode renders Center on Target, rotation slider, and cardinal presets', (tester) async {
       final filters = FilterState(
         useCustomHorizon: true,
         horizonPoints: const [
@@ -108,33 +109,37 @@ void main() {
       expect(find.text("Horizon: ON"), findsOneWidget);
       expect(find.text("1.0x"), findsOneWidget);
 
-      // Tap Zoom In button
-      final zoomInBtn = find.byIcon(Icons.zoom_in_rounded);
-      expect(zoomInBtn, findsOneWidget);
-      await tester.tap(zoomInBtn);
-      await tester.pumpAndSettle();
-
-      // Zoom level should have increased and viewport scrubber should appear
-      expect(find.text("1.4x"), findsOneWidget);
+      // Verify Center on Target button and cardinal presets exist
+      expect(find.text("Center on Target"), findsOneWidget);
+      expect(find.text("N"), findsOneWidget);
+      expect(find.text("E"), findsOneWidget);
+      expect(find.text("S"), findsOneWidget);
+      expect(find.text("W"), findsOneWidget);
       expect(find.byType(Slider), findsOneWidget);
-      expect(find.text("Transit"), findsOneWidget);
 
-      // Tapping Transit centers the view
-      await tester.tap(find.text("Transit"));
+      // Tapping preset 'E' should change center to 90°
+      await tester.tap(find.text("E"));
       await tester.pumpAndSettle();
+      expect(find.text("Center: 90° (E)"), findsOneWidget);
+
+      // Tapping preset 'N' should change center to 0°
+      await tester.tap(find.text("N"));
+      await tester.pumpAndSettle();
+      expect(find.text("Center: 0° (N)"), findsOneWidget);
+
+      // Tapping 'Center on Target' should center on the peak azimuth
+      await tester.tap(find.text("Center on Target"));
+      await tester.pumpAndSettle();
+      // Peak point is the last point in testPoints (altitude 57.5, azimuth 270)
+      expect(find.text("Center: 270° (W)"), findsOneWidget);
 
       // Toggle Horizon to OFF
       await tester.tap(find.text("Horizon: ON"));
       await tester.pumpAndSettle();
       expect(find.text("Horizon: OFF"), findsOneWidget);
-
-      // Reset zoom
-      await tester.tap(find.text("1.4x"));
-      await tester.pumpAndSettle();
-      expect(find.text("1.0x"), findsOneWidget);
     });
 
-    testWidgets('Skyline 360 mode allows panning and jumping to 360 degrees', (tester) async {
+    testWidgets('Timeline mode switch and zoom controls work properly', (tester) async {
       final filters = FilterState(
         useCustomHorizon: true,
         horizonPoints: const [
@@ -158,23 +163,75 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Zoom in to 2.0x
+      // Switch to Timeline mode
+      await tester.tap(find.text("Timeline (Hours)"));
+      await tester.pumpAndSettle();
+
+      // Zoom in to 1.4x
       final zoomInBtn = find.byIcon(Icons.zoom_in_rounded);
       await tester.tap(zoomInBtn);
       await tester.pumpAndSettle();
-      await tester.tap(zoomInBtn);
+
+      expect(find.text("1.4x"), findsOneWidget);
+      expect(find.text("Transit"), findsOneWidget);
+
+      // Tapping Transit button centers on transit
+      await tester.tap(find.text("Transit"));
       await tester.pumpAndSettle();
 
-      // Cardinal jump buttons should exist
-      expect(find.text("W"), findsOneWidget);
-      expect(find.text("N (360°)"), findsOneWidget);
+      // Reset zoom
+      await tester.tap(find.text("1.4x"));
+      await tester.pumpAndSettle();
+      expect(find.text("1.0x"), findsOneWidget);
+    });
 
-      // Jump to N (360°)
-      await tester.tap(find.text("N (360°)"));
+    testWidgets('Skyline 360 inspection info with mountain ridge and clearance persists constantly without popping out', (tester) async {
+      final filters = FilterState(
+        useCustomHorizon: true,
+        horizonPoints: const [
+          HorizonPointModel(azimuth: 0.0, altitude: 15.0),
+          HorizonPointModel(azimuth: 180.0, altitude: 25.0),
+          HorizonPointModel(azimuth: 270.0, altitude: 10.0),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AltitudeCurveChart(
+              targetPoints: testPoints,
+              night: testNight,
+              targetName: "Persistent Target",
+              filterState: filters,
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      // Slider text should show visible span ending at 360°
-      expect(find.textContaining("360° (N)"), findsOneWidget);
+      // Verify that without any mouse hover, the info bar is immediately visible and displays Mountain Ridge
+      expect(find.textContaining("Mountain Ridge:"), findsOneWidget);
+      expect(find.textContaining("Clear ("), findsOneWidget);
+
+      // Perform a hover gesture over the chart canvas
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      final chartFinder = find.byType(CustomPaint).last;
+      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.pumpAndSettle();
+
+      // Info bar must still be present during hover
+      expect(find.textContaining("Mountain Ridge:"), findsOneWidget);
+
+      // Move pointer completely outside the widget (simulating mouse exit)
+      await gesture.moveTo(const Offset(2000, 2000));
+      await tester.pumpAndSettle();
+
+      // Info bar must continue to persist even after hover exits
+      expect(find.textContaining("Mountain Ridge:"), findsOneWidget);
+      expect(find.textContaining("Clear ("), findsOneWidget);
     });
   });
 }

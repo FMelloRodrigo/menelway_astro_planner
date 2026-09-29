@@ -46,11 +46,59 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
 
   // Zoom & Pan state
   double _zoomLevel = 1.0; // 1.0x to 6.0x
-  double _viewStartFraction = 0.0; // 0.0 to (1.0 - 1.0 / _zoomLevel)
+  double _viewStartFraction = 0.0; // 0.0 to (1.0 - 1.0 / _zoomLevel) for Timeline mode
+  double _skylineCenterAz = 180.0; // Center azimuth for 360° Skyline mode (0.0 to 360.0)
   double? _hoverFraction; // 0.0 to 1.0 along the active domain
   bool _showHorizonSilhouette = true;
 
+  double? _activeSkylineAzimuth;
+  AltitudePoint? _activeTimelinePoint;
+
   double _baseZoomOnScaleStart = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoAlignSkyline();
+  }
+
+  @override
+  void didUpdateWidget(covariant AltitudeCurveChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.targetName != widget.targetName || oldWidget.targetPoints != widget.targetPoints) {
+      _autoAlignSkyline();
+    }
+  }
+
+  void _autoAlignSkyline() {
+    if (widget.targetPoints.isEmpty) return;
+    AltitudePoint peak = widget.targetPoints.first;
+    for (final p in widget.targetPoints) {
+      if (p.altitude > peak.altitude) peak = p;
+    }
+    // If target culminates near North (azimuth < 60° or > 300°), automatically center on North (0°)
+    // so the trajectory is beautifully centered and unbroken across the North boundary!
+    if (peak.azimuth < 60.0 || peak.azimuth > 300.0) {
+      _skylineCenterAz = 0.0;
+    } else {
+      _skylineCenterAz = 180.0;
+    }
+    _activeSkylineAzimuth = peak.azimuth;
+    _activeTimelinePoint = peak;
+  }
+
+  void _centerOnTarget() {
+    if (widget.targetPoints.isEmpty) return;
+    AltitudePoint peak = widget.targetPoints.first;
+    for (final p in widget.targetPoints) {
+      if (p.altitude > peak.altitude) peak = p;
+    }
+    setState(() {
+      _skylineCenterAz = peak.azimuth;
+      _activeSkylineAzimuth = peak.azimuth;
+      _activeTimelinePoint = peak;
+    });
+  }
 
   static String _cardinal(double az) {
     final a = ((az % 360) + 360) % 360;
@@ -96,20 +144,6 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
     final targetSec = targetTime.difference(startTime).inSeconds;
     final targetFrac = (targetSec / totalDuration).clamp(0.0, 1.0);
     final span = 1.0 / _zoomLevel;
-    final maxStart = (1.0 - span).clamp(0.0, 1.0);
-    final newStart = (targetFrac - span / 2.0).clamp(0.0, maxStart);
-    setState(() {
-      _viewStartFraction = newStart;
-    });
-  }
-
-  void _jumpToAzimuth(double targetAz) {
-    if (_zoomLevel <= 1.0) {
-      _zoomLevel = 1.8;
-    }
-    final span = 1.0 / _zoomLevel;
-    final normalizedAz = targetAz == 360.0 ? 360.0 : ((targetAz % 360.0) + 360.0) % 360.0;
-    final targetFrac = (normalizedAz / 360.0).clamp(0.0, 1.0);
     final maxStart = (1.0 - span).clamp(0.0, 1.0);
     final newStart = (targetFrac - span / 2.0).clamp(0.0, maxStart);
     setState(() {
@@ -188,8 +222,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
         maxHAlt = 0.0;
       }
     }
-
-    // Hovered point and azimuth lookup depending on current mode
+    // Active/inspected point and azimuth lookup depending on current mode (persists across hover)
     double? hoveredAzimuth;
     double? hoveredRidgeAlt;
     AltitudePoint? hoveredPoint;
@@ -197,18 +230,23 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
     bool isHoveredOccluded = false;
     bool isTargetTrajectoryNear = false;
 
-    if (_hoverFraction != null) {
-      if (_viewMode == ChartViewMode.skyline360) {
-        final visibleAzSpan = 360.0 / _zoomLevel;
-        final viewStartAz = viewStartFrac * 360.0;
-        final rawHoveredAz = viewStartAz + _hoverFraction! * visibleAzSpan;
-        final az = ((rawHoveredAz % 360.0) + 360.0) % 360.0;
-        hoveredAzimuth = az;
+    if (_viewMode == ChartViewMode.skyline360) {
+      final visibleAzSpan = 360.0 / _zoomLevel;
+      final startAz = ((_skylineCenterAz - visibleAzSpan / 2.0) % 360.0 + 360.0) % 360.0;
 
-        if (hasHorizon) {
-          hoveredRidgeAlt = widget.filterState!.getHorizonAltitudeAt(az);
-        }
+      if (_hoverFraction != null) {
+        final rawHoveredAz = startAz + _hoverFraction! * visibleAzSpan;
+        _activeSkylineAzimuth = ((rawHoveredAz % 360.0) + 360.0) % 360.0;
+      }
 
+      final az = _activeSkylineAzimuth ?? peakPoint?.azimuth ?? 180.0;
+      hoveredAzimuth = az;
+
+      if (hasHorizon) {
+        hoveredRidgeAlt = widget.filterState!.getHorizonAltitudeAt(az);
+      }
+
+      if (widget.targetPoints.isNotEmpty) {
         int bestIdx = 0;
         double bestDiff = double.infinity;
         for (int i = 0; i < widget.targetPoints.length; i++) {
@@ -222,12 +260,15 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
         hoveredPoint = widget.targetPoints[bestIdx];
         isTargetTrajectoryNear = bestDiff <= 18.0;
 
-        if (hasHorizon && hoveredRidgeAlt != null) {
-          hoveredClearance = hoveredPoint.altitude - hoveredRidgeAlt;
-          isHoveredOccluded = hoveredPoint.altitude < hoveredRidgeAlt;
+        if (hasHorizon) {
+          final targetRidge = widget.filterState!.getHorizonAltitudeAt(hoveredPoint.azimuth);
+          hoveredClearance = hoveredPoint.altitude - targetRidge;
+          isHoveredOccluded = hoveredPoint.altitude < targetRidge;
         }
-      } else {
-        // In timeline mode, find point closest to hovered time
+      }
+    } else {
+      // In timeline mode
+      if (_hoverFraction != null) {
         final hoveredSec = (_hoverFraction! * visibleDurationSec).round();
         final hoveredTime = visibleStartTime.add(Duration(seconds: hoveredSec));
 
@@ -240,7 +281,11 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
             bestIdx = i;
           }
         }
-        hoveredPoint = widget.targetPoints[bestIdx];
+        _activeTimelinePoint = widget.targetPoints[bestIdx];
+      }
+
+      hoveredPoint = _activeTimelinePoint ?? peakPoint;
+      if (hoveredPoint != null) {
         hoveredAzimuth = hoveredPoint.azimuth;
         isTargetTrajectoryNear = true;
 
@@ -267,28 +312,35 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                 runSpacing: 6,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _viewMode == ChartViewMode.skyline360
-                            ? Icons.landscape_rounded
-                            : Icons.show_chart_rounded,
-                        size: 18,
-                        color: accentColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _viewMode == ChartViewMode.skyline360
-                            ? "Skyline (0°–360° NWES): ${widget.targetName}"
-                            : (l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}"),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: constraints.maxWidth - 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _viewMode == ChartViewMode.skyline360
+                              ? Icons.landscape_rounded
+                              : Icons.show_chart_rounded,
+                          size: 18,
+                          color: accentColor,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _viewMode == ChartViewMode.skyline360
+                                ? (isNarrow ? "Skyline: ${widget.targetName}" : "Skyline (0°–360° NWES): ${widget.targetName}")
+                                : (l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}"),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // View Mode Toggle (360° Skyline NWES vs. Timeline Hours)
@@ -307,7 +359,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _modeButton(
-                          label: "360° Skyline (NWES)",
+                          label: isNarrow ? "360° Skyline" : "360° Skyline (NWES)",
                           icon: Icons.landscape_rounded,
                           isSelected: _viewMode == ChartViewMode.skyline360,
                           onTap: () => setState(() {
@@ -323,7 +375,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
                         ),
                         _modeButton(
-                          label: "Timeline (Hours)",
+                          label: isNarrow ? "Timeline" : "Timeline (Hours)",
                           icon: Icons.schedule_rounded,
                           isSelected: _viewMode == ChartViewMode.timeline,
                           onTap: () => setState(() {
@@ -427,8 +479,8 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
               ),
             ),
 
-            // Live Scrubber / Hover Info Bar
-            if (_hoverFraction != null && (hoveredPoint != null || hoveredAzimuth != null)) ...[
+            // Persistent Scrubber / Inspection Info Bar
+            if (hoveredPoint != null || hoveredAzimuth != null) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: Container(
@@ -496,7 +548,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                                 color: isTargetTrajectoryNear ? textColor : textColor.withValues(alpha: 0.6),
                               ),
                             ),
-                            if (isTargetTrajectoryNear && hasHorizon && _showHorizonSilhouette && hoveredRidgeAlt != null && hoveredClearance != null) ...[
+                            if (hasHorizon && _showHorizonSilhouette && hoveredClearance != null) ...[
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -629,12 +681,19 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                 if (details.scale != 1.0) {
                   // Pinch to zoom
                   _setZoom(_baseZoomOnScaleStart * details.scale);
-                } else if (_zoomLevel > 1.0) {
-                  // Drag to pan viewport
-                  final dxFrac = -details.focalPointDelta.dx / constraints.maxWidth * spanFrac;
-                  final maxStart = 1.0 - spanFrac;
+                } else if (_viewMode == ChartViewMode.skyline360) {
+                  // In Skyline 360 mode, drag to continuously rotate the horizon at any zoom level!
+                  final visibleAzSpan = 360.0 / _zoomLevel;
+                  final deltaAz = -details.focalPointDelta.dx / constraints.maxWidth * visibleAzSpan;
                   setState(() {
-                    _viewStartFraction = (_viewStartFraction + dxFrac).clamp(0.0, maxStart.clamp(0.0, 1.0));
+                    _skylineCenterAz = ((_skylineCenterAz + deltaAz) % 360.0 + 360.0) % 360.0;
+                  });
+                } else if (_zoomLevel > 1.0) {
+                  // In Timeline mode, drag to pan viewport
+                  final dxFrac = -details.focalPointDelta.dx / constraints.maxWidth * spanFrac;
+                  final maxStart = (1.0 - spanFrac).clamp(0.0, 1.0);
+                  setState(() {
+                    _viewStartFraction = (_viewStartFraction + dxFrac).clamp(0.0, maxStart);
                   });
                 } else {
                   // Drag to scrub line
@@ -642,6 +701,13 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                   setState(() {
                     _hoverFraction = localX / constraints.maxWidth;
                   });
+                }
+              },
+              onDoubleTap: () {
+                if (_viewMode == ChartViewMode.skyline360) {
+                  _centerOnTarget();
+                } else {
+                  _resetZoom();
                 }
               },
               onTapDown: (details) {
@@ -681,7 +747,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                               hoverFraction: _hoverFraction,
                               isRedNightMode: widget.isRedNightMode,
                               zoomLevel: _zoomLevel,
-                              viewStartFraction: viewStartFrac,
+                              centerAzimuth: _skylineCenterAz,
                               l10n: l10n,
                             )
                           : _AltitudeChartPainter(
@@ -707,8 +773,172 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
               ),
             ),
 
-            // Viewport Scrubber Bar (visible when zoomed in)
-            if (_zoomLevel > 1.0) ...[
+            // Bottom Controls Bar:
+            // In Skyline 360 mode: Always visible panorama rotation and centering toolbar
+            // In Timeline mode: Visible when zoomed in to scrub time viewport
+            if (_viewMode == ChartViewMode.skyline360) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: widget.isRedNightMode
+                      ? AstroColors.nightVisionSurfaceVariant
+                      : AstroColors.spaceDarkSurfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                  ),
+                ),
+                child: constraints.maxWidth < 640
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Center on Target Button
+                            InkWell(
+                              onTap: _centerOnTarget,
+                              borderRadius: BorderRadius.circular(5),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                decoration: BoxDecoration(
+                                  color: accentColor.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(color: accentColor.withValues(alpha: 0.45)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.filter_center_focus_rounded, size: 13, color: accentColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "Center on Target",
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: accentColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+
+                            // Current Center indicator
+                            Icon(Icons.explore_rounded, size: 13, color: accentColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Center: ${_skylineCenterAz.round()}° (${_cardinal(_skylineCenterAz)})",
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontFamily: 'monospace',
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // Panorama Rotation Slider
+                            SizedBox(
+                              width: 130,
+                              child: SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  trackHeight: 3,
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                ),
+                                child: Slider(
+                                  value: _skylineCenterAz.clamp(0.0, 360.0),
+                                  min: 0.0,
+                                  max: 360.0,
+                                  activeColor: accentColor,
+                                  onChanged: (val) => setState(() => _skylineCenterAz = val % 360.0),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Quick Cardinal Presets
+                            _quickCenterPresetBtn("N", 0.0, accentColor),
+                            _quickCenterPresetBtn("E", 90.0, accentColor),
+                            _quickCenterPresetBtn("S", 180.0, accentColor),
+                            _quickCenterPresetBtn("W", 270.0, accentColor),
+                          ],
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          // Center on Target Button
+                          InkWell(
+                            onTap: _centerOnTarget,
+                            borderRadius: BorderRadius.circular(5),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                              decoration: BoxDecoration(
+                                color: accentColor.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(color: accentColor.withValues(alpha: 0.45)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.filter_center_focus_rounded, size: 13, color: accentColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Center on Target",
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: accentColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+
+                          // Current Center indicator
+                          Icon(Icons.explore_rounded, size: 13, color: accentColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Center: ${_skylineCenterAz.round()}° (${_cardinal(_skylineCenterAz)})",
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Panorama Rotation Slider
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                trackHeight: 3,
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                              ),
+                              child: Slider(
+                                value: _skylineCenterAz.clamp(0.0, 360.0),
+                                min: 0.0,
+                                max: 360.0,
+                                activeColor: accentColor,
+                                onChanged: (val) => setState(() => _skylineCenterAz = val % 360.0),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+
+                          // Quick Cardinal Presets
+                          _quickCenterPresetBtn("N", 0.0, accentColor),
+                          _quickCenterPresetBtn("E", 90.0, accentColor),
+                          _quickCenterPresetBtn("S", 180.0, accentColor),
+                          _quickCenterPresetBtn("W", 270.0, accentColor),
+                        ],
+                      ),
+              ),
+            ] else if (_zoomLevel > 1.0) ...[
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -726,9 +956,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                     Icon(Icons.pan_tool_alt_rounded, size: 14, color: accentColor),
                     const SizedBox(width: 6),
                     Text(
-                      _viewMode == ChartViewMode.skyline360
-                          ? "${(viewStartFrac * 360.0).round()}° (${_cardinal(viewStartFrac * 360.0)}) – ${(viewEndFrac * 360.0).round()}° (${_cardinal(viewEndFrac * 360.0)})"
-                          : "${DateFormat('HH:mm').format(visibleStartTime)} – ${DateFormat('HH:mm').format(visibleEndTime)}",
+                      "${DateFormat('HH:mm').format(visibleStartTime)} – ${DateFormat('HH:mm').format(visibleEndTime)}",
                       style: TextStyle(
                         fontSize: 11,
                         fontFamily: 'monospace',
@@ -752,26 +980,16 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         ),
                       ),
                     ),
-                    if (_viewMode == ChartViewMode.skyline360) ...[
+                    if (!isNarrow) ...[
                       const SizedBox(width: 6),
-                      _quickJumpAzBtn("Transit", peakPoint.azimuth, accentColor),
-                      _quickJumpAzBtn("N", 0.0, accentColor),
-                      _quickJumpAzBtn("E", 90.0, accentColor),
-                      _quickJumpAzBtn("S", 180.0, accentColor),
-                      _quickJumpAzBtn("W", 270.0, accentColor),
-                      _quickJumpAzBtn("N (360°)", 360.0, accentColor),
+                      _quickJumpBtn("Sunset", widget.night.sunset, accentColor),
+                      _quickJumpBtn("Dusk", widget.night.astronomicalDusk, accentColor),
+                      _quickJumpBtn("Transit", peakPoint.time, accentColor),
+                      _quickJumpBtn("Dawn", widget.night.astronomicalDawn, accentColor),
+                      _quickJumpBtn("Sunrise", widget.night.sunrise, accentColor),
                     ] else ...[
-                      if (!isNarrow) ...[
-                        const SizedBox(width: 6),
-                        _quickJumpBtn("Sunset", widget.night.sunset, accentColor),
-                        _quickJumpBtn("Dusk", widget.night.astronomicalDusk, accentColor),
-                        _quickJumpBtn("Transit", peakPoint.time, accentColor),
-                        _quickJumpBtn("Dawn", widget.night.astronomicalDawn, accentColor),
-                        _quickJumpBtn("Sunrise", widget.night.sunrise, accentColor),
-                      ] else ...[
-                        const SizedBox(width: 4),
-                        _quickJumpBtn("Transit", peakPoint.time, accentColor),
-                      ],
+                      const SizedBox(width: 4),
+                      _quickJumpBtn("Transit", peakPoint.time, accentColor),
                     ],
                   ],
                 ),
@@ -843,24 +1061,25 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
     );
   }
 
-  Widget _quickJumpAzBtn(String label, double az, Color accentColor) {
+  Widget _quickCenterPresetBtn(String label, double centerAz, Color accentColor) {
+    final isSelected = (_skylineCenterAz - centerAz).abs() < 1.0;
     return InkWell(
-      onTap: () => _jumpToAzimuth(az),
+      onTap: () => setState(() => _skylineCenterAz = centerAz),
       borderRadius: BorderRadius.circular(4),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: accentColor.withValues(alpha: 0.15),
+          color: isSelected ? accentColor.withValues(alpha: 0.3) : accentColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+          border: Border.all(color: isSelected ? accentColor : accentColor.withValues(alpha: 0.25)),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 9.5,
             fontWeight: FontWeight.bold,
-            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+            color: widget.isRedNightMode ? AstroColors.nightVisionRed : (isSelected ? Colors.white : AstroColors.starlightCyan),
           ),
         ),
       ),
@@ -881,7 +1100,7 @@ class _Skyline360Painter extends CustomPainter {
   final double? hoverFraction;
   final bool isRedNightMode;
   final double zoomLevel;
-  final double viewStartFraction;
+  final double centerAzimuth;
   final AppLocalizations? l10n;
 
   _Skyline360Painter({
@@ -893,7 +1112,7 @@ class _Skyline360Painter extends CustomPainter {
     this.hoverFraction,
     required this.isRedNightMode,
     this.zoomLevel = 1.0,
-    this.viewStartFraction = 0.0,
+    this.centerAzimuth = 180.0,
     this.l10n,
   });
 
@@ -909,10 +1128,13 @@ class _Skyline360Painter extends CustomPainter {
     );
 
     final visibleAzSpan = 360.0 / zoomLevel;
-    final viewStartAz = viewStartFraction * 360.0;
+    final startAz = ((centerAzimuth - visibleAzSpan / 2.0) % 360.0 + 360.0) % 360.0;
 
-    double azToX(double az) =>
-        ((az - viewStartAz) / visibleAzSpan) * size.width;
+    double azToX(double az) {
+      var diff = (az - startAz) % 360.0;
+      if (diff < 0) diff += 360.0;
+      return (diff / visibleAzSpan) * size.width;
+    }
 
     double altToY(double alt) =>
         chartRect.bottom - (alt.clamp(0.0, 90.0) / 90.0) * chartRect.height;
@@ -958,7 +1180,7 @@ class _Skyline360Painter extends CustomPainter {
           : Colors.white.withValues(alpha: 0.04)
       ..strokeWidth = 1.0;
 
-    for (double az = 0.0; az <= 360.0; az += 45.0) {
+    for (double az = 0.0; az < 360.0; az += 45.0) {
       final x = azToX(az);
       if (x >= 0 && x <= size.width) {
         canvas.drawLine(Offset(x, 0), Offset(x, chartRect.bottom), cardinalGridPaint);
@@ -968,22 +1190,22 @@ class _Skyline360Painter extends CustomPainter {
     // 3. Draw 360° Mountain Horizon Silhouette
     final hasHorizon = filterState != null && filterState!.hasHorizon;
     if (hasHorizon && showHorizonSilhouette) {
-      _draw360Horizon(canvas, chartRect, azToX, altToY, visibleAzSpan, viewStartAz, size.width);
+      _draw360Horizon(canvas, chartRect, azToX, altToY, visibleAzSpan, startAz, size.width);
     }
 
     // 4. Draw Target Trajectory Path across the 360° Sky
     if (points.isNotEmpty) {
-      _drawTargetTrajectory(canvas, chartRect, azToX, altToY, hasHorizon);
+      _drawTargetTrajectory(canvas, chartRect, azToX, altToY, startAz, hasHorizon);
     }
 
     canvas.restore();
 
-    // 5. Draw Cardinal Direction Markers on the Bottom Axis (N, NE, E, SE, S, SW, W, NW, N)
-    _drawCardinalAxis(canvas, size, chartRect, azToX);
+    // 5. Draw Cardinal Direction Markers on the Bottom Axis (N, NE, E, SE, S, SW, W, NW)
+    _drawCardinalAxis(canvas, size, chartRect, startAz, visibleAzSpan);
 
     // 6. Draw Interactive Cursor and Waypoint Highlights on Hover
     if (hoverFraction != null) {
-      _drawHoverIndicator(canvas, chartRect, azToX, altToY, visibleAzSpan, viewStartAz, hasHorizon, size.width);
+      _drawHoverIndicator(canvas, chartRect, azToX, altToY, visibleAzSpan, startAz, hasHorizon, size.width);
     }
   }
 
@@ -993,7 +1215,7 @@ class _Skyline360Painter extends CustomPainter {
     double Function(double) azToX,
     double Function(double) altToY,
     double visibleAzSpan,
-    double viewStartAz,
+    double startAz,
     double sizeWidth,
   ) {
     final horizonPath = Path();
@@ -1003,7 +1225,7 @@ class _Skyline360Painter extends CustomPainter {
     bool first = true;
     for (int i = 0; i <= numSteps; i++) {
       final frac = i / numSteps;
-      final az = viewStartAz + frac * visibleAzSpan;
+      final az = (startAz + frac * visibleAzSpan) % 360.0;
       final hAlt = filterState!.getHorizonAltitudeAt(az);
       final x = frac * sizeWidth;
       final y = altToY(hAlt);
@@ -1053,16 +1275,23 @@ class _Skyline360Painter extends CustomPainter {
     Rect chartRect,
     double Function(double) azToX,
     double Function(double) altToY,
+    double startAz,
     bool hasHorizon,
   ) {
-    // 1. Separate path into continuous segments (handling 0/360 wrap-around)
+    // 1. Separate path into continuous segments relative to startAz
     final segments = <List<AltitudePoint>>[];
     var currentSeg = <AltitudePoint>[points.first];
 
     for (int i = 1; i < points.length; i++) {
       final prev = points[i - 1];
       final curr = points[i];
-      if ((curr.azimuth - prev.azimuth).abs() > 180.0) {
+
+      var dPrev = (prev.azimuth - startAz) % 360.0;
+      if (dPrev < 0) dPrev += 360.0;
+      var dCurr = (curr.azimuth - startAz) % 360.0;
+      if (dCurr < 0) dCurr += 360.0;
+
+      if ((dCurr - dPrev).abs() > 180.0) {
         segments.add(currentSeg);
         currentSeg = <AltitudePoint>[curr];
       } else {
@@ -1171,7 +1400,8 @@ class _Skyline360Painter extends CustomPainter {
     Canvas canvas,
     Size size,
     Rect chartRect,
-    double Function(double) azToX,
+    double startAz,
+    double visibleAzSpan,
   ) {
     final cardinals = [
       (0.0, "N"),
@@ -1182,36 +1412,54 @@ class _Skyline360Painter extends CustomPainter {
       (225.0, "SW"),
       (270.0, "W"),
       (315.0, "NW"),
-      (360.0, "N"),
     ];
+
+    for (final c in cardinals) {
+      var diff = (c.$1 - startAz) % 360.0;
+      if (diff < 0) diff += 360.0;
+
+      if (diff <= visibleAzSpan + 0.01) {
+        final x = (diff / visibleAzSpan) * size.width;
+        _paintSingleCardinal(canvas, chartRect, c.$1, c.$2, x, size.width);
+      }
+      // If at left edge (diff close to 0) and at full 360 span, also paint at right edge
+      if (diff < 0.01 && (visibleAzSpan - 360.0).abs() < 1e-3) {
+        _paintSingleCardinal(canvas, chartRect, c.$1, c.$2, size.width, size.width);
+      }
+    }
+  }
+
+  void _paintSingleCardinal(
+    Canvas canvas,
+    Rect chartRect,
+    double az,
+    String label,
+    double x,
+    double sizeWidth,
+  ) {
+    if (x < -2 || x > sizeWidth + 2) return;
 
     final tickPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.25)
       ..strokeWidth = 1.0;
+    canvas.drawLine(Offset(x, chartRect.bottom), Offset(x, chartRect.bottom + 5), tickPaint);
 
-    for (final c in cardinals) {
-      final x = azToX(c.$1);
-      if (x < -2 || x > size.width + 2) continue;
-
-      canvas.drawLine(Offset(x, chartRect.bottom), Offset(x, chartRect.bottom + 5), tickPaint);
-
-      final isMajor = c.$2 == "N" || c.$2 == "E" || c.$2 == "S" || c.$2 == "W";
-      final span = TextSpan(
-        text: "${c.$2}\n${c.$1.toInt()}°",
-        style: TextStyle(
-          fontSize: isMajor ? 9.5 : 8.0,
-          fontWeight: isMajor ? FontWeight.bold : FontWeight.w500,
-          fontFamily: 'monospace',
-          height: 1.1,
-          color: isMajor
-              ? (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
-              : (isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white54),
-        ),
-      );
-      final tp = TextPainter(text: span, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
-      final textX = (x - tp.width / 2.0).clamp(2.0, size.width - tp.width - 2.0);
-      tp.paint(canvas, Offset(textX, chartRect.bottom + 6));
-    }
+    final isMajor = label == "N" || label == "E" || label == "S" || label == "W";
+    final span = TextSpan(
+      text: "$label\n${az.toInt()}°",
+      style: TextStyle(
+        fontSize: isMajor ? 9.5 : 8.0,
+        fontWeight: isMajor ? FontWeight.bold : FontWeight.w500,
+        fontFamily: 'monospace',
+        height: 1.1,
+        color: isMajor
+            ? (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan)
+            : (isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white54),
+      ),
+    );
+    final tp = TextPainter(text: span, textDirection: TextDirection.ltr, textAlign: TextAlign.center)..layout();
+    final textX = (x - tp.width / 2.0).clamp(2.0, sizeWidth - tp.width - 2.0);
+    tp.paint(canvas, Offset(textX, chartRect.bottom + 6));
   }
 
   void _drawHoverIndicator(
@@ -1220,12 +1468,12 @@ class _Skyline360Painter extends CustomPainter {
     double Function(double) azToX,
     double Function(double) altToY,
     double visibleAzSpan,
-    double viewStartAz,
+    double startAz,
     bool hasHorizon,
     double sizeWidth,
   ) {
     final scrubX = (hoverFraction! * sizeWidth).clamp(0.0, sizeWidth);
-    final rawHoveredAz = viewStartAz + hoverFraction! * visibleAzSpan;
+    final rawHoveredAz = startAz + hoverFraction! * visibleAzSpan;
     final hoveredAz = ((rawHoveredAz % 360.0) + 360.0) % 360.0;
 
     final guidePaint = Paint()
@@ -1318,7 +1566,7 @@ class _Skyline360Painter extends CustomPainter {
         old.showHorizonSilhouette != showHorizonSilhouette ||
         old.hoverFraction != hoverFraction ||
         old.zoomLevel != zoomLevel ||
-        old.viewStartFraction != viewStartFraction ||
+        old.centerAzimuth != centerAzimuth ||
         old.isRedNightMode != isRedNightMode;
   }
 }
