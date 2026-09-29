@@ -71,10 +71,12 @@ class TerrainCacheService {
   }
 
   /// Loads a cached terrain profile if one exists within [maxDistanceMeters] of the site.
+  /// If no profile is within [maxDistanceMeters], automatically falls back to the closest
+  /// cached profile in the cache directory to prevent unconfigured or flat silhouettes.
   static Future<TerrainProfileModel?> loadProfile(
     double lat,
     double lon, {
-    double maxDistanceMeters = 200.0,
+    double maxDistanceMeters = 15000.0,
   }) async {
     try {
       final dir = await _getCacheDirectory();
@@ -85,10 +87,14 @@ class TerrainCacheService {
       if (directFile.existsSync()) {
         final content = await directFile.readAsString();
         final jsonMap = jsonDecode(content) as Map<String, dynamic>;
+        AppLogger.info('Found exact coordinate cached terrain profile', tag: _tag);
         return TerrainProfileModel.fromJson(jsonMap);
       }
 
       // Proximity scan across cached profiles
+      TerrainProfileModel? closestProfile;
+      double minDistance = double.infinity;
+
       for (final entity in dir.listSync()) {
         if (entity is File && entity.path.endsWith('.json')) {
           try {
@@ -96,15 +102,59 @@ class TerrainCacheService {
             final jsonMap = jsonDecode(content) as Map<String, dynamic>;
             final profile = TerrainProfileModel.fromJson(jsonMap);
             final dist = _distanceMeters(lat, lon, profile.originLat, profile.originLon);
-            if (dist <= maxDistanceMeters) {
-              AppLogger.info('Found cached profile within ${dist.toStringAsFixed(1)}m of coordinates', tag: _tag);
-              return profile;
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestProfile = profile;
             }
           } catch (_) {}
         }
       }
+
+      if (closestProfile != null) {
+        if (minDistance <= maxDistanceMeters) {
+          AppLogger.info('Found cached profile within ${minDistance.toStringAsFixed(1)}m of coordinates', tag: _tag);
+          return closestProfile;
+        } else {
+          AppLogger.info('Using closest cached profile (${minDistance.toStringAsFixed(1)}m away) as fallback', tag: _tag);
+          return closestProfile;
+        }
+      }
     } catch (e) {
       AppLogger.error('Error loading cached terrain profile: $e', tag: _tag);
+    }
+    return null;
+  }
+
+  /// Loads the most recently saved or closest terrain profile from the local cache.
+  static Future<TerrainProfileModel?> loadLatestOrClosestProfile({double? lat, double? lon}) async {
+    if (lat != null && lon != null) {
+      return loadProfile(lat, lon);
+    }
+    try {
+      final dir = await _getCacheDirectory();
+      if (!dir.existsSync()) return null;
+
+      File? newestFile;
+      DateTime? newestTime;
+
+      for (final entity in dir.listSync()) {
+        if (entity is File && entity.path.endsWith('.json')) {
+          final modTime = entity.lastModifiedSync();
+          if (newestTime == null || modTime.isAfter(newestTime)) {
+            newestTime = modTime;
+            newestFile = entity;
+          }
+        }
+      }
+
+      if (newestFile != null) {
+        final content = await newestFile.readAsString();
+        final jsonMap = jsonDecode(content) as Map<String, dynamic>;
+        AppLogger.info('Loaded most recent terrain profile from ${newestFile.path}', tag: _tag);
+        return TerrainProfileModel.fromJson(jsonMap);
+      }
+    } catch (e) {
+      AppLogger.error('Error loading latest terrain profile: $e', tag: _tag);
     }
     return null;
   }

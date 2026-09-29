@@ -849,7 +849,10 @@ class _FilterDialogState extends State<FilterDialog> {
                                       builder: (_) => HorizonMakerDialog(
                                         initialFilters: _state,
                                         isRedNightMode: widget.isRedNightMode,
-                                        onApply: (updated) => _controller.updateFilterState(updated),
+                                        onApply: (updated) {
+                                          _controller.updateFilterState(updated);
+                                          widget.onApply(updated);
+                                        },
                                       ),
                                     );
                                   },

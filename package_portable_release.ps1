@@ -10,9 +10,29 @@ $zipFileMenelway = Join-Path $workspaceRoot "dist\menelway_astro_planner_win64_p
 
 Write-Host "Creating portable release bundle..." -ForegroundColor Cyan
 
+# Close any running instances to release file locks on binaries and DLLs
+Get-Process -Name "menelway_astro_planner", "astro_targets_planner", "app" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 600
+
 # 1. Ensure runner Release dir has menelway_astro_planner.exe directly
 if (Test-Path "$releaseDir\app.exe") {
     Copy-Item "$releaseDir\app.exe" "$releaseDir\menelway_astro_planner.exe" -Force
+}
+
+# 1b. Backup user configuration and terrain cache to prevent wiping on repackage
+$tempBackupDir = Join-Path $env:TEMP "astro_settings_backup_$(Get-Random)"
+New-Item -ItemType Directory -Path $tempBackupDir -Force | Out-Null
+
+if (Test-Path "$distDirMenelway\terrain_cache") {
+    Copy-Item "$distDirMenelway\terrain_cache" -Destination "$tempBackupDir\terrain_cache" -Recurse -Force
+} elseif (Test-Path "$releaseDir\terrain_cache") {
+    Copy-Item "$releaseDir\terrain_cache" -Destination "$tempBackupDir\terrain_cache" -Recurse -Force
+}
+
+if (Test-Path "$distDirMenelway\user_settings.json") {
+    Copy-Item "$distDirMenelway\user_settings.json" -Destination "$tempBackupDir\user_settings.json" -Force
+} elseif (Test-Path "$releaseDir\user_settings.json") {
+    Copy-Item "$releaseDir\user_settings.json" -Destination "$tempBackupDir\user_settings.json" -Force
 }
 
 # 2. Clean previous dist bundles
@@ -36,6 +56,17 @@ if (Test-Path "$distDirMenelway\app.exe") {
 if (Test-Path "$distDirMenelway\data\flutter_assets\assets\catalogs.db") {
     Copy-Item "$distDirMenelway\data\flutter_assets\assets\catalogs.db" "$distDirMenelway\catalogs.db" -Force
 }
+
+# Restore user configuration and terrain cache into dist and runner
+if (Test-Path "$tempBackupDir\terrain_cache") {
+    Copy-Item "$tempBackupDir\terrain_cache" -Destination "$distDirMenelway\terrain_cache" -Recurse -Force
+    Copy-Item "$tempBackupDir\terrain_cache" -Destination "$releaseDir\terrain_cache" -Recurse -Force
+}
+if (Test-Path "$tempBackupDir\user_settings.json") {
+    Copy-Item "$tempBackupDir\user_settings.json" -Destination "$distDirMenelway\user_settings.json" -Force
+    Copy-Item "$tempBackupDir\user_settings.json" -Destination "$releaseDir\user_settings.json" -Force
+}
+Remove-Item $tempBackupDir -Recurse -Force -ErrorAction SilentlyContinue
 
 # Mirror to legacy folder for backwards-compatibility
 Copy-Item "$distDirMenelway" -Destination $distDirLegacy -Recurse -Force

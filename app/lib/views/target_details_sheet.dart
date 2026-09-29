@@ -21,6 +21,8 @@ import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../core/target_description_service.dart';
 import '../core/url_service.dart';
+import '../models/terrain_profile_model.dart';
+import '../services/terrain_cache_service.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -71,6 +73,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   bool _showFilteredYearly = true;
   TargetDescription? _targetDescription;
   bool _isLoadingDescription = true;
+  TerrainProfileModel? _cachedTerrainProfile;
 
   @override
   void initState() {
@@ -79,6 +82,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     _loadCurve();
     _loadYearlyVisibility();
     _loadDescription();
+    _loadCachedTerrainProfile();
+  }
+
+  void _loadCachedTerrainProfile() async {
+    if (widget.filters?.terrainProfile != null) return;
+    final cached = await TerrainCacheService.loadProfile(
+      widget.latitude,
+      widget.longitude,
+    );
+    if (cached != null && mounted) {
+      setState(() {
+        _cachedTerrainProfile = cached;
+      });
+    }
   }
 
   void _loadDescription({bool allowOnline = false}) async {
@@ -682,19 +699,41 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             if (_isLoadingCurve)
               const Center(child: CircularProgressIndicator())
             else
-              AltitudeCurveChart(
-                targetPoints: _curvePoints,
-                night: widget.night,
-                targetName: widget.target.displayName,
-                minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
-                maxAltitudeThreshold: widget.filters?.maxAltitude ?? 90.0,
-                customWindowStart: (widget.filters?.useCustomTimeWindow == true)
-                    ? widget.filters!.getWindowStart(widget.night.sunset)
-                    : null,
-                customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
-                    ? widget.filters!.getWindowEnd(widget.night.sunset)
-                    : null,
-                isRedNightMode: widget.isRedNightMode,
+              Builder(
+                builder: (context) {
+                  final effectiveFilters = (widget.filters?.terrainProfile != null)
+                      ? widget.filters
+                      : (widget.filters != null && _cachedTerrainProfile != null)
+                          ? widget.filters!.copyWith(
+                              terrainProfile: _cachedTerrainProfile,
+                              showTerrainSilhouette: true,
+                            )
+                          : (_cachedTerrainProfile != null)
+                              ? FilterState(
+                                  terrainProfile: _cachedTerrainProfile,
+                                  showTerrainSilhouette: true,
+                                  observerLat: widget.latitude,
+                                  observerLon: widget.longitude,
+                                  observerElevation: widget.elevation,
+                                )
+                              : widget.filters;
+
+                  return AltitudeCurveChart(
+                    targetPoints: _curvePoints,
+                    night: widget.night,
+                    targetName: widget.target.displayName,
+                    minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
+                    maxAltitudeThreshold: widget.filters?.maxAltitude ?? 90.0,
+                    customWindowStart: (widget.filters?.useCustomTimeWindow == true)
+                        ? widget.filters!.getWindowStart(widget.night.sunset)
+                        : null,
+                    customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
+                        ? widget.filters!.getWindowEnd(widget.night.sunset)
+                        : null,
+                    isRedNightMode: widget.isRedNightMode,
+                    filterState: effectiveFilters,
+                  );
+                },
               ),
 
             const SizedBox(height: 16),
@@ -1286,7 +1325,6 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
       }
     } else if (isVisibleTonight) {
-      final dateStr = DateFormat('MMM d').format(now);
       tonightStatusText = l10n?.visibleTonight ?? "Visible Tonight";
     } else {
       final thisYear = now.year;

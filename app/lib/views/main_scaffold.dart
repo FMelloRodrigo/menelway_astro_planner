@@ -23,6 +23,7 @@ import 'planner_view.dart';
 import 'settings_dialog.dart';
 import 'target_search_view.dart';
 import '../widgets/spotlight_tour.dart';
+import '../services/terrain_cache_service.dart';
 
 class MainScaffold extends StatefulWidget {
   final bool isRedNightMode;
@@ -123,6 +124,20 @@ class _MainScaffoldState extends State<MainScaffold> {
 
       FavoritesManager.instance.init(widget.initialSettings?.favorites);
       FavoritesManager.instance.addListener(_onFavoritesChanged);
+
+      // Auto-load cached terrain profile if missing from active filters
+      if (_filters.terrainProfile == null) {
+        final cached = await TerrainCacheService.loadProfile(
+          _filters.observerLat,
+          _filters.observerLon,
+        );
+        if (cached != null) {
+          _filters = _filters.copyWith(
+            terrainProfile: cached,
+            showTerrainSilhouette: true,
+          );
+        }
+      }
 
       setState(() {
         _isInitializing = false;

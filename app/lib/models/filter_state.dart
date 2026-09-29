@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'terrain_profile_model.dart';
 
 class HorizonPointModel {
@@ -167,6 +168,66 @@ class FilterState {
     final eH = customEndHour.toString().padLeft(2, '0');
     final eM = customEndMinute.toString().padLeft(2, '0');
     return "$sH:${sM}h - $eH:${eM}h";
+  }
+
+  /// Returns whether a custom horizon or mountain terrain profile is active.
+  bool get hasHorizon =>
+      (useCustomHorizon && horizonPoints.isNotEmpty) ||
+      (showTerrainSilhouette && terrainProfile != null);
+
+  /// Returns interpolated obstacle altitude in degrees for any given azimuth [0..360].
+  /// Combines custom obstacle polygon (e.g. roofs/trees) and DEM mountain profile if both active.
+  double getHorizonAltitudeAt(double azDeg) {
+    if (!hasHorizon) return 0.0;
+    final normAz = ((azDeg % 360.0) + 360.0) % 360.0;
+
+    double customAlt = 0.0;
+    if (useCustomHorizon && horizonPoints.isNotEmpty) {
+      customAlt = _interpolateHorizonPoints(normAz);
+    }
+
+    double terrainAlt = 0.0;
+    if (showTerrainSilhouette && terrainProfile != null) {
+      terrainAlt = terrainProfile!.altitudeAt(normAz);
+    }
+
+    if (useCustomHorizon && showTerrainSilhouette && terrainProfile != null && horizonPoints.isNotEmpty) {
+      return math.max(customAlt, terrainAlt);
+    } else if (useCustomHorizon && horizonPoints.isNotEmpty) {
+      return customAlt;
+    } else {
+      return terrainAlt;
+    }
+  }
+
+  double _interpolateHorizonPoints(double az) {
+    if (horizonPoints.isEmpty) return 0.0;
+    if (horizonPoints.length == 1) return horizonPoints.first.altitude;
+
+    final sorted = List<HorizonPointModel>.from(horizonPoints)
+      ..sort((a, b) => a.azimuth.compareTo(b.azimuth));
+
+    for (int i = 0; i < sorted.length; i++) {
+      if (az < sorted[i].azimuth) {
+        final pPrev = i == 0 ? sorted.last : sorted[i - 1];
+        final pNext = sorted[i];
+        final span = (i == 0)
+            ? (pNext.azimuth + 360.0) - pPrev.azimuth
+            : pNext.azimuth - pPrev.azimuth;
+        if (span <= 0.0001) return pNext.altitude;
+        final frac = (i == 0)
+            ? (az + 360.0 - pPrev.azimuth) / span
+            : (az - pPrev.azimuth) / span;
+        return pPrev.altitude + frac * (pNext.altitude - pPrev.altitude);
+      }
+    }
+
+    final pPrev = sorted.last;
+    final pNext = sorted.first;
+    final span = (pNext.azimuth + 360.0) - pPrev.azimuth;
+    if (span <= 0.0001) return pNext.altitude;
+    final frac = (az - pPrev.azimuth) / span;
+    return pPrev.altitude + frac * (pNext.altitude - pPrev.altitude);
   }
 
   FilterState copyWith({
