@@ -540,6 +540,8 @@ class _MainScaffoldState extends State<MainScaffold> {
             }
           }
 
+          final isNarrow = MediaQuery.of(context).size.width < 600;
+
           return AlertDialog(
             backgroundColor: widget.isRedNightMode
                 ? AstroColors.nightVisionSurface
@@ -549,6 +551,10 @@ class _MainScaffoldState extends State<MainScaffold> {
               side: BorderSide(
                 color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
               ),
+            ),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 12 : 40,
+              vertical: isNarrow ? 16 : 24,
             ),
             title: Row(
               children: [
@@ -657,45 +663,47 @@ class _MainScaffoldState extends State<MainScaffold> {
                                 : AstroColors.spaceDarkBorder,
                           ),
                         ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: searchResults.length,
-                          separatorBuilder: (_, index) => const Divider(height: 1),
-                          itemBuilder: (ctx, idx) {
-                            final r = searchResults[idx];
-                            return ListTile(
-                              dense: true,
-                              title: Text(
-                                r.displayName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: textColor,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (int idx = 0; idx < searchResults.length; idx++) ...[
+                                if (idx > 0) const Divider(height: 1),
+                                ListTile(
+                                  dense: true,
+                                  title: Text(
+                                    searchResults[idx].displayName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    l10n?.searchResultSubtitle(
+                                      searchResults[idx].latitude.toStringAsFixed(2),
+                                      searchResults[idx].longitude.toStringAsFixed(2),
+                                      searchResults[idx].elevation.round().toString(),
+                                    ) ?? "Lat: ${searchResults[idx].latitude.toStringAsFixed(2)}° | Lon: ${searchResults[idx].longitude.toStringAsFixed(2)}° | Elevation: ${searchResults[idx].elevation.round()}m",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: textColor.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  trailing: Icon(Icons.check_circle_outline_rounded, size: 18, color: accentColor),
+                                  onTap: () {
+                                    setDialogState(() {
+                                      latController.text = searchResults[idx].latitude.toStringAsFixed(4);
+                                      lonController.text = searchResults[idx].longitude.toStringAsFixed(4);
+                                      eleController.text = searchResults[idx].elevation.round().toString();
+                                      currentLocationName = searchResults[idx].displayName;
+                                      searchResults = [];
+                                    });
+                                  },
                                 ),
-                              ),
-                              subtitle: Text(
-                                l10n?.searchResultSubtitle(
-                                  r.latitude.toStringAsFixed(2),
-                                  r.longitude.toStringAsFixed(2),
-                                  r.elevation.round().toString(),
-                                ) ?? "Lat: ${r.latitude.toStringAsFixed(2)}° | Lon: ${r.longitude.toStringAsFixed(2)}° | Elevation: ${r.elevation.round()}m",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: textColor.withValues(alpha: 0.6),
-                                ),
-                              ),
-                              trailing: Icon(Icons.check_circle_outline_rounded, size: 18, color: accentColor),
-                              onTap: () {
-                                setDialogState(() {
-                                  latController.text = r.latitude.toStringAsFixed(4);
-                                  lonController.text = r.longitude.toStringAsFixed(4);
-                                  eleController.text = r.elevation.round().toString();
-                                  currentLocationName = r.displayName;
-                                  searchResults = [];
-                                });
-                              },
-                            );
-                          },
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -772,41 +780,44 @@ class _MainScaffoldState extends State<MainScaffold> {
                                   : AstroColors.spaceDarkBorder,
                             ),
                           ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: addressResults.length,
-                            separatorBuilder: (_, index) => const Divider(height: 1),
-                            itemBuilder: (ctx, idx) {
-                              final r = addressResults[idx];
-                              return ListTile(
-                                dense: true,
-                                leading: Icon(Icons.pin_drop_rounded, size: 18, color: accentColor),
-                                title: Text(
-                                  r.displayName,
-                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: textColor),
-                                ),
-                                subtitle: Text(
-                                  "Lat: ${r.latitude.toStringAsFixed(4)}° | Lon: ${r.longitude.toStringAsFixed(4)}°",
-                                  style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
-                                ),
-                                trailing: Icon(Icons.check_circle_outline_rounded, size: 16, color: accentColor),
-                                onTap: () async {
-                                  setDialogState(() {
-                                    latController.text = r.latitude.toStringAsFixed(4);
-                                    lonController.text = r.longitude.toStringAsFixed(4);
-                                    currentLocationName = r.displayName;
-                                    addressResults = [];
-                                  });
-                                  // Auto-fetch precise elevation
-                                  final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
-                                  if (elev != null) {
-                                    setDialogState(() {
-                                      eleController.text = elev.round().toString();
-                                    });
-                                  }
-                                },
-                              );
-                            },
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (int idx = 0; idx < addressResults.length; idx++) ...[
+                                  if (idx > 0) const Divider(height: 1),
+                                  ListTile(
+                                    dense: true,
+                                    leading: Icon(Icons.pin_drop_rounded, size: 18, color: accentColor),
+                                    title: Text(
+                                      addressResults[idx].displayName,
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: textColor),
+                                    ),
+                                    subtitle: Text(
+                                      "Lat: ${addressResults[idx].latitude.toStringAsFixed(4)}° | Lon: ${addressResults[idx].longitude.toStringAsFixed(4)}°",
+                                      style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                                    ),
+                                    trailing: Icon(Icons.check_circle_outline_rounded, size: 16, color: accentColor),
+                                    onTap: () async {
+                                      final r = addressResults[idx];
+                                      setDialogState(() {
+                                        latController.text = r.latitude.toStringAsFixed(4);
+                                        lonController.text = r.longitude.toStringAsFixed(4);
+                                        currentLocationName = r.displayName;
+                                        addressResults = [];
+                                      });
+                                      // Auto-fetch precise elevation
+                                      final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
+                                      if (elev != null && ctx.mounted) {
+                                        setDialogState(() {
+                                          eleController.text = elev.round().toString();
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -839,7 +850,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                           child: TextField(
                             controller: latController,
                             decoration: InputDecoration(labelText: l10n?.latitude ?? "Latitude (°)"),
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -847,7 +858,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                           child: TextField(
                             controller: lonController,
                             decoration: InputDecoration(labelText: l10n?.longitude ?? "Longitude (°)"),
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -855,7 +866,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                           child: TextField(
                             controller: eleController,
                             decoration: InputDecoration(labelText: l10n?.elevation ?? "Elevation (m)"),
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                           ),
                         ),
                       ],

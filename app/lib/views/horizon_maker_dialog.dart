@@ -183,6 +183,8 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
             }
           }
 
+          final isNarrow = MediaQuery.of(context).size.width < 600;
+
           return AlertDialog(
             backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
             shape: RoundedRectangleBorder(
@@ -190,6 +192,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
               side: BorderSide(
                 color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
               ),
+            ),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isNarrow ? 12 : 40,
+              vertical: isNarrow ? 16 : 24,
             ),
             title: Row(
               children: [
@@ -256,36 +262,39 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                             color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
                           ),
                         ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: results.length,
-                          separatorBuilder: (ctx, index) => const Divider(height: 1),
-                          itemBuilder: (context, idx) {
-                            final r = results[idx];
-                            return ListTile(
-                              dense: true,
-                              leading: Icon(Icons.location_on_outlined, size: 16, color: accentColor),
-                              title: Text(r.displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
-                              subtitle: Text(
-                                "Lat: ${r.latitude.toStringAsFixed(4)}° | Lon: ${r.longitude.toStringAsFixed(4)}°",
-                                style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
-                              ),
-                              onTap: () async {
-                                setDlgState(() {
-                                  latCtrl.text = r.latitude.toStringAsFixed(4);
-                                  lonCtrl.text = r.longitude.toStringAsFixed(4);
-                                  locName = r.displayName;
-                                  results = [];
-                                });
-                                final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
-                                if (elev != null) {
-                                  setDlgState(() {
-                                    eleCtrl.text = elev.round().toString();
-                                  });
-                                }
-                              },
-                            );
-                          },
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (int idx = 0; idx < results.length; idx++) ...[
+                                if (idx > 0) const Divider(height: 1),
+                                ListTile(
+                                  dense: true,
+                                  leading: Icon(Icons.location_on_outlined, size: 16, color: accentColor),
+                                  title: Text(results[idx].displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+                                  subtitle: Text(
+                                    "Lat: ${results[idx].latitude.toStringAsFixed(4)}° | Lon: ${results[idx].longitude.toStringAsFixed(4)}°",
+                                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                                  ),
+                                  onTap: () async {
+                                    final r = results[idx];
+                                    setDlgState(() {
+                                      latCtrl.text = r.latitude.toStringAsFixed(4);
+                                      lonCtrl.text = r.longitude.toStringAsFixed(4);
+                                      locName = r.displayName;
+                                      results = [];
+                                    });
+                                    final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
+                                    if (elev != null && ctx.mounted) {
+                                      setDlgState(() {
+                                        eleCtrl.text = elev.round().toString();
+                                      });
+                                    }
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
