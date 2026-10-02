@@ -128,6 +128,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchOnlineTooltip => 'Search online';
 
   @override
+  String get searchAddressHint =>
+      'Type the detailed location, like street name, and city';
+
+  @override
+  String get searchAddressTooltip =>
+      'Search precise street/neighborhood (worldwide)';
+
+  @override
   String get manualCoordinates => 'Manual Coordinates';
 
   @override

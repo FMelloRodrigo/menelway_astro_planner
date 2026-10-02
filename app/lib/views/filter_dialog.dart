@@ -416,88 +416,123 @@ class _FilterDialogState extends State<FilterDialog> {
                     // Section 2: Altitude & Duration (Telescopius core)
                     _buildSectionHeader(l10n?.visibilityAltitudeRange ?? "Visibility & Altitude Range", Icons.terrain_rounded),
                     const SizedBox(height: 8),
-                    if (isNarrow)
-                      Column(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n?.minimumAltitude(_state.minAltitude.round().toString()) ?? "Minimum Altitude: ${_state.minAltitude.round()}°",
-                                style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
-                              ),
-                              Slider(
-                                value: _state.minAltitude,
-                                min: 10,
-                                max: math.min(70.0, _state.maxAltitude - 5),
-                                divisions: 12,
-                                activeColor: accentColor,
-                                onChanged: (v) => _controller.setMinAltitude(v),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n?.maximumAltitude(_state.maxAltitude.round().toString()) ?? "Maximum Altitude: ${_state.maxAltitude.round()}°${_state.maxAltitude == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
-                                style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
-                              ),
-                              Slider(
-                                value: _state.maxAltitude,
-                                min: math.max(50.0, _state.minAltitude + 5),
-                                max: 90,
-                                divisions: 8,
-                                activeColor: accentColor,
-                                onChanged: (v) => _controller.setMaxAltitude(v),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _state.useCustomTimeWindow
-                                    ? "${l10n?.minimumDuration(_state.minDurationHours.toStringAsFixed(1)) ?? "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
-                                    : (l10n?.minimumDuration(_state.minDurationHours.toStringAsFixed(1)) ?? "Minimum Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs"),
-                                style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
-                              ),
-                              Builder(builder: (context) {
-                                final maxDur = _state.useCustomTimeWindow
-                                    ? math.max(0.5, _state.windowDurationHours)
-                                    : 8.0;
-                                final clampedVal = _state.minDurationHours.clamp(0.5, maxDur);
-                                return Slider(
-                                  value: clampedVal,
+                    Builder(builder: (context) {
+                      const double minAltMin = 10.0;
+                      final double minAltMax = math.max(
+                        minAltMin + 5.0,
+                        math.min(
+                          70.0,
+                          ((_state.maxAltitude - 5.0) / 5.0).floorToDouble() * 5.0,
+                        ),
+                      );
+                      final int minAltDivisions =
+                          math.max(1, ((minAltMax - minAltMin) / 5.0).round());
+                      final double minAltVal = ((_state.minAltitude / 5.0).round() * 5.0)
+                          .toDouble()
+                          .clamp(minAltMin, minAltMax);
+
+                      const double maxAltMax = 90.0;
+                      final double maxAltMin = math.min(
+                        maxAltMax - 5.0,
+                        math.max(
+                          50.0,
+                          ((_state.minAltitude + 5.0) / 5.0).ceilToDouble() * 5.0,
+                        ),
+                      );
+                      final int maxAltDivisions =
+                          math.max(1, ((maxAltMax - maxAltMin) / 5.0).round());
+                      final double maxAltVal = ((_state.maxAltitude / 5.0).round() * 5.0)
+                          .toDouble()
+                          .clamp(maxAltMin, maxAltMax);
+
+                      final maxDur = _state.useCustomTimeWindow
+                          ? math.max(0.5, _state.windowDurationHours)
+                          : 8.0;
+                      final clampedDur = _state.minDurationHours.clamp(0.5, maxDur);
+                      final durDivisions = maxDur > 0.5
+                          ? math.max(1, ((maxDur - 0.5) * 2).round())
+                          : 1;
+
+                      if (isNarrow) {
+                        return Column(
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n?.minimumAltitude(minAltVal.round().toString()) ??
+                                      "Minimum Altitude: ${minAltVal.round()}°",
+                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Slider(
+                                  value: minAltVal,
+                                  min: minAltMin,
+                                  max: minAltMax,
+                                  divisions: minAltDivisions,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => _controller.setMinAltitude(v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n?.maximumAltitude(maxAltVal.round().toString()) ??
+                                      "Maximum Altitude: ${maxAltVal.round()}°${maxAltVal == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
+                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Slider(
+                                  value: maxAltVal,
+                                  min: maxAltMin,
+                                  max: maxAltMax,
+                                  divisions: maxAltDivisions,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => _controller.setMaxAltitude(v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _state.useCustomTimeWindow
+                                      ? "${l10n?.minimumDuration(clampedDur.toStringAsFixed(1)) ?? "Minimum Duration: ${clampedDur.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : (l10n?.minimumDuration(clampedDur.toStringAsFixed(1)) ?? "Minimum Duration: ${clampedDur.toStringAsFixed(1)} hrs"),
+                                  style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
+                                ),
+                                Slider(
+                                  value: clampedDur,
                                   min: 0.5,
                                   max: maxDur > 0.5 ? maxDur : 0.6,
-                                  divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
+                                  divisions: durDivisions,
                                   activeColor: accentColor,
                                   onChanged: (v) => _controller.setMinDurationHours(v),
-                                );
-                              }),
-                            ],
-                          ),
-                        ],
-                      )
-                    else
-                      Row(
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
                         children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l10n?.minAltitudeLabel(_state.minAltitude.round().toString()) ?? "Min Altitude: ${_state.minAltitude.round()}°",
+                                  l10n?.minAltitudeLabel(minAltVal.round().toString()) ??
+                                      "Min Altitude: ${minAltVal.round()}°",
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
-                                  value: _state.minAltitude,
-                                  min: 10,
-                                  max: math.min(70.0, _state.maxAltitude - 5),
-                                  divisions: 12,
+                                  value: minAltVal,
+                                  min: minAltMin,
+                                  max: minAltMax,
+                                  divisions: minAltDivisions,
                                   activeColor: accentColor,
                                   onChanged: (v) => _controller.setMinAltitude(v),
                                 ),
@@ -510,14 +545,14 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "${l10n?.maxAltitudeLabel(_state.maxAltitude.round().toString()) ?? "Max Altitude: ${_state.maxAltitude.round()}°"}${_state.maxAltitude == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
+                                  "${l10n?.maxAltitudeLabel(maxAltVal.round().toString()) ?? "Max Altitude: ${maxAltVal.round()}°"}${maxAltVal == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
-                                  value: _state.maxAltitude,
-                                  min: math.max(50.0, _state.minAltitude + 5),
-                                  max: 90,
-                                  divisions: 8,
+                                  value: maxAltVal,
+                                  min: maxAltMin,
+                                  max: maxAltMax,
+                                  divisions: maxAltDivisions,
                                   activeColor: accentColor,
                                   onChanged: (v) => _controller.setMaxAltitude(v),
                                 ),
@@ -531,30 +566,25 @@ class _FilterDialogState extends State<FilterDialog> {
                               children: [
                                 Text(
                                   _state.useCustomTimeWindow
-                                      ? "${l10n?.durationLabel(_state.minDurationHours.toStringAsFixed(1)) ?? "Duration: ${_state.minDurationHours.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
-                                      : (l10n?.durationLabel(_state.minDurationHours.toStringAsFixed(1)) ?? "Duration: ${_state.minDurationHours.toStringAsFixed(1)} hrs"),
+                                      ? "${l10n?.durationLabel(clampedDur.toStringAsFixed(1)) ?? "Duration: ${clampedDur.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : (l10n?.durationLabel(clampedDur.toStringAsFixed(1)) ?? "Duration: ${clampedDur.toStringAsFixed(1)} hrs"),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                Builder(builder: (context) {
-                                  final maxDur = _state.useCustomTimeWindow
-                                      ? math.max(0.5, _state.windowDurationHours)
-                                      : 8.0;
-                                  final clampedVal = _state.minDurationHours.clamp(0.5, maxDur);
-                                  return Slider(
-                                    value: clampedVal,
-                                    min: 0.5,
-                                    max: maxDur > 0.5 ? maxDur : 0.6,
-                                    divisions: maxDur > 0.5 ? math.max(1, ((maxDur - 0.5) * 2).round()) : 1,
-                                    activeColor: accentColor,
-                                    onChanged: (v) => _controller.setMinDurationHours(v),
-                                  );
-                                }),
+                                Slider(
+                                  value: clampedDur,
+                                  min: 0.5,
+                                  max: maxDur > 0.5 ? maxDur : 0.6,
+                                  divisions: durDivisions,
+                                  activeColor: accentColor,
+                                  onChanged: (v) => _controller.setMinDurationHours(v),
+                                ),
                               ],
                             ),
                           ),
                         ],
-                      ),
+                      );
+                    }),
 
                     const SizedBox(height: 16),
 
@@ -971,7 +1001,8 @@ class _FilterDialogState extends State<FilterDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text(
                                       l10n?.faintestLimitLabel(_state.maxMagnitude.toStringAsFixed(1)) ?? "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",

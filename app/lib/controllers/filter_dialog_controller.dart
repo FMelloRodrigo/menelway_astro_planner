@@ -12,6 +12,11 @@ class FilterDialogController extends ChangeNotifier {
   FilterDialogController({required FilterState initialFilters})
       : _initialFilters = initialFilters {
     _state = initialFilters.copyWith();
+    _state.minAltitude = ((_state.minAltitude / 5.0).round() * 5.0).toDouble().clamp(10.0, 70.0);
+    _state.maxAltitude = ((_state.maxAltitude / 5.0).round() * 5.0).toDouble().clamp(50.0, 90.0);
+    if (_state.minAltitude >= _state.maxAltitude) {
+      _state.minAltitude = math.max(10.0, _state.maxAltitude - 5.0);
+    }
   }
 
   FilterState get state => _state;
@@ -140,12 +145,20 @@ class FilterDialogController extends ChangeNotifier {
   }
 
   void setMinAltitude(double value) {
-    _state.minAltitude = value;
+    final snapped = ((value / 5.0).round() * 5.0).toDouble();
+    _state.minAltitude = snapped;
+    if (_state.minAltitude >= _state.maxAltitude) {
+      _state.maxAltitude = math.min(90.0, _state.minAltitude + 5.0);
+    }
     notifyListeners();
   }
 
   void setMaxAltitude(double value) {
-    _state.maxAltitude = value;
+    final snapped = ((value / 5.0).round() * 5.0).toDouble();
+    _state.maxAltitude = snapped;
+    if (_state.maxAltitude <= _state.minAltitude) {
+      _state.minAltitude = math.max(10.0, _state.maxAltitude - 5.0);
+    }
     notifyListeners();
   }
 

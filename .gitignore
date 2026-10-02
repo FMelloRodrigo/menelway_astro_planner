@@ -48,3 +48,6 @@ __pycache__/
 *.bak
 *.tmp
 *.crash
+
+# Local agent rules
+.agents/rules/engineering_standards.md

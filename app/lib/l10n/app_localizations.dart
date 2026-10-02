@@ -326,6 +326,18 @@ abstract class AppLocalizations {
   /// **'Search online'**
   String get searchOnlineTooltip;
 
+  /// No description provided for @searchAddressHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the detailed location, like street name, and city'**
+  String get searchAddressHint;
+
+  /// No description provided for @searchAddressTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Search precise street/neighborhood (worldwide)'**
+  String get searchAddressTooltip;
+
   /// No description provided for @manualCoordinates.
   ///
   /// In en, this message translates to:

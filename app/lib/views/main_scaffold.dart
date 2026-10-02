@@ -744,11 +744,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                       TextField(
                         controller: addressController,
                         decoration: InputDecoration(
-                          hintText: "e.g. Rua Alberto Braune, Nova Friburgo or Cônego",
+                          hintText: l10n?.searchAddressHint ?? "Type the detailed location, like street name, and city",
                           prefixIcon: const Icon(Icons.add_location_alt_rounded, size: 18),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                            tooltip: "Search precise street/neighborhood (worldwide)",
+                            tooltip: l10n?.searchAddressTooltip ?? "Search precise street/neighborhood (worldwide)",
                             onPressed: doAddressSearch,
                           ),
                         ),
@@ -917,7 +917,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     final l10n = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
         border: Border(
@@ -929,35 +929,40 @@ class _MainScaffoldState extends State<MainScaffold> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Observer Location Pill (tappable)
             InkWell(
               key: _mobileLocationKey,
               onTap: _editLocationDialog,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                height: 40.0,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionSurfaceVariant
                       : AstroColors.spaceDarkSurfaceVariant,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: widget.isRedNightMode
                         ? AstroColors.nightVisionBorder
                         : AstroColors.spaceDarkBorder,
+                    width: 1.2,
                   ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on_outlined, size: 13, color: accentColor),
-                    const SizedBox(width: 4),
+                    Icon(Icons.location_on_outlined, size: 16, color: accentColor),
+                    const SizedBox(width: 5),
                     Text(
                       _filters.observerLocationName,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                     ),
-                    const SizedBox(width: 3),
-                    Icon(Icons.arrow_drop_down, size: 14, color: textColor.withValues(alpha: 0.6)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_drop_down, size: 18, color: textColor.withValues(alpha: 0.7)),
                   ],
                 ),
               ),
@@ -967,32 +972,36 @@ class _MainScaffoldState extends State<MainScaffold> {
             // Night summary pill
             if (_nightSummary != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                height: 40.0,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionSurfaceVariant
                       : AstroColors.spaceDarkSurfaceVariant,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: widget.isRedNightMode
                         ? AstroColors.nightVisionBorder
                         : AstroColors.spaceDarkBorder,
+                    width: 1.2,
                   ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.dark_mode_outlined, size: 13, color: AstroColors.nebulaIndigo),
-                    const SizedBox(width: 4),
+                    Icon(Icons.dark_mode_outlined, size: 15, color: AstroColors.nebulaIndigo),
+                    const SizedBox(width: 5),
                     Text(
                       "${l10n?.darkTime ?? 'Dark'}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
-                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                     ),
                     const SizedBox(width: 8),
-                    Icon(Icons.brightness_2_rounded, size: 13, color: AstroColors.starGold),
+                    Icon(Icons.brightness_2_rounded, size: 15, color: AstroColors.starGold),
                     const SizedBox(width: 4),
                     Text(
                       "${(_nightSummary!.moonIllumination * 100).round()}%",
-                      style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                      style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                     ),
                   ],
                 ),
@@ -1002,25 +1011,29 @@ class _MainScaffoldState extends State<MainScaffold> {
 
             // Database size pill
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              height: 40.0,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: widget.isRedNightMode
                     ? AstroColors.nightVisionSurfaceVariant
                     : AstroColors.spaceDarkSurfaceVariant,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionBorder
                       : AstroColors.spaceDarkBorder,
+                  width: 1.2,
                 ),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.storage_rounded, size: 12, color: textColor.withValues(alpha: 0.6)),
-                  const SizedBox(width: 3),
+                  Icon(Icons.storage_rounded, size: 14, color: textColor.withValues(alpha: 0.6)),
+                  const SizedBox(width: 4),
                   Text(
                     "${_dbSizeMb.toStringAsFixed(1)} MB",
-                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                    style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
                   ),
                 ],
               ),
@@ -1087,6 +1100,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: isWide ? 16.0 : 10.0,
         title: Row(
           children: [
             ClipRRect(
@@ -1244,8 +1258,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
           // Red Night-Vision Mode Toggle
           SizedBox(
-            width: 32.0,
-            height: 32.0,
+            width: isWide ? 32.0 : 40.0,
+            height: isWide ? 32.0 : 40.0,
             child: IconButton(
               tooltip: widget.isRedNightMode ? (l10n?.nightModeStandard ?? "Deep Space Obsidian") : (l10n?.nightModeRed ?? "Telescope Red Mode"),
               padding: EdgeInsets.zero,
@@ -1254,7 +1268,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
                     : AstroColors.starlightCyan.withValues(alpha: 0.08),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(isWide ? 8 : 10),
                   side: BorderSide(
                     color: widget.isRedNightMode
                         ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
@@ -1265,13 +1279,13 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
               icon: Icon(
                 widget.isRedNightMode ? Icons.nightlight_round : Icons.remove_red_eye_rounded,
-                size: 16,
+                size: isWide ? 16 : 20,
                 color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
               ),
               onPressed: _handleToggleNightMode,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isWide ? 8 : 6),
 
           // Language Switcher Pill (Quick toggle / selection)
           PopupMenuButton<String>(
@@ -1361,14 +1375,14 @@ class _MainScaffoldState extends State<MainScaffold> {
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Container(
-                height: 32.0,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: isWide ? 32.0 : 40.0,
+                padding: EdgeInsets.symmetric(horizontal: isWide ? 8 : 7),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
                       : AstroColors.starlightCyan.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(isWide ? 8 : 10),
                   border: Border.all(
                     color: widget.isRedNightMode
                         ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
@@ -1381,14 +1395,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                   children: [
                     Icon(
                       Icons.translate_rounded,
-                      size: 15,
+                      size: isWide ? 15 : 18,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                     ),
-                    const SizedBox(width: 5),
+                    SizedBox(width: isWide ? 5 : 4),
                     Text(
                       widget.currentLanguageCode == 'pt' ? "PT" : (widget.currentLanguageCode == 'en' ? "EN" : "AUTO"),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: isWide ? 11 : 12,
                         fontWeight: FontWeight.w700,
                         color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
                       ),
@@ -1396,7 +1410,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     const SizedBox(width: 2),
                     Icon(
                       Icons.arrow_drop_down,
-                      size: 14,
+                      size: isWide ? 14 : 18,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                     ),
                   ],
@@ -1404,7 +1418,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: isWide ? 8 : 6),
 
           // Equipment Rigs Manager Button
           if (isWide)
@@ -1462,8 +1476,8 @@ class _MainScaffoldState extends State<MainScaffold> {
           else
             SizedBox(
               key: _equipmentMobileKey,
-              width: 32.0,
-              height: 32.0,
+              width: 40.0,
+              height: 40.0,
               child: IconButton(
                 tooltip: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
                 padding: EdgeInsets.zero,
@@ -1472,7 +1486,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
                       : AstroColors.starGold.withValues(alpha: 0.15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     side: BorderSide(
                       color: widget.isRedNightMode
                           ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
@@ -1483,7 +1497,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
                 icon: Icon(
                   Icons.camera_alt_rounded,
-                  size: 16,
+                  size: 20,
                   color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
                 ),
                 onPressed: () {
@@ -1500,7 +1514,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 },
               ),
             ),
-          const SizedBox(width: 8),
+          SizedBox(width: isWide ? 8 : 6),
 
           // Settings & Clean Data Window Pill
           Tooltip(
@@ -1529,16 +1543,17 @@ class _MainScaffoldState extends State<MainScaffold> {
                   ),
                 );
               },
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(isWide ? 8 : 10),
               child: Container(
-                height: 32.0,
-                padding: EdgeInsets.symmetric(horizontal: isWide ? 10 : 8),
+                height: isWide ? 32.0 : 40.0,
+                width: isWide ? null : 40.0,
+                padding: isWide ? const EdgeInsets.symmetric(horizontal: 10) : EdgeInsets.zero,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: widget.isRedNightMode
                       ? AstroColors.nightVisionRed.withValues(alpha: 0.18)
                       : AstroColors.starlightCyan.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(isWide ? 8 : 10),
                   border: Border.all(
                     color: widget.isRedNightMode
                         ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
@@ -1557,10 +1572,11 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
                       Icons.settings_suggest_rounded,
-                      size: 15,
+                      size: isWide ? 15 : 20,
                       color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
                     ),
                     if (isWide) ...[
@@ -1580,7 +1596,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: isWide ? 10 : 8),
         ],
       ),
       body: Column(

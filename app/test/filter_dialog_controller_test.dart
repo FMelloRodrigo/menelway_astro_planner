@@ -131,6 +131,29 @@ void main() {
       expect(controller.state.minSizeArcmin, initialFilters.minSizeArcmin);
     });
 
+    test('snaps altitude filters to 5-degree increments and maintains mutual constraints', () {
+      // Snaps non-multiple-of-5 values to nearest 5
+      controller.setMinAltitude(19.0);
+      expect(controller.state.minAltitude, 20.0);
+
+      controller.setMinAltitude(24.0);
+      expect(controller.state.minAltitude, 25.0);
+
+      controller.setMinAltitude(28.0);
+      expect(controller.state.minAltitude, 30.0);
+
+      // Increasing minAltitude beyond maxAltitude adjusts maxAltitude
+      controller.setMaxAltitude(60.0);
+      controller.setMinAltitude(60.0);
+      expect(controller.state.minAltitude, 60.0);
+      expect(controller.state.maxAltitude, 65.0);
+
+      // Decreasing maxAltitude below minAltitude adjusts minAltitude
+      controller.setMaxAltitude(40.0);
+      expect(controller.state.maxAltitude, 40.0);
+      expect(controller.state.minAltitude, 35.0);
+    });
+
     test('calculates cardinal abbreviations in English and Portuguese', () {
       expect(FilterDialogController.cardinalName(0.0), 'N');
       expect(FilterDialogController.cardinalName(45.0), 'NE');

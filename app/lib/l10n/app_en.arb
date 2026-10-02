@@ -43,6 +43,8 @@
   "searchCityOnline": "Search City & Country (Online)",
   "searchCityHint": "Type city",
   "searchOnlineTooltip": "Search online",
+  "searchAddressHint": "Type the detailed location, like street name, and city",
+  "searchAddressTooltip": "Search precise street/neighborhood (worldwide)",
   "manualCoordinates": "Manual Coordinates",
   "latitude": "Latitude (°)",
   "longitude": "Longitude (°)",

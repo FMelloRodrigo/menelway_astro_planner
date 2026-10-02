@@ -132,6 +132,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get searchOnlineTooltip => 'Buscar online';
 
   @override
+  String get searchAddressHint =>
+      'Digite a localização detalhada, como rua e cidade';
+
+  @override
+  String get searchAddressTooltip => 'Buscar rua/bairro específico (mundial)';
+
+  @override
   String get manualCoordinates => 'Coordenadas Manuais';
 
   @override
