@@ -21,12 +21,11 @@ if (Test-Path "$releaseDir\app.exe") {
 
 # 1b. Backup user configuration and terrain cache to prevent wiping on repackage
 $tempBackupDir = Join-Path $env:TEMP "astro_settings_backup_$(Get-Random)"
-New-Item -ItemType Directory -Path $tempBackupDir -Force | Out-Null
+New-Item -ItemType Directory -Path "$tempBackupDir\terrain_cache" -Force | Out-Null
 
-if (Test-Path "$distDirMenelway\terrain_cache") {
-    Copy-Item "$distDirMenelway\terrain_cache" -Destination "$tempBackupDir\terrain_cache" -Recurse -Force
-} elseif (Test-Path "$releaseDir\terrain_cache") {
-    Copy-Item "$releaseDir\terrain_cache" -Destination "$tempBackupDir\terrain_cache" -Recurse -Force
+$sourceTerrain = if (Test-Path "$distDirMenelway\terrain_cache") { "$distDirMenelway\terrain_cache" } elseif (Test-Path "$releaseDir\terrain_cache") { "$releaseDir\terrain_cache" } else { $null }
+if ($sourceTerrain) {
+    Get-ChildItem -Path $sourceTerrain -Filter "*.json" -Recurse -File | Copy-Item -Destination "$tempBackupDir\terrain_cache" -Force
 }
 
 if (Test-Path "$distDirMenelway\user_settings.json") {
@@ -43,6 +42,11 @@ if (Test-Path $zipFileMenelway) { Remove-Item $zipFileMenelway -Force }
 
 New-Item -ItemType Directory -Path $distDirMenelway -Force | Out-Null
 
+# Clean nested terrain_cache in releaseDir if present before copying release files
+if (Test-Path "$releaseDir\terrain_cache") {
+    Remove-Item "$releaseDir\terrain_cache" -Recurse -Force
+}
+
 # Copy release files to Menelway dist folder
 Copy-Item "$releaseDir\*" -Destination $distDirMenelway -Recurse -Force
 
@@ -58,9 +62,11 @@ if (Test-Path "$distDirMenelway\data\flutter_assets\assets\catalogs.db") {
 }
 
 # Restore user configuration and terrain cache into dist and runner
-if (Test-Path "$tempBackupDir\terrain_cache") {
-    Copy-Item "$tempBackupDir\terrain_cache" -Destination "$distDirMenelway\terrain_cache" -Recurse -Force
-    Copy-Item "$tempBackupDir\terrain_cache" -Destination "$releaseDir\terrain_cache" -Recurse -Force
+if ((Get-ChildItem "$tempBackupDir\terrain_cache" -File).Count -gt 0) {
+    New-Item -ItemType Directory -Path "$distDirMenelway\terrain_cache" -Force | Out-Null
+    Copy-Item "$tempBackupDir\terrain_cache\*" -Destination "$distDirMenelway\terrain_cache" -Force
+    New-Item -ItemType Directory -Path "$releaseDir\terrain_cache" -Force | Out-Null
+    Copy-Item "$tempBackupDir\terrain_cache\*" -Destination "$releaseDir\terrain_cache" -Force
 }
 if (Test-Path "$tempBackupDir\user_settings.json") {
     Copy-Item "$tempBackupDir\user_settings.json" -Destination "$distDirMenelway\user_settings.json" -Force
