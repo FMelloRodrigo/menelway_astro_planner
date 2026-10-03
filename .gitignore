@@ -20,6 +20,9 @@ app/android/app/build/
 app/android/.cxx/
 *.apk
 *.aab
+key.properties
+*.jks
+*.keystore
 
 # Windows / Native build outputs and intermediate files
 .vs/
