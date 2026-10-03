@@ -225,7 +225,6 @@ void main() {
         buildTestableWidget(
           ObservingListsView(
             lists: lists,
-            isRedNightMode: false,
             onCreateList: (name, desc, date) {},
             onDeleteList: (id) {},
             onRemoveItem: (listId, dsoId) {},

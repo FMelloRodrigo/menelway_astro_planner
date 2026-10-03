@@ -177,8 +177,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.text;
+    final accentColor = palette.accent;
 
     final isWideScreen = MediaQuery.of(context).size.width >= 900;
     final allSorted = _sortedTargets;
@@ -196,10 +197,10 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+            color: palette.surface,
             border: Border(
               bottom: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                color: palette.border,
               ),
             ),
           ),
@@ -218,9 +219,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   textAlignVertical: TextAlignVertical.center,
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: l10n?.searchTargetsHint ?? (isNarrow
-                        ? "Search DSO (e.g. M42, NGC 7000, Arp 220)..."
-                        : "Search DSO (e.g. M42, Orion, NGC 7000, C14, Arp 220)..."),
+                    hintText: l10n.searchTargetsHint,
                     prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
                     prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14),
@@ -232,7 +231,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                 icon: const Icon(Icons.clear, size: 18),
                                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 padding: EdgeInsets.zero,
-                                tooltip: l10n?.clearSearchTooltip ?? "Clear search",
+                                tooltip: l10n.clearSearchTooltip,
                                 onPressed: () {
                                   _debounceTimer?.cancel();
                                   _searchController.clear();
@@ -244,7 +243,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                 icon: Icon(Icons.arrow_forward_rounded, size: 18, color: accentColor),
                                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 padding: EdgeInsets.zero,
-                                tooltip: l10n?.searchTargetTooltip ?? "Search target",
+                                tooltip: l10n.searchTargetTooltip,
                                 onPressed: () {
                                   _debounceTimer?.cancel();
                                   widget.onFilterChanged(
@@ -272,19 +271,15 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 height: topBarElementHeight,
                 child: FilledButton.tonalIcon(
                   icon: const Icon(Icons.tune_rounded, size: 18),
-                  label: Text(l10n?.filtersButton ?? "Filters"),
+                  label: Text(l10n.filtersButton),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    backgroundColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
+                    backgroundColor: palette.surfaceVariant,
                     foregroundColor: accentColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                       side: BorderSide(
-                        color: widget.isRedNightMode
-                            ? AstroColors.nightVisionBorder
-                            : AstroColors.spaceDarkBorder,
+                        color: palette.border,
                       ),
                     ),
                   ),
@@ -297,14 +292,10 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionBorder
-                        : AstroColors.spaceDarkBorder,
+                    color: palette.border,
                   ),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -312,9 +303,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     value: _sortMode,
                     isDense: true,
                     isExpanded: isNarrow,
-                    dropdownColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
+                    dropdownColor: palette.surfaceVariant,
                     icon: Icon(Icons.sort_rounded, color: accentColor, size: 18),
                     style: TextStyle(
                       color: textColor,
@@ -324,23 +313,23 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     items: [
                       DropdownMenuItem(
                         value: SortMode.peakAltitude,
-                        child: Text(l10n?.sortPeakAltitude ?? "Peak Altitude", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n.sortPeakAltitude, overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.visibleDuration,
-                        child: Text(l10n?.sortVisibleDuration ?? "Visible Duration", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n.sortVisibleDuration, overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.visibleStartTime,
-                        child: Text(l10n?.sortVisibleStartTime ?? "Visible From", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n.sortVisibleStartTime, overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.brightness,
-                        child: Text(l10n?.sortMagnitude ?? "Brightness (Mag)", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n.sortMagnitude, overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.transitTime,
-                        child: Text(l10n?.sortTransitTime ?? "Transit Time", overflow: TextOverflow.ellipsis),
+                        child: Text(l10n.sortTransitTime, overflow: TextOverflow.ellipsis),
                       ),
                     ],
                     onChanged: (v) {
@@ -398,14 +387,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       ),
                       const SizedBox(width: 6),
                     ] else ...[
-                      _buildSummaryChip(l10n?.windowFullDarkness ?? "Window: Darkness (Full Night)", Icons.nights_stay_rounded),
+                      _buildSummaryChip(l10n.windowFullDarkness, Icons.nights_stay_rounded),
                       const SizedBox(width: 6),
                     ],
                     _buildSummaryChip("Moon ≥ ${widget.filters.minMoonSeparation.round()}°", Icons.brightness_2_rounded),
                     const SizedBox(width: 6),
                     _buildSummaryChip("Catalogs: ${widget.filters.selectedCatalogs.join(', ')}", Icons.auto_stories_rounded),
                     const SizedBox(width: 6),
-                    _buildSummaryChip(l10n?.targetsFoundCount(displayTargets.length) ?? "${displayTargets.length} targets found", Icons.radar_rounded),
+                    _buildSummaryChip(l10n.targetsFoundCount(displayTargets.length), Icons.radar_rounded),
                   ],
                 ),
               ),
@@ -425,13 +414,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                           Icon(Icons.auto_awesome_rounded, size: 48, color: textColor.withValues(alpha: 0.3)),
                           const SizedBox(height: 12),
                           Text(
-                            l10n?.noTargetsFound ?? "No targets match the current filter criteria",
+                            l10n.noTargetsFound,
                             style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.6)),
                           ),
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: _openFilterDialog,
-                            child: Text(l10n?.filtersButton ?? "Adjust Filter Settings"),
+                            child: Text(l10n.filtersButton),
                           ),
                         ],
                       ),
@@ -454,7 +443,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                 ),
                                 Container(
                                   width: 1,
-                                  color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                                  color: palette.border,
                                 ),
                                 Expanded(
                                   flex: 6,
@@ -483,6 +472,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
   Widget _buildTargetList(List<TargetItem> targets) {
     final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
     final hasOffSeason = widget.filters.searchQuery.isNotEmpty && widget.targets.any((t) => !t.meetsCriteria);
 
     return ListView.builder(
@@ -505,11 +495,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 Expanded(
                   child: Text(
                     _hideOutsideFilters
-                        ? (l10n?.showingMatchingOnly ?? "Showing only targets matching active filters tonight.")
-                        : (l10n?.searchIncludesOutsideFilters ?? "Search includes targets outside active filters tonight. Click any target to view its yearly window."),
+                        ? (l10n.showingMatchingOnly)
+                        : (l10n.searchIncludesOutsideFilters),
                     style: TextStyle(
                       fontSize: 11,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                      color: palette.textDim,
                     ),
                   ),
                 ),
@@ -527,8 +517,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   ),
                   child: Text(
                     _hideOutsideFilters
-                        ? (l10n?.showAll ?? "Show All")
-                        : (l10n?.hideNonMatching ?? "Hide Non-Matching"),
+                        ? (l10n.showAll)
+                        : (l10n.hideNonMatching),
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.amber),
                   ),
                 ),
@@ -547,22 +537,21 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
   Widget _buildTargetCard(TargetItem target, bool isSelected) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.text;
+    final accentColor = palette.accent;
 
     final card = Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: isSelected
-          ? (widget.isRedNightMode
-              ? AstroColors.nightVisionSurfaceVariant
-              : AstroColors.spaceDarkSurfaceVariant)
-          : (widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface),
+          ? palette.surfaceVariant
+          : palette.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(
           color: isSelected
               ? accentColor
-              : (widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder),
+              : palette.border,
           width: isSelected ? 1.5 : 1.0,
         ),
       ),
@@ -575,26 +564,18 @@ class _TargetSearchViewState extends State<TargetSearchView> {
           }
           setState(() => _selectedTarget = target);
           if (MediaQuery.of(context).size.width < 900) {
-            // Show bottom sheet on mobile screens
-            await showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (ctx) => FractionallySizedBox(
-                heightFactor: 0.85,
-                child: TargetDetailsSheet(
-                  target: target,
-                  night: widget.night,
-                  latitude: widget.filters.observerLat,
-                  longitude: widget.filters.observerLon,
-                  elevation: widget.filters.observerElevation,
-                  isRedNightMode: widget.isRedNightMode,
-                  availableLists: widget.availableLists,
-                  onAddToList: widget.onAddToList,
-                  filters: widget.filters,
-                  onClose: () => Navigator.of(ctx).pop(),
-                ),
-              ),
+            await TargetDetailsSheet.show(
+              context,
+              target: target,
+              night: widget.night,
+              latitude: widget.filters.observerLat,
+              longitude: widget.filters.observerLon,
+              elevation: widget.filters.observerElevation,
+              isRedNightMode: widget.isRedNightMode,
+              availableLists: widget.availableLists,
+              onAddToList: widget.onAddToList,
+              filters: widget.filters,
+              onClose: () => Navigator.of(context).pop(),
             );
             if (mounted) {
               setState(() => _selectedTarget = null);
@@ -667,8 +648,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     ),
                     child: Text(
                       isNarrow
-                          ? (l10n?.visibleDurationShort(target.visibleDurationHours.toStringAsFixed(1)) ?? "${target.visibleDurationHours.toStringAsFixed(1)}h visible")
-                          : (l10n?.visibleDurationAbove(target.visibleDurationHours.toStringAsFixed(1), widget.filters.minAltitude.round().toString()) ?? "${target.visibleDurationHours.toStringAsFixed(1)}h above ${widget.filters.minAltitude.round()}°"),
+                          ? (l10n.visibleDurationShort(target.visibleDurationHours.toStringAsFixed(1)))
+                          : (l10n.visibleDurationAbove(target.visibleDurationHours.toStringAsFixed(1), widget.filters.minAltitude.round().toString())),
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -685,8 +666,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     ),
                     child: Text(
                       isNarrow
-                          ? (l10n?.outsideFilters ?? "Outside Filters")
-                          : (l10n?.outsideActiveFilters ?? "Outside Active Filters"),
+                          ? (l10n.outsideFilters)
+                          : (l10n.outsideActiveFilters),
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -696,17 +677,17 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                   );
 
             String windowSpanText = "--:--";
-            String windowSpanTooltip = l10n?.notObservableFiltered ?? "Not observable with active filters";
+            String windowSpanTooltip = l10n.notObservableFiltered;
 
             if (target.visibleStartTime != null && target.meetsCriteria) {
               final startStr = DateFormat('HH:mm').format(target.visibleStartTime!);
               if (target.visibleEndTime != null) {
                 final endStr = DateFormat('HH:mm').format(target.visibleEndTime!);
                 windowSpanText = '$startStr – $endStr';
-                windowSpanTooltip = l10n?.visibilityWindowSpan(startStr, endStr) ?? "Visible: $startStr – $endStr";
+                windowSpanTooltip = l10n.visibilityWindowSpan(startStr, endStr);
               } else {
                 windowSpanText = startStr;
-                windowSpanTooltip = l10n?.visibleFromTooltip(startStr) ?? "Visible from $startStr";
+                windowSpanTooltip = l10n.visibleFromTooltip(startStr);
               }
             }
 
@@ -739,7 +720,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             Text(
                               target.peakAltitudeDeg > 0
                                   ? "${target.peakAltitudeDeg.toStringAsFixed(0)}°"
-                                  : (l10n?.belowZero ?? "Below 0°"),
+                                  : (l10n.belowZero),
                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -799,8 +780,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             const SizedBox(width: 4),
                             Text(
                               target.peakAltitudeDeg > 0
-                                  ? (l10n?.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0)) ?? "Peak: ${target.peakAltitudeDeg.toStringAsFixed(0)}°")
-                                  : (l10n?.belowHorizon ?? "Below Horizon"),
+                                  ? (l10n.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0)))
+                                  : (l10n.belowHorizon),
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                             ),
                           ],
@@ -832,7 +813,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                         durationPill,
                         const SizedBox(height: 4),
                         Text(
-                          l10n?.moonSeparationShort(target.minMoonSepDeg.toStringAsFixed(0)) ?? "Moon: ${target.minMoonSepDeg.toStringAsFixed(0)}°",
+                          l10n.moonSeparationShort(target.minMoonSepDeg.toStringAsFixed(0)),
                           style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
                         ),
                       ],
@@ -855,7 +836,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildSummaryChip(String label, IconData icon) {
-    final color = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final color = palette.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -878,8 +860,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   }
 
   Widget _buildSmallChip(String text, Color color) {
-    final isRed = widget.isRedNightMode;
-    final badgeColor = isRed ? AstroColors.nightVisionRed : color;
+    final palette = AstroPalette.of(context);
+    final badgeColor = palette.isRedNightMode ? palette.accent : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
       decoration: BoxDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/favorites_manager.dart';
 import 'package:app/models/filter_state.dart';
@@ -149,6 +150,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetDetailsSheet(
               target: targetA,
@@ -192,6 +195,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FavoritesView(
               night: sampleNight,
@@ -206,10 +211,10 @@ void main() {
       );
 
       // 1. Verify empty state
-      expect(find.text("No Favorite Targets Yet"), findsOneWidget);
-      expect(find.text("Explore Night Targets"), findsOneWidget);
+      expect(find.text("No favorite targets yet"), findsOneWidget);
+      expect(find.text("Explore Targets"), findsOneWidget);
 
-      await tester.tap(find.text("Explore Night Targets"));
+      await tester.tap(find.text("Explore Targets"));
       expect(explored, isTrue);
 
       // 2. Add targets and verify cards appear

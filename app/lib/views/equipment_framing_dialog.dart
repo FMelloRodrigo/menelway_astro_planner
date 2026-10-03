@@ -7,17 +7,18 @@ import '../l10n/app_localizations.dart';
 import '../models/equipment_profile.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import '../utils/astro_formatters.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'equipment_dialog.dart';
 
 class EquipmentFramingDialog extends StatefulWidget {
   final TargetItem target;
-  final bool isRedNightMode;
+  final bool? isRedNightMode;
 
   const EquipmentFramingDialog({
     super.key,
     required this.target,
-    required this.isRedNightMode,
+    this.isRedNightMode,
   });
 
   @override
@@ -62,25 +63,8 @@ class _EquipmentFramingDialogState extends State<EquipmentFramingDialog> {
     setState(() {});
   }
 
-  String _formatRa(double hours) {
-    var h = (hours % 24.0);
-    if (h < 0) h += 24.0;
-    final intHours = h.floor();
-    final remMinutes = (h - intHours) * 60.0;
-    final intMinutes = remMinutes.floor();
-    final seconds = (remMinutes - intMinutes) * 60.0;
-    return "${intHours.toString().padLeft(2, '0')}h ${intMinutes.toString().padLeft(2, '0')}m ${seconds.toStringAsFixed(1).padLeft(4, '0')}s";
-  }
-
-  String _formatDec(double degrees) {
-    final sign = degrees < 0 ? '-' : '+';
-    final absD = degrees.abs();
-    final intDeg = absD.floor();
-    final remMinutes = (absD - intDeg) * 60.0;
-    final intMinutes = remMinutes.floor();
-    final seconds = (remMinutes - intMinutes) * 60.0;
-    return "$sign${intDeg.toString().padLeft(2, '0')}° ${intMinutes.toString().padLeft(2, '0')}' ${seconds.toStringAsFixed(1).padLeft(4, '0')}\"";
-  }
+  String _formatRa(double hours) => AstroFormatters.formatRa(hours);
+  String _formatDec(double degrees) => AstroFormatters.formatDec(degrees);
 
   void _pan(double factorX, double factorY) {
     EquipmentManager.instance.panBy(
@@ -127,7 +111,7 @@ Sampling: ${rig.samplingCategory}
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(l10n?.framingSpecsCopied ?? "Framing specs copied to clipboard (ready for N.I.N.A. / ASIAIR / Stellarium)"),
+        content: Text(l10n.framingSpecsCopied),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -137,7 +121,6 @@ Sampling: ${rig.samplingCategory}
     showDialog(
       context: context,
       builder: (_) => EquipmentDialog(
-        isRedNightMode: widget.isRedNightMode,
         onSaved: () => setState(() {}),
       ),
     );
@@ -155,10 +138,11 @@ Sampling: ${rig.samplingCategory}
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
-    final surfaceColor = widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
+    final borderColor = palette.border;
+    final surfaceColor = palette.surface;
 
     final rig = EquipmentManager.instance.activeProfile;
     final angle = EquipmentManager.instance.cameraAngleDeg;
@@ -188,12 +172,12 @@ Sampling: ${rig.samplingCategory}
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${widget.target.displayName} — ${l10n?.framingSimulatorTitle ?? "Equipment Framing Simulator"}",
+                          "${widget.target.displayName} — ${l10n.framingSimulatorTitle}",
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          l10n?.activeRigLabel(rig.name) ?? "Active Rig: ${rig.name}",
+                          l10n.activeRigLabel(rig.name),
                           style: TextStyle(fontSize: 11, color: accentColor),
                         ),
                       ],
@@ -202,7 +186,7 @@ Sampling: ${rig.samplingCategory}
 
                   // Equipment Selector Dropdown
                   PopupMenuButton<String>(
-                    tooltip: l10n?.switchRigTooltip ?? "Switch Equipment Rig",
+                    tooltip: l10n.switchRigTooltip,
                     color: surfaceColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -234,7 +218,7 @@ Sampling: ${rig.samplingCategory}
                         children: [
                           Icon(Icons.tune_rounded, size: 14, color: accentColor),
                           const SizedBox(width: 4),
-                          Text(l10n?.rigsLabel ?? "Rigs", style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w600)),
+                          Text(l10n.rigsLabel, style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w600)),
                           const SizedBox(width: 2),
                           Icon(Icons.arrow_drop_down_rounded, size: 16, color: textColor),
                         ],
@@ -245,13 +229,13 @@ Sampling: ${rig.samplingCategory}
                   const SizedBox(width: 6),
                   IconButton(
                     icon: const Icon(Icons.settings_suggest_rounded, size: 20),
-                    tooltip: l10n?.manageRigsTooltip ?? "Manage Rigs / Add Gear",
+                    tooltip: l10n.manageRigsTooltip,
                     onPressed: _openEquipmentManager,
                   ),
                   const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 22),
-                    tooltip: l10n?.closeFramingSimulator ?? "Close Framing Simulator",
+                    tooltip: l10n.closeFramingSimulator,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -304,7 +288,6 @@ Sampling: ${rig.samplingCategory}
       child: TargetPreviewCanvas(
         key: _canvasKey,
         target: widget.target,
-        isRedNightMode: widget.isRedNightMode,
         height: double.infinity,
         enableExpandDialog: false,
         initialFramingEnabled: true,
@@ -318,8 +301,9 @@ Sampling: ${rig.samplingCategory}
     Color textColor,
     Color accentColor,
     Color borderColor,
-    AppLocalizations? l10n,
+    AppLocalizations l10n,
   ) {
+    final palette = AstroPalette.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -327,7 +311,7 @@ Sampling: ${rig.samplingCategory}
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+            color: palette.surfaceVariant,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: borderColor),
           ),
@@ -340,7 +324,7 @@ Sampling: ${rig.samplingCategory}
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      l10n?.cameraRotatorAngle ?? "Camera Rotator Angle",
+                      l10n.cameraRotatorAngle,
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -398,7 +382,7 @@ Sampling: ${rig.samplingCategory}
             Expanded(
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.fit_screen_rounded, size: 15),
-                label: Text(l10n?.fitToSensor ?? "Fit to Sensor", style: const TextStyle(fontSize: 12)),
+                label: Text(l10n.fitToSensor, style: const TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   foregroundColor: textColor,
@@ -409,10 +393,10 @@ Sampling: ${rig.samplingCategory}
             ),
             const SizedBox(width: 8),
             Tooltip(
-              message: l10n?.autoAlignTargetTooltip ?? "Auto-Align with Target Position Angle",
+              message: l10n.autoAlignTargetTooltip,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.auto_awesome_rounded, size: 13),
-                label: Text(l10n?.autoAlignTarget ?? "Align", style: const TextStyle(fontSize: 11)),
+                label: Text(l10n.autoAlignTarget, style: const TextStyle(fontSize: 11)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   foregroundColor: textColor,
@@ -428,8 +412,8 @@ Sampling: ${rig.samplingCategory}
 
         // Rule of Thirds Grid Toggle
         SwitchListTile(
-          title: Text(l10n?.ruleOfThirdsGrid ?? "Rule of Thirds Grid", style: TextStyle(fontSize: 13, color: textColor, fontWeight: FontWeight.w600)),
-          subtitle: Text(l10n?.ruleOfThirdsSubtitle ?? "Overlay composition cross-lines inside sensor frame", style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
+          title: Text(l10n.ruleOfThirdsGrid, style: TextStyle(fontSize: 13, color: textColor, fontWeight: FontWeight.w600)),
+          subtitle: Text(l10n.ruleOfThirdsSubtitle, style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
           value: EquipmentManager.instance.showRuleOfThirds,
           activeThumbColor: accentColor,
           dense: true,
@@ -450,14 +434,14 @@ Sampling: ${rig.samplingCategory}
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n?.opticalSystemMetrics ?? "Optical System Metrics", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+              Text(l10n.opticalSystemMetrics, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
               const Divider(height: 12),
-              _buildMetricRow(l10n?.effectiveFocalLength ?? "Effective Focal Length", "${rig.telescope.effectiveFocalLength.round()} mm (${rig.telescope.focalRatioString})", textColor),
-              _buildMetricRow(l10n?.sensorFovDegrees ?? "Sensor Field of View", "${rig.sensorFovWidthDeg.toStringAsFixed(2)}° × ${rig.sensorFovHeightDeg.toStringAsFixed(2)}°", textColor),
-              _buildMetricRow(l10n?.sensorFovArcmin ?? "Sensor FOV (Arcmin)", "${rig.sensorFovWidthArcmin.toStringAsFixed(1)}' × ${rig.sensorFovHeightArcmin.toStringAsFixed(1)}'", textColor),
-              _buildMetricRow(l10n?.imageScalePixelSize ?? "Image Scale (Pixel Size)", "${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\" / pixel", textColor),
-              _buildMetricRow(l10n?.samplingDiagnosis ?? "Sampling Diagnosis", rig.samplingCategory, accentColor),
-              _buildMetricRow(l10n?.sensorResolution ?? "Sensor Resolution", "${rig.camera.resolutionWidthPx} × ${rig.camera.resolutionHeightPx} (${rig.camera.megapixels.toStringAsFixed(1)} MP)", textColor),
+              _buildMetricRow(l10n.effectiveFocalLength, "${rig.telescope.effectiveFocalLength.round()} mm (${rig.telescope.focalRatioString})", textColor),
+              _buildMetricRow(l10n.sensorFovDegrees, "${rig.sensorFovWidthDeg.toStringAsFixed(2)}° × ${rig.sensorFovHeightDeg.toStringAsFixed(2)}°", textColor),
+              _buildMetricRow(l10n.sensorFovArcmin, "${rig.sensorFovWidthArcmin.toStringAsFixed(1)}' × ${rig.sensorFovHeightArcmin.toStringAsFixed(1)}'", textColor),
+              _buildMetricRow(l10n.imageScalePixelSize, "${rig.imageScaleArcsecPerPixel.toStringAsFixed(2)}\" / pixel", textColor),
+              _buildMetricRow(l10n.samplingDiagnosis, rig.samplingCategory, accentColor),
+              _buildMetricRow(l10n.sensorResolution, "${rig.camera.resolutionWidthPx} × ${rig.camera.resolutionHeightPx} (${rig.camera.megapixels.toStringAsFixed(1)} MP)", textColor),
             ],
           ),
         ),
@@ -468,7 +452,7 @@ Sampling: ${rig.samplingCategory}
         Align(
           alignment: Alignment.centerRight,
           child: Tooltip(
-            message: l10n?.copyFramingSpecsTooltip ?? "Copy Framing Specs (N.I.N.A. / ASIAIR / Stellarium)",
+            message: l10n.copyFramingSpecsTooltip,
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -487,7 +471,7 @@ Sampling: ${rig.samplingCategory}
                       Icon(Icons.copy_rounded, size: 12, color: accentColor),
                       const SizedBox(width: 4),
                       Text(
-                        l10n?.copyFramingInfo ?? "Copy Info",
+                        l10n.copyFramingInfo,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -505,7 +489,7 @@ Sampling: ${rig.samplingCategory}
     );
   }
 
-  Widget _buildPanCard(EquipmentProfile rig, Color textColor, Color accentColor, Color borderColor, AppLocalizations? l10n) {
+  Widget _buildPanCard(EquipmentProfile rig, Color textColor, Color accentColor, Color borderColor, AppLocalizations l10n) {
     final panX = EquipmentManager.instance.panOffsetArcminX;
     final panY = EquipmentManager.instance.panOffsetArcminY;
     final totalOffset = EquipmentManager.instance.totalPanOffsetArcmin;
@@ -539,7 +523,7 @@ Sampling: ${rig.samplingCategory}
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  l10n?.framingPanOffset ?? "Framing Pan Offset",
+                  l10n.framingPanOffset,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -554,8 +538,8 @@ Sampling: ${rig.samplingCategory}
                 ),
                 child: Text(
                   hasOffset
-                      ? (l10n?.offsetLabel(totalOffset.toStringAsFixed(1)) ?? "${totalOffset.toStringAsFixed(1)}' offset")
-                      : (l10n?.centered ?? "Centered"),
+                      ? (l10n.offsetLabel(totalOffset.toStringAsFixed(1)))
+                      : (l10n.centered),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -600,7 +584,7 @@ Sampling: ${rig.samplingCategory}
                         const SizedBox(width: 4),
                         _buildPanBtn(
                           Icons.filter_center_focus_rounded,
-                          l10n?.resetToCenter ?? "Reset to Target Center",
+                          l10n.resetToCenter,
                           () => EquipmentManager.instance.resetPan(),
                           hasOffset ? accentColor : textColor.withValues(alpha: 0.4),
                           isCenter: true,
@@ -630,7 +614,7 @@ Sampling: ${rig.samplingCategory}
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n?.stepSize ?? "Step Size", style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
+                    Text(l10n.stepSize, style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7), fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 4,
@@ -680,7 +664,7 @@ Sampling: ${rig.samplingCategory}
                       ),
                     ] else ...[
                       Text(
-                        l10n?.useArrowsToFrame ?? "Use arrows to frame off-center composition",
+                        l10n.useArrowsToFrame,
                         style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5), fontStyle: FontStyle.italic),
                       ),
                     ],

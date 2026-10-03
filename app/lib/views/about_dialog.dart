@@ -7,12 +7,7 @@ import '../theme/astro_theme.dart';
 /// A dedicated About window dialog for Menelway Astro Planner,
 /// sharing the project's origin story, design philosophy, and attribution.
 class AboutDialogView extends StatelessWidget {
-  final bool isRedNightMode;
-
-  const AboutDialogView({
-    super.key,
-    required this.isRedNightMode,
-  });
+  const AboutDialogView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,16 +15,13 @@ class AboutDialogView extends StatelessWidget {
     final isPt = Localizations.localeOf(context).languageCode == 'pt';
     final isNarrow = MediaQuery.of(context).size.width < 600;
 
-    final bgColor = isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface;
-    final cardBgColor = isRedNightMode
-        ? AstroColors.nightVisionSurfaceVariant
-        : AstroColors.spaceDarkSurfaceVariant;
-    final borderColor = isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
-    final textColor = isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final textSubColor = isRedNightMode
-        ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
-        : Colors.white.withValues(alpha: 0.75);
-    final accentColor = isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final bgColor = palette.surface;
+    final cardBgColor = palette.surfaceVariant;
+    final borderColor = palette.border;
+    final textColor = palette.textPrimary;
+    final textSubColor = palette.textSecondary;
+    final accentColor = palette.accent;
 
     return Dialog(
       backgroundColor: bgColor,
@@ -57,7 +49,7 @@ class AboutDialogView extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: isRedNightMode
+                    child: palette.isRedNightMode
                         ? ColorFiltered(
                             colorFilter: const ColorFilter.mode(
                               AstroColors.nightVisionRed,
@@ -111,7 +103,7 @@ class AboutDialogView extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: l10n?.aboutCloseBtn ?? "Close",
+                    tooltip: l10n.aboutCloseBtn,
                     icon: Icon(Icons.close_rounded, size: 20, color: textColor.withValues(alpha: 0.8)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -321,10 +313,10 @@ class AboutDialogView extends StatelessWidget {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: isRedNightMode
+                            colors: palette.isRedNightMode
                                 ? [
-                                    AstroColors.nightVisionSurfaceVariant,
-                                    AstroColors.nightVisionSurfaceVariant.withValues(alpha: 0.7),
+                                    cardBgColor,
+                                    cardBgColor.withValues(alpha: 0.7),
                                   ]
                                 : [
                                     accentColor.withValues(alpha: 0.08),
@@ -397,23 +389,23 @@ class AboutDialogView extends StatelessWidget {
                       Center(
                         child: FilledButton.icon(
                           onPressed: () => UrlService.openUrl("https://buymeacoffee.com/rodrigofmello"),
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.coffee_rounded,
                             size: 19,
-                            color: isRedNightMode ? Colors.black : const Color(0xFF000000),
+                            color: Color(0xFF000000),
                           ),
-                          label: Text(
+                          label: const Text(
                             "Buy Me A Coffee",
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.2,
-                              color: isRedNightMode ? Colors.black : const Color(0xFF000000),
+                              color: Color(0xFF000000),
                             ),
                           ),
                           style: FilledButton.styleFrom(
-                            backgroundColor: isRedNightMode
-                                ? AstroColors.nightVisionRed
+                            backgroundColor: palette.isRedNightMode
+                                ? palette.accent
                                 : const Color(0xFFFFDD00),
                             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(

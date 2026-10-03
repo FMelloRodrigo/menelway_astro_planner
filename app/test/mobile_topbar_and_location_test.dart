@@ -15,7 +15,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
-            l10nEn = AppLocalizations.of(context)!;
+            l10nEn = AppLocalizations.of(context);
             return Container();
           },
         ),
@@ -33,7 +33,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(
           builder: (context) {
-            l10nPt = AppLocalizations.of(context)!;
+            l10nPt = AppLocalizations.of(context);
             return Container();
           },
         ),

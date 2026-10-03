@@ -142,9 +142,7 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: const Scaffold(
-            body: ObservingSitesDialog(
-              isRedNightMode: false,
-            ),
+            body: ObservingSitesDialog(),
           ),
         ),
       );

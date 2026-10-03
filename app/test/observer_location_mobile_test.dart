@@ -51,7 +51,7 @@ void main() {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  l10n?.locationEditTitle ?? "Observer Location",
+                                  l10n.locationEditTitle,
                                   style: const TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w700),
                                 ),
                               ),
@@ -78,11 +78,11 @@ void main() {
                                                 dense: true,
                                                 title: Text(searchResults[idx].displayName),
                                                 subtitle: Text(
-                                                  l10n?.searchResultSubtitle(
+                                                  l10n.searchResultSubtitle(
                                                     searchResults[idx].latitude.toStringAsFixed(2),
                                                     searchResults[idx].longitude.toStringAsFixed(2),
                                                     searchResults[idx].elevation.round().toString(),
-                                                  ) ?? "",
+                                                  ),
                                                 ),
                                                 onTap: () {
                                                   setDialogState(() {

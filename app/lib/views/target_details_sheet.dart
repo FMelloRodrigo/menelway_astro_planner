@@ -17,12 +17,14 @@ import '../theme/astro_theme.dart';
 import '../widgets/target_preview_canvas.dart';
 import 'altitude_curve_chart.dart';
 import 'equipment_dialog.dart';
+import 'equipment_framing_dialog.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../core/target_description_service.dart';
 import '../core/url_service.dart';
 import '../models/terrain_profile_model.dart';
 import '../services/terrain_cache_service.dart';
+import '../utils/astro_formatters.dart';
 
 class TargetDetailsSheet extends StatefulWidget {
   final TargetItem target;
@@ -57,6 +59,47 @@ class TargetDetailsSheet extends StatefulWidget {
     this.plannedStartDate,
     this.plannedEndDate,
   });
+
+  /// Standard modal bottom sheet launcher for [TargetDetailsSheet].
+  static Future<T?> show<T>(
+    BuildContext context, {
+    required TargetItem target,
+    required NightSummary night,
+    required double latitude,
+    required double longitude,
+    required double elevation,
+    required List<ObservingListModel> availableLists,
+    required void Function(int listId, int dsoId, String notes) onAddToList,
+    bool isRedNightMode = false,
+    FilterState? filters,
+    VoidCallback? onClose,
+    AstroEngine? engine,
+    PeriodTargetItem? periodTarget,
+    DateTime? plannedStartDate,
+    DateTime? plannedEndDate,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => TargetDetailsSheet(
+        target: target,
+        night: night,
+        latitude: latitude,
+        longitude: longitude,
+        elevation: elevation,
+        isRedNightMode: isRedNightMode,
+        availableLists: availableLists,
+        onAddToList: onAddToList,
+        filters: filters,
+        onClose: onClose,
+        engine: engine,
+        periodTarget: periodTarget,
+        plannedStartDate: plannedStartDate,
+        plannedEndDate: plannedEndDate,
+      ),
+    );
+  }
 
   @override
   State<TargetDetailsSheet> createState() => _TargetDetailsSheetState();
@@ -218,27 +261,26 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     final l10n = AppLocalizations.of(context);
     if (widget.availableLists.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n?.noObservingListsFound ?? "No observing lists found. Create a list first!")),
+        SnackBar(content: Text(l10n.noObservingListsFound)),
       );
       return;
     }
 
     int selectedListId = widget.availableLists.first.id;
-    final notesController = TextEditingController(text: l10n?.defaultListNotes ?? "Target for imaging");
+    final notesController = TextEditingController(text: l10n.defaultListNotes);
 
     showDialog(
       context: context,
       builder: (ctx) {
+        final palette = AstroPalette.of(ctx);
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionSurface
-                  : AstroColors.spaceDarkSurface,
+              backgroundColor: palette.surface,
               title: Text(
-                l10n?.addToListDialogTitle(widget.target.displayName) ?? "Add ${widget.target.displayName} to List",
+                l10n.addToListDialogTitle(widget.target.displayName),
                 style: TextStyle(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                  color: palette.textPrimary,
                   fontSize: 16,
                 ),
               ),
@@ -247,11 +289,12 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 children: [
                   DropdownButtonFormField<int>(
                     initialValue: selectedListId,
-                    decoration: InputDecoration(labelText: l10n?.targetObservingListLabel ?? "Target Observing List"),
+                    decoration: InputDecoration(labelText: l10n.targetObservingListLabel),
+                    dropdownColor: palette.surface,
                     items: widget.availableLists.map((l) {
                       return DropdownMenuItem(
                         value: l.id,
-                        child: Text(l.name, style: const TextStyle(fontSize: 13)),
+                        child: Text(l.name, style: TextStyle(fontSize: 13, color: palette.textPrimary)),
                       );
                     }).toList(),
                     onChanged: (v) {
@@ -261,25 +304,25 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: notesController,
-                    decoration: InputDecoration(labelText: l10n?.sessionNotesLabel ?? "Session Notes / Filters"),
+                    decoration: InputDecoration(labelText: l10n.sessionNotesLabel),
                     style: TextStyle(
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                      color: palette.textPrimary,
                     ),
                   ),
                 ],
               ),
               actions: [
                 TextButton(
-                  child: Text(l10n?.cancel ?? "Cancel"),
+                  child: Text(l10n.cancel),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
                 FilledButton(
-                  child: Text(l10n?.addBtn ?? "Add"),
+                  child: Text(l10n.addBtn),
                   onPressed: () {
                     widget.onAddToList(selectedListId, widget.target.id, notesController.text);
                     Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n?.addedToObservingListSuccess(widget.target.displayName) ?? "Added ${widget.target.displayName} to observing list")),
+                      SnackBar(content: Text(l10n.addedToObservingListSuccess(widget.target.displayName))),
                     );
                   },
                 ),
@@ -293,15 +336,15 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
   void _queryOnlineSimbad() async {
     final l10n = AppLocalizations.of(context);
-    setState(() => _onlineInfo = l10n?.simbadQuerying ?? "Querying CDS / SIMBAD...");
+    setState(() => _onlineInfo = l10n.simbadQuerying);
     final result = await CatalogManager.queryOnlineObject(widget.target.name);
     if (mounted) {
       setState(() {
         if (result != null) {
           final objType = result['object_type']?.toString() ?? '';
-          _onlineInfo = l10n?.simbadVerified(objType) ?? "Verified on SIMBAD: $objType";
+          _onlineInfo = l10n.simbadVerified(objType);
         } else {
-          _onlineInfo = l10n?.simbadNotFound ?? "No additional online records found.";
+          _onlineInfo = l10n.simbadNotFound;
         }
       });
     }
@@ -310,8 +353,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
     final effectiveClose = widget.onClose ??
         (Navigator.of(context).canPop() ? () => Navigator.of(context).pop() : null);
 
@@ -322,19 +366,19 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       runSpacing: 4,
       children: [
         if (widget.target.catalog.isNotEmpty)
-          _buildBadge(widget.target.catalog, AstroColors.nebulaIndigo),
+          _buildBadge(widget.target.catalog, palette.nebulaIndigo),
         if (widget.target.messier != null && widget.target.messier!.isNotEmpty)
-          _buildBadge(widget.target.messier!, AstroColors.nebulaIndigo),
+          _buildBadge(widget.target.messier!, palette.nebulaIndigo),
         if (widget.target.caldwell != null && widget.target.caldwell!.isNotEmpty)
-          _buildBadge(widget.target.caldwell!, AstroColors.nebulaIndigo),
+          _buildBadge(widget.target.caldwell!, palette.nebulaIndigo),
         if (widget.target.arp != null && widget.target.arp!.isNotEmpty)
           _buildBadge(widget.target.arp!, Colors.deepOrangeAccent),
         if (widget.target.herschel != null && widget.target.herschel!.isNotEmpty)
           _buildBadge(widget.target.herschel!, Colors.amber.shade700),
         if (widget.target.objectType.isNotEmpty)
-          _buildBadge(localizeObjectType(widget.target.objectType, l10n), AstroColors.starlightCyan),
+          _buildBadge(localizeObjectType(widget.target.objectType, l10n), palette.starlightCyan),
         if (widget.target.constellation.isNotEmpty)
-          _buildBadge(widget.target.constellation, AstroColors.starGold),
+          _buildBadge(widget.target.constellation, palette.starGold),
       ],
     );
 
@@ -342,7 +386,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       height: 40,
       child: FilledButton.icon(
         icon: const Icon(Icons.playlist_add_rounded, size: 18),
-        label: Text(l10n?.addToObservingList ?? "Add to List"),
+        label: Text(l10n.addToObservingList),
         style: FilledButton.styleFrom(
           backgroundColor: accentColor,
           foregroundColor: Colors.black,
@@ -355,11 +399,12 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     );
 
     final isFav = FavoritesManager.instance.isFavorite(widget.target.id);
+    final heartColor = palette.isRedNightMode ? palette.accent : Colors.pinkAccent;
 
     final favBtn = Tooltip(
       message: isFav
-          ? (l10n?.removeFromFavorites ?? "Remove from Favorites")
-          : (l10n?.addToFavorites ?? "Add to Favorites"),
+          ? (l10n.removeFromFavorites)
+          : (l10n.addToFavorites),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {
@@ -369,8 +414,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             SnackBar(
               content: Text(
                 nowFav
-                    ? (l10n?.addedToFavorites(widget.target.displayName) ?? "Added ${widget.target.displayName} to Favorites")
-                    : (l10n?.removedFromFavorites(widget.target.displayName) ?? "Removed ${widget.target.displayName} to Favorites"),
+                    ? (l10n.addedToFavorites(widget.target.displayName))
+                    : (l10n.removedFromFavorites(widget.target.displayName)),
               ),
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -383,30 +428,18 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isFav
-                ? (widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.25)
-                    : Colors.pinkAccent.withValues(alpha: 0.18))
-                : (widget.isRedNightMode
-                    ? AstroColors.nightVisionSurfaceVariant
-                    : const Color(0xFF222F42)),
+                ? heartColor.withValues(alpha: 0.22)
+                : palette.surfaceVariant,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isFav
-                  ? (widget.isRedNightMode
-                      ? AstroColors.nightVisionRed
-                      : Colors.pinkAccent.withValues(alpha: 0.7))
-                  : (widget.isRedNightMode
-                      ? AstroColors.nightVisionBorder
-                      : Colors.white.withValues(alpha: 0.3)),
+              color: isFav ? heartColor : palette.border,
               width: 1.4,
             ),
           ),
           child: Icon(
             isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
             size: 20,
-            color: isFav
-                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
-                : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.85)),
+            color: isFav ? heartColor : palette.textSecondary,
           ),
         ),
       ),
@@ -414,7 +447,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
     final closeBtn = effectiveClose != null
         ? Tooltip(
-            message: l10n?.closeDetailsTooltip ?? "Close details (Esc)",
+            message: l10n.closeDetailsTooltip,
             child: InkWell(
               borderRadius: BorderRadius.circular(8),
               onTap: effectiveClose,
@@ -423,23 +456,17 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 height: 40,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : const Color(0xFF222F42),
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionBorder
-                        : Colors.white.withValues(alpha: 0.3),
+                    color: palette.border,
                     width: 1.4,
                   ),
                 ),
                 child: Icon(
                   Icons.close_rounded,
                   size: 20,
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed
-                      : Colors.white.withValues(alpha: 0.85),
+                  color: palette.textSecondary,
                 ),
               ),
             ),
@@ -449,10 +476,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     return Container(
       padding: EdgeInsets.all(isNarrow ? 16 : 20),
       decoration: BoxDecoration(
-        color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        color: palette.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         border: Border.all(
-          color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          color: palette.border,
         ),
       ),
       child: SingleChildScrollView(
@@ -478,7 +505,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   if (effectiveClose != null)
                     IconButton(
                       icon: Icon(Icons.close_rounded, color: textColor),
-                      tooltip: l10n?.closeBtn ?? "Close",
+                      tooltip: l10n.closeBtn,
                       onPressed: effectiveClose,
                     ),
                 ],
@@ -493,7 +520,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       height: 40,
                       child: FilledButton.icon(
                         icon: const Icon(Icons.playlist_add_rounded, size: 18),
-                        label: Text(l10n?.addToObservingList ?? "Add to Observing List"),
+                        label: Text(l10n.addToObservingList),
                         style: FilledButton.styleFrom(
                           backgroundColor: accentColor,
                           foregroundColor: Colors.black,
@@ -559,14 +586,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionSurfaceVariant
-                    : AstroColors.spaceDarkSurfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionBorder
-                      : AstroColors.spaceDarkBorder,
+                  color: palette.border,
                 ),
               ),
               child: isNarrow
@@ -576,21 +599,21 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           children: [
                             Expanded(
                               child: _buildMetric(
-                                l10n?.peakAltitude ?? "Peak Altitude",
+                                l10n.peakAltitude,
                                 "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
                                 Icons.trending_up_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                l10n?.transitTimeMetric ?? "Transit Time",
+                                l10n.transitTimeMetric,
                                 DateFormat('HH:mm').format(widget.target.transitTime),
                                 Icons.schedule_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                l10n?.visibleDurationMetric ?? "Visible Duration",
+                                l10n.visibleDurationMetric,
                                 "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
                                 Icons.timer_outlined,
                               ),
@@ -602,21 +625,21 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           children: [
                             Expanded(
                               child: _buildMetric(
-                                l10n?.moonDistanceMetric ?? "Moon Distance",
+                                l10n.moonDistanceMetric,
                                 "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
                                 Icons.brightness_2_outlined,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                l10n?.magnitudeLabel ?? "Magnitude",
+                                l10n.magnitudeLabel,
                                 widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
                                 Icons.auto_awesome_rounded,
                               ),
                             ),
                             Expanded(
                               child: _buildMetric(
-                                l10n?.apparentSizeMetric ?? "Apparent Size",
+                                l10n.apparentSizeMetric,
                                 widget.target.majorAxisArcmin != null
                                     ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
                                     : "N/A",
@@ -632,42 +655,42 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       children: [
                         Expanded(
                           child: _buildMetric(
-                            l10n?.peakAltitude ?? "Peak Altitude",
+                            l10n.peakAltitude,
                             "${widget.target.peakAltitudeDeg.toStringAsFixed(1)}°",
                             Icons.trending_up_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            l10n?.transitTimeMetric ?? "Transit Time",
+                            l10n.transitTimeMetric,
                             DateFormat('HH:mm').format(widget.target.transitTime),
                             Icons.schedule_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            l10n?.visibleDurationMetric ?? "Visible Duration",
+                            l10n.visibleDurationMetric,
                             "${widget.target.visibleDurationHours.toStringAsFixed(1)} hrs",
                             Icons.timer_outlined,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            l10n?.moonDistanceMetric ?? "Moon Distance",
+                            l10n.moonDistanceMetric,
                             "${widget.target.minMoonSepDeg.toStringAsFixed(0)}°",
                             Icons.brightness_2_outlined,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            l10n?.magnitudeLabel ?? "Magnitude",
+                            l10n.magnitudeLabel,
                             widget.target.magnitude != null ? "${widget.target.magnitude}" : "N/A",
                             Icons.auto_awesome_rounded,
                           ),
                         ),
                         Expanded(
                           child: _buildMetric(
-                            l10n?.apparentSizeMetric ?? "Apparent Size",
+                            l10n.apparentSizeMetric,
                             widget.target.majorAxisArcmin != null
                                 ? "${widget.target.majorAxisArcmin!.toStringAsFixed(1)}'"
                                 : "N/A",
@@ -730,7 +753,6 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                     customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
                         ? widget.filters!.getWindowEnd(widget.night.sunset)
                         : null,
-                    isRedNightMode: widget.isRedNightMode,
                     filterState: effectiveFilters,
                   );
                 },
@@ -754,7 +776,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       const SizedBox(height: 4),
                       TextButton.icon(
                         icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                        label: Text(l10n?.verifyOnlineSimbad ?? "Verify Online (SIMBAD)"),
+                        label: Text(l10n.verifyOnlineSimbad),
                         onPressed: _queryOnlineSimbad,
                       ),
                     ],
@@ -773,7 +795,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.travel_explore_rounded, size: 16),
-                        label: Text(l10n?.verifyOnlineSimbad ?? "Verify Online (SIMBAD)"),
+                        label: Text(l10n.verifyOnlineSimbad),
                         onPressed: _queryOnlineSimbad,
                       ),
                     ],
@@ -793,20 +815,18 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   Widget _buildDescriptionCard() {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isRed = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     if (_isLoadingDescription) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isRed
-              ? AstroColors.nightVisionSurfaceVariant
-              : AstroColors.spaceDarkSurfaceVariant,
+          color: palette.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+            color: palette.border,
           ),
         ),
         child: Row(
@@ -825,7 +845,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 "Loading target overview...",
                 style: TextStyle(
                   fontSize: 12,
-                  color: textColor.withValues(alpha: 0.7),
+                  color: palette.textSecondary,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -839,12 +859,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isRed
-              ? AstroColors.nightVisionSurfaceVariant
-              : AstroColors.spaceDarkSurfaceVariant,
+          color: palette.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+            color: palette.border,
           ),
         ),
         child: Row(
@@ -852,13 +870,13 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             Icon(
               Icons.menu_book_outlined,
               size: 16,
-              color: textColor.withValues(alpha: 0.5),
+              color: palette.textTertiary,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 "No local description available.",
-                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6)),
+                style: TextStyle(fontSize: 12, color: palette.textSecondary),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -885,12 +903,10 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isRed
-            ? AstroColors.nightVisionSurfaceVariant
-            : AstroColors.spaceDarkSurfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          color: palette.border,
         ),
       ),
       child: Column(
@@ -973,13 +989,13 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   Widget _buildMetric(String label, String value, IconData icon) {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
+    final palette = AstroPalette.of(context);
     return Column(
       children: [
-        Icon(icon, size: 16, color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan),
+        Icon(icon, size: 16, color: palette.accent),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
-        Text(label, style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6))),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: palette.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 10, color: palette.textSecondary)),
       ],
     );
   }
@@ -990,9 +1006,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     DateTime endDate,
   ) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isRed = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     final startStr = DateFormat('MMM d').format(startDate);
     final endStr = DateFormat('MMM d').format(endDate);
@@ -1002,13 +1018,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isRed
-            ? AstroColors.nightVisionSurfaceVariant
-            : AstroColors.spaceDarkSurfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: hasPeak
-              ? (isRed ? AstroColors.nightVisionRed : AstroColors.starlightCyan.withValues(alpha: 0.5))
+              ? accentColor.withValues(alpha: 0.5)
               : Colors.orange.withValues(alpha: 0.4),
           width: 1.2,
         ),
@@ -1026,8 +1040,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  l10n?.plannedPeriodBannerTitle(startStr, endStr) ??
-                      "PLANNED PERIOD: $startStr – $endStr",
+                  l10n.plannedPeriodBannerTitle(startStr, endStr),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -1040,16 +1053,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AstroColors.visibleGreen.withValues(alpha: 0.15),
+                    color: palette.visibleGreen.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AstroColors.visibleGreen.withValues(alpha: 0.4)),
+                    border: Border.all(color: palette.visibleGreen.withValues(alpha: 0.4)),
                   ),
                   child: Text(
-                    l10n?.periodPeakDate(peakDateStr) ?? "Period Peak: $peakDateStr",
-                    style: const TextStyle(
+                    l10n.periodPeakDate(peakDateStr),
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AstroColors.visibleGreen,
+                      color: palette.visibleGreen,
                     ),
                   ),
                 ),
@@ -1058,8 +1071,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           const SizedBox(height: 8),
           if (hasPeak) ...[
             Text(
-              l10n?.periodBestNightSummary(peakDateStr, periodTarget.maxHoursObservable.toStringAsFixed(1)) ??
-                  "Best Night in Window: $peakDateStr (${periodTarget.maxHoursObservable.toStringAsFixed(1)}h visible)",
+              l10n.periodBestNightSummary(peakDateStr, periodTarget.maxHoursObservable.toStringAsFixed(1)),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -1071,7 +1083,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               children: [
                 Expanded(
                   child: Text(
-                    "${l10n?.periodDaysObservableSummary(periodTarget.observableDaysCount, periodTarget.totalPeriodDays) ?? '${periodTarget.observableDaysCount} of ${periodTarget.totalPeriodDays} nights observable in this window'} • ${l10n?.periodPeakAltSummary(periodTarget.peakAltitudeDeg.toStringAsFixed(1)) ?? 'Peak Altitude: ${periodTarget.peakAltitudeDeg.toStringAsFixed(1)}°'}",
+                    "${l10n.periodDaysObservableSummary(periodTarget.observableDaysCount, periodTarget.totalPeriodDays)} • ${l10n.periodPeakAltSummary(periodTarget.peakAltitudeDeg.toStringAsFixed(1))}",
                     style: TextStyle(
                       fontSize: 11,
                       color: textColor.withValues(alpha: 0.7),
@@ -1092,8 +1104,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    l10n?.periodEvaluatedNote(peakDateStr) ??
-                        "Metrics and altitude curve below are evaluated for $peakDateStr (period peak night).",
+                    l10n.periodEvaluatedNote(peakDateStr),
                     style: TextStyle(
                       fontSize: 10,
                       fontStyle: FontStyle.italic,
@@ -1105,8 +1116,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             ),
           ] else ...[
             Text(
-              l10n?.periodNotObservableSummary ??
-                  "Target does not meet active filter limits during this period (0 days observable).",
+              l10n.periodNotObservableSummary,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1124,8 +1134,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    l10n?.periodEvaluatedStartDateNote(startStr) ??
-                        "Metrics and altitude curve below are evaluated for $startStr (period start).",
+                    l10n.periodEvaluatedStartDateNote(startStr),
                     style: TextStyle(
                       fontSize: 10,
                       fontStyle: FontStyle.italic,
@@ -1142,8 +1151,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   }
 
   Widget _buildBadge(String text, Color color) {
-    final isRed = widget.isRedNightMode;
-    final badgeColor = isRed ? AstroColors.nightVisionRed : color;
+    final palette = AstroPalette.of(context);
+    final badgeColor = palette.isRedNightMode ? palette.accent : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -1178,15 +1187,15 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
   Widget _buildVisualPreviewCard() {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isRed = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     return Container(
       decoration: BoxDecoration(
-        color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder),
+        border: Border.all(color: palette.border),
       ),
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -1202,7 +1211,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  l10n?.visualSkyPreview ?? "Visual Sky Preview",
+                  l10n.visualSkyPreview,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -1214,15 +1223,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               const SizedBox(width: 6),
               // Equipment Gear Dialog Button
               InkWell(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => EquipmentDialog(
-                      isRedNightMode: widget.isRedNightMode,
-                      onSaved: () => setState(() {}),
-                    ),
-                  );
-                },
+                onTap: _openEquipmentDialog,
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -1234,11 +1235,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.tune_rounded, size: 12, color: AstroColors.starGold),
+                      Icon(Icons.tune_rounded, size: 12, color: palette.starGold),
                       const SizedBox(width: 3),
                       Text(
-                        l10n?.gearButton ?? "Gear",
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AstroColors.starGold),
+                        l10n.gearButton,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: palette.starGold),
                       ),
                     ],
                   ),
@@ -1249,28 +1250,47 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           const SizedBox(height: 10),
           TargetPreviewCanvas(
             target: widget.target,
-            isRedNightMode: widget.isRedNightMode,
             height: 240,
             enableExpandDialog: true,
+            onOpenFramingDialog: () => _openFramingDialog(widget.target),
+            onOpenEquipmentDialog: _openEquipmentDialog,
           ),
         ],
       ),
     );
   }
 
+  void _openFramingDialog(TargetItem target) {
+    showDialog(
+      context: context,
+      builder: (_) => EquipmentFramingDialog(
+        target: target,
+      ),
+    );
+  }
+
+  void _openEquipmentDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => EquipmentDialog(
+        onSaved: () => setState(() {}),
+      ),
+    );
+  }
+
   Widget _buildYearlyVisibilityCard() {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isRed = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     if (_isLoadingYearly) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+          color: palette.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isRed ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder),
+          border: Border.all(color: palette.border),
         ),
         child: Row(
           children: [
@@ -1282,8 +1302,8 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                l10n?.simulatingYearlyVisibility ?? "Simulating 12-month visibility across the year...",
-                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                l10n.simulatingYearlyVisibility,
+                style: TextStyle(fontSize: 11, color: palette.textSecondary),
               ),
             ),
           ],
@@ -1295,79 +1315,30 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
     final y = _yearlyVisibility!;
     final now = widget.night.sunset;
-    final currentMonth = now.month;
-    final currentDay = now.day;
     final inSeasonTonight = y.isDateObservable(now);
     final isVisibleTonight = inSeasonTonight && (_showFilteredYearly ? widget.target.meetsCriteria : true);
 
     // Determine tonight status text factoring in days remaining until season start
-    String tonightStatusText;
-
-    if (!y.canEverReachMinAlt) {
-      tonightStatusText = l10n?.unreachable ?? "Unreachable";
-    } else if (y.totalObservableDays == 0) {
-      tonightStatusText = _showFilteredYearly
-          ? (l10n?.notObservableFiltered ?? "Not observable with active filters")
-          : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
-    } else if (widget.periodTarget != null) {
-      final p = widget.periodTarget!;
-      if (p.isObservable && p.observableDaysCount > 0) {
-        final startM = localizeMonthAbbr(p.startMonth, l10n);
-        final dateStr = "$startM ${p.startDay}";
-        if (p.startMonth == p.endMonth && p.startDay == p.endDay) {
-          tonightStatusText = l10n?.visibleOnDate(dateStr) ?? "Observable on $dateStr";
-        } else {
-          tonightStatusText = l10n?.visibleFromDate(dateStr) ?? "Observable from $dateStr";
-        }
-      } else {
-        tonightStatusText = _showFilteredYearly
-            ? (l10n?.notObservableFiltered ?? "Not observable with active filters")
-            : (l10n?.notObservableBelowLimits ?? "Not observable (below limits)");
-      }
-    } else if (isVisibleTonight) {
-      tonightStatusText = l10n?.visibleTonight ?? "Visible Tonight";
-    } else {
-      final thisYear = now.year;
-      DateTime seasonStart = DateTime(thisYear, y.startMonth, y.startDay);
-      if (seasonStart.isBefore(now) && y.startMonth > y.endMonth && currentMonth <= y.endMonth) {
-        seasonStart = DateTime(thisYear - 1, y.startMonth, y.startDay);
-      }
-      DateTime seasonEnd = DateTime(thisYear, y.endMonth, y.endDay);
-      if (y.endMonth < y.startMonth && currentMonth >= y.startMonth) {
-        seasonEnd = DateTime(thisYear + 1, y.endMonth, y.endDay);
-      }
-
-      if (now.isBefore(seasonStart)) {
-        final diffDays = seasonStart.difference(DateTime(thisYear, currentMonth, currentDay)).inDays;
-        final startM = localizeMonthAbbr(y.startMonth, l10n);
-        if (diffDays == 1) {
-          tonightStatusText = l10n?.startsTomorrow("$startM ${y.startDay}") ?? "Starts tomorrow ($startM ${y.startDay})";
-        } else if (diffDays <= 60) {
-          tonightStatusText = l10n?.startsInDays(diffDays, "$startM ${y.startDay}") ?? "Starts in $diffDays days ($startM ${y.startDay})";
-        } else {
-          tonightStatusText = l10n?.startsOnDate("$startM ${y.startDay}") ?? "Starts $startM ${y.startDay}";
-        }
-      } else if (!now.isAfter(seasonEnd)) {
-        final dateStr = DateFormat('MMM d').format(now);
-        tonightStatusText = widget.periodTarget != null
-            ? (l10n?.outsideFiltersOnDate(dateStr) ?? "Outside limits on $dateStr")
-            : (l10n?.inSeasonBelowLimits ?? "In Season · Below limits tonight");
-      } else {
-        final endM = localizeMonthAbbr(y.endMonth, l10n);
-        tonightStatusText = l10n?.offSeasonEnded("$endM ${y.endDay}") ?? "Off-Season (Ended $endM ${y.endDay})";
-      }
-    }
+    final seasonStatus = SeasonStatusCalculator.computeStatus(
+      yearly: y,
+      isVisibleTonight: isVisibleTonight,
+      showFilteredYearly: _showFilteredYearly,
+      l10n: l10n,
+      periodTarget: widget.periodTarget,
+      referenceDate: now,
+    );
+    final tonightStatusText = seasonStatus.statusText;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isRed
-              ? AstroColors.nightVisionBorder
+          color: palette.isRedNightMode
+              ? palette.border
               : (y.canEverReachMinAlt
-                  ? AstroColors.starlightCyan.withValues(alpha: 0.3)
+                  ? palette.accent.withValues(alpha: 0.3)
                   : Colors.redAccent.withValues(alpha: 0.35)),
           width: 1.2,
         ),
@@ -1385,7 +1356,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    l10n?.simulationModeLabel ?? "SIMULATION MODE:",
+                    l10n.simulationModeLabel,
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
@@ -1415,7 +1386,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                       ),
                       child: Text(
-                        l10n?.activeFiltersMode ?? "Active Filters",
+                        l10n.activeFiltersMode,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: _showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
@@ -1446,7 +1417,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         ),
                       ),
                       child: Text(
-                        l10n?.fullSkyNightMode ?? "Full Sky & Night",
+                        l10n.fullSkyNightMode,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: !_showFilteredYearly ? FontWeight.w700 : FontWeight.w500,
@@ -1479,7 +1450,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n?.yearlyObservingWindow ?? "YEARLY OBSERVING WINDOW",
+                          l10n.yearlyObservingWindow,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -1512,11 +1483,11 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              l10n?.yearlyDaysObservablePeak(
+                              l10n.yearlyDaysObservablePeak(
                                 y.totalObservableDays,
                                 y.maxHoursInPeak.toStringAsFixed(1),
                                 "${localizeMonthAbbr(y.peakMonth, l10n)} ${y.peakDay}",
-                              ) ?? "${y.totalObservableDays} days observable this year • Peak: ${y.maxHoursInPeak.toStringAsFixed(1)}h on ${y.months[y.peakMonth - 1].name} ${y.peakDay}",
+                              ),
                               style: TextStyle(
                                 fontSize: 10,
                                 color: textColor.withValues(alpha: 0.6),
@@ -1529,24 +1500,20 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                 ],
               );
 
-              final isPositiveStatus = widget.periodTarget != null
-                  ? (widget.periodTarget!.isObservable && widget.periodTarget!.observableDaysCount > 0)
-                  : isVisibleTonight;
-              final isZeroDays = widget.periodTarget != null
-                  ? (!widget.periodTarget!.isObservable || widget.periodTarget!.observableDaysCount == 0 || !y.canEverReachMinAlt)
-                  : (y.totalObservableDays == 0 || !y.canEverReachMinAlt);
+              final isPositiveStatus = seasonStatus.isPositive;
+              final isZeroDays = seasonStatus.isZeroDays;
               final statusPill = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isPositiveStatus
-                      ? AstroColors.visibleGreen.withValues(alpha: 0.15)
+                      ? palette.visibleGreen.withValues(alpha: 0.15)
                       : (isZeroDays
                           ? Colors.orange.withValues(alpha: 0.15)
                           : Colors.amber.withValues(alpha: 0.15)),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: isPositiveStatus
-                        ? AstroColors.visibleGreen.withValues(alpha: 0.5)
+                        ? palette.visibleGreen.withValues(alpha: 0.5)
                         : (isZeroDays
                             ? Colors.orange.withValues(alpha: 0.5)
                             : Colors.amber.withValues(alpha: 0.5)),
@@ -1561,7 +1528,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                           : (isZeroDays ? Icons.filter_alt_off_rounded : Icons.schedule_rounded),
                       size: 13,
                       color: isPositiveStatus
-                          ? AstroColors.visibleGreen
+                          ? palette.visibleGreen
                           : (isZeroDays ? Colors.orange : Colors.amber),
                     ),
                     const SizedBox(width: 4),
@@ -1571,7 +1538,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: isPositiveStatus
-                            ? AstroColors.visibleGreen
+                            ? palette.visibleGreen
                             : (isZeroDays ? Colors.orange : Colors.amber),
                       ),
                     ),
@@ -1615,23 +1582,17 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
               Color monthTextColor;
 
               if (isPeak) {
-                bgColor = isRed
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.3)
-                    : AstroColors.starGold.withValues(alpha: 0.22);
-                borderColor = isRed ? AstroColors.nightVisionRed : AstroColors.starGold;
-                monthTextColor = isRed ? AstroColors.nightVisionRed : AstroColors.starGold;
+                bgColor = palette.starGold.withValues(alpha: 0.22);
+                borderColor = palette.starGold;
+                monthTextColor = palette.starGold;
               } else if (isObservable) {
-                bgColor = isRed
-                    ? AstroColors.nightVisionRed.withValues(alpha: isPartial ? 0.08 : 0.15)
-                    : AstroColors.starlightCyan.withValues(alpha: isPartial ? 0.08 : 0.15);
-                borderColor = isRed
-                    ? AstroColors.nightVisionRed.withValues(alpha: isPartial ? 0.6 : 0.4)
-                    : AstroColors.starlightCyan.withValues(alpha: isPartial ? 0.6 : 0.4);
-                monthTextColor = isRed ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+                bgColor = palette.accent.withValues(alpha: isPartial ? 0.08 : 0.15);
+                borderColor = palette.accent.withValues(alpha: isPartial ? 0.6 : 0.4);
+                monthTextColor = palette.accent;
               } else {
                 bgColor = Colors.black.withValues(alpha: 0.25);
                 borderColor = Colors.white.withValues(alpha: 0.08);
-                monthTextColor = textColor.withValues(alpha: 0.35);
+                monthTextColor = palette.textTertiary;
               }
 
               return Expanded(
@@ -1716,17 +1677,17 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
             alignment: WrapAlignment.spaceBetween,
             children: [
               Text(
-                l10n?.theoreticalMaxAtTransit(
+                l10n.theoreticalMaxAtTransit(
                   y.theoreticalMaxAltitudeDeg.toStringAsFixed(1),
                   y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : '',
-                ) ?? "Theoretical max: ${y.theoreticalMaxAltitudeDeg.toStringAsFixed(1)}° at transit${y.totalObservableDays > 0 ? ' • ${y.totalObservableDays} days/yr' : ''}",
+                ),
                 style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
               ),
               Text(
-                l10n?.limitsSubtitle(
+                l10n.limitsSubtitle(
                   widget.filters?.minAltitude.round().toString() ?? '30',
                   widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0',
-                ) ?? "Limits: ≥${widget.filters?.minAltitude.round() ?? 30}° for ≥${widget.filters?.minDurationHours.toStringAsFixed(1) ?? '2.0'}h",
+                ),
                 style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
               ),
             ],

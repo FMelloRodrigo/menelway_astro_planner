@@ -231,6 +231,16 @@ class AstroBridge implements AstroEngine {
     return _instance!;
   }
 
+  /// Registers AstroBridge as the default engine provider for AstroEngine.instance.
+  static void registerAsDefault() {
+    AstroEngine.defaultFactory = () => AstroBridge.instance;
+  }
+
+  /// Creates a dedicated AstroBridge instance (e.g. for worker isolates).
+  factory AstroBridge.create({DynamicLibrary? library}) {
+    return AstroBridge._(library: library);
+  }
+
   /// Creates an AstroBridge instance backed by a custom DynamicLibrary.
   factory AstroBridge.fromLibrary(DynamicLibrary library) {
     return AstroBridge._(library: library);
@@ -581,7 +591,6 @@ class AstroBridge implements AstroEngine {
     }
   }
 
-  @override
   @override
   List<TargetItem> getPlanets({
     required FilterState filters,

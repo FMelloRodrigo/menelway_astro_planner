@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/favorites_manager.dart';
 import '../l10n/app_localizations.dart';
@@ -7,6 +6,7 @@ import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
+import '../services/csv_export_service.dart';
 import '../theme/astro_theme.dart';
 import 'equipment_framing_dialog.dart';
 import 'target_details_sheet.dart';
@@ -94,61 +94,12 @@ class _FavoritesViewState extends State<FavoritesView> {
 
   void _exportFavoritesCsv(List<TargetItem> items) {
     if (items.isEmpty) return;
-
-    final buffer = StringBuffer();
-    buffer.writeln("Name,Catalog,Type,Constellation,RA_Hours,Dec_Deg,Magnitude,Size_Arcmin,PositionAngle_Deg");
-    for (final t in items) {
-      buffer.writeln(
-        '"${t.displayName}","${t.catalog}","${t.objectType}","${t.constellation}",'
-        '${t.raHours.toStringAsFixed(4)},${t.decDegrees.toStringAsFixed(4)},'
-        '${t.magnitude?.toStringAsFixed(2) ?? ""},'
-        '${t.majorAxisArcmin?.toStringAsFixed(1) ?? ""},'
-        '${t.positionAngleDeg?.toStringAsFixed(1) ?? ""}',
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        title: Text(
-          "Exported Favorites (${items.length} targets)",
-          style: TextStyle(color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white),
-        ),
-        content: SizedBox(
-          width: 500,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SelectableText(
-                buffer.toString(),
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.copy_rounded, size: 16),
-            label: const Text("Copy CSV"),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: buffer.toString()));
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Favorites CSV copied to clipboard"),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-          FilledButton(
-            child: const Text("Done"),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-        ],
-      ),
+    final csv = CsvExportService.exportFavoritesCsv(items);
+    CsvExportService.showCsvDialog(
+      context,
+      title: "Exported Favorites (${items.length} targets)",
+      csvContent: csv,
+      copiedMessage: "Favorites CSV copied to clipboard",
     );
   }
 
@@ -167,44 +118,91 @@ class _FavoritesViewState extends State<FavoritesView> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-          title: Text(
-            "Add All Favorites to Observing List",
-            style: TextStyle(
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Add ${items.length} favorite targets to:",
-                style: TextStyle(
-                  color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.8),
-                  fontSize: 13,
-                ),
+      builder: (ctx) {
+        final palette = AstroPalette.of(ctx);
+        return StatefulBuilder(
+          builder: (context, setDlgState) => AlertDialog(
+            backgroundColor: palette.surface,
+            title: Text(
+              "Add All Favorites to Observing List",
+              style: TextStyle(
+                color: palette.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                initialValue: selectedListId,
-                decoration: const InputDecoration(labelText: "Target Observing List"),
-                dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-                items: widget.availableLists.map((l) {
-                  return DropdownMenuItem<int>(
-                    value: l.id,
-                    child: Text(l.name),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Add ${items.length} favorite targets to:",
+                  style: TextStyle(
+                    color: palette.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: selectedListId,
+                  decoration: const InputDecoration(labelText: "Target Observing List"),
+                  dropdownColor: palette.surface,
+                  items: widget.availableLists.map((l) {
+                    return DropdownMenuItem<int>(
+                      value: l.id,
+                      child: Text(l.name),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setDlgState(() => selectedListId = val);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+              FilledButton(
+                child: const Text("Add All"),
+                onPressed: () {
+                  for (final t in items) {
+                    widget.onAddToList(selectedListId, t.id, "Added from Favorites");
+                  }
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Added ${items.length} favorite targets to observing list"),
+                      behavior: SnackBarBehavior.floating,
+                    ),
                   );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) setDlgState(() => selectedListId = val);
                 },
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmClearFavorites() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final palette = AstroPalette.of(ctx);
+        return AlertDialog(
+          backgroundColor: palette.surface,
+          title: Text(
+            "Clear All Favorites?",
+            style: TextStyle(
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            "Are you sure you want to remove all saved targets from your favorites list?",
+            style: TextStyle(color: palette.textSecondary),
           ),
           actions: [
             TextButton(
@@ -212,85 +210,38 @@ class _FavoritesViewState extends State<FavoritesView> {
               onPressed: () => Navigator.of(ctx).pop(),
             ),
             FilledButton(
-              child: const Text("Add All"),
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+              child: const Text("Clear All"),
               onPressed: () {
-                for (final t in items) {
-                  widget.onAddToList(selectedListId, t.id, "Added from Favorites");
-                }
+                FavoritesManager.instance.clear();
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Added ${items.length} favorite targets to observing list"),
+                  const SnackBar(
+                    content: Text("All favorites cleared"),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _confirmClearFavorites() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        title: Text(
-          "Clear All Favorites?",
-          style: TextStyle(
-            color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: const Text(
-          "Are you sure you want to remove all saved targets from your favorites list?",
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text("Clear All"),
-            onPressed: () {
-              FavoritesManager.instance.clear();
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("All favorites cleared"),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   void _openDetailsModal(TargetItem target) {
     if (widget.night == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.88,
-        child: TargetDetailsSheet(
-          target: target,
-          night: widget.night!,
-          latitude: widget.filters.observerLat,
-          longitude: widget.filters.observerLon,
-          elevation: widget.filters.observerElevation,
-          isRedNightMode: widget.isRedNightMode,
-          filters: widget.filters,
-          availableLists: widget.availableLists,
-          onAddToList: widget.onAddToList,
-        ),
-      ),
+    TargetDetailsSheet.show(
+      context,
+      target: target,
+      night: widget.night!,
+      latitude: widget.filters.observerLat,
+      longitude: widget.filters.observerLon,
+      elevation: widget.filters.observerElevation,
+      isRedNightMode: widget.isRedNightMode,
+      filters: widget.filters,
+      availableLists: widget.availableLists,
+      onAddToList: widget.onAddToList,
     );
   }
 
@@ -299,13 +250,13 @@ class _FavoritesViewState extends State<FavoritesView> {
       context: context,
       builder: (_) => EquipmentFramingDialog(
         target: target,
-        isRedNightMode: widget.isRedNightMode,
       ),
     );
   }
 
-  Widget _buildEmptyState(Color textColor, Color accentColor) {
+  Widget _buildEmptyState(AstroPalette palette) {
     final l10n = AppLocalizations.of(context);
+    final heartColor = palette.isRedNightMode ? palette.accent : Colors.pinkAccent;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -316,37 +267,37 @@ class _FavoritesViewState extends State<FavoritesView> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent).withValues(alpha: 0.12),
+                color: heartColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent).withValues(alpha: 0.35),
+                  color: heartColor.withValues(alpha: 0.35),
                   width: 2,
                 ),
               ),
               child: Icon(
                 Icons.favorite_border_rounded,
                 size: 40,
-                color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                color: heartColor,
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              l10n?.noFavoritesYet ?? "No Favorite Targets Yet",
+              l10n.noFavoritesYet,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: textColor,
+                color: palette.textPrimary,
               ),
             ),
             const SizedBox(height: 10),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Text(
-                l10n?.noFavoritesDesc ?? "Save your favorite deep-sky targets by clicking the heart button next to 'Add to List' on any target's details card for fast planning and framing.",
+                l10n.noFavoritesDesc,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: textColor.withValues(alpha: 0.7),
+                  color: palette.textSecondary,
                   height: 1.4,
                 ),
               ),
@@ -354,9 +305,9 @@ class _FavoritesViewState extends State<FavoritesView> {
             const SizedBox(height: 24),
             FilledButton.icon(
               icon: const Icon(Icons.radar_rounded, size: 18),
-              label: Text(l10n?.exploreTargets ?? "Explore Night Targets"),
+              label: Text(l10n.exploreTargets),
               style: FilledButton.styleFrom(
-                backgroundColor: accentColor,
+                backgroundColor: palette.accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
@@ -368,16 +319,10 @@ class _FavoritesViewState extends State<FavoritesView> {
     );
   }
 
-  Widget _buildFavoriteCard(TargetItem target, bool isSelected, bool isWide, Color textColor, Color accentColor) {
-    final borderColor = isSelected
-        ? accentColor
-        : (widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder);
-
-    final cardBg = isSelected
-        ? (widget.isRedNightMode
-            ? AstroColors.nightVisionSurfaceVariant
-            : AstroColors.spaceDarkSurfaceVariant)
-        : (widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface);
+  Widget _buildFavoriteCard(TargetItem target, bool isSelected, bool isWide, AstroPalette palette) {
+    final borderColor = isSelected ? palette.accent : palette.border;
+    final cardBg = isSelected ? palette.surfaceVariant : palette.surface;
+    final heartColor = palette.isRedNightMode ? palette.accent : Colors.pinkAccent;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -412,7 +357,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: textColor,
+                            color: palette.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -420,9 +365,9 @@ class _FavoritesViewState extends State<FavoritesView> {
                           spacing: 6,
                           runSpacing: 4,
                           children: [
-                            _buildBadge(target.catalog, Colors.teal, widget.isRedNightMode),
-                            _buildBadge(target.objectType, AstroColors.starlightCyan, widget.isRedNightMode),
-                            _buildBadge(target.constellation, AstroColors.starGold, widget.isRedNightMode),
+                            _buildBadge(target.catalog, palette.deepSkyTeal, palette),
+                            _buildBadge(target.objectType, palette.starlightCyan, palette),
+                            _buildBadge(target.constellation, palette.starGold, palette),
                           ],
                         ),
                       ],
@@ -434,7 +379,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                     child: IconButton(
                       icon: Icon(
                         Icons.favorite_rounded,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                        color: heartColor,
                         size: 20,
                       ),
                       onPressed: () {
@@ -468,11 +413,11 @@ class _FavoritesViewState extends State<FavoritesView> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.auto_awesome_rounded, size: 13, color: textColor.withValues(alpha: 0.5)),
+                      Icon(Icons.auto_awesome_rounded, size: 13, color: palette.textTertiary),
                       const SizedBox(width: 3),
                       Text(
                         target.magnitude != null ? "Mag ${target.magnitude!.toStringAsFixed(1)}" : "Mag N/A",
-                        style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                        style: TextStyle(fontSize: 11, color: palette.textSecondary),
                       ),
                     ],
                   ),
@@ -480,13 +425,13 @@ class _FavoritesViewState extends State<FavoritesView> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.aspect_ratio_rounded, size: 13, color: textColor.withValues(alpha: 0.5)),
+                      Icon(Icons.aspect_ratio_rounded, size: 13, color: palette.textTertiary),
                       const SizedBox(width: 3),
                       Text(
                         target.majorAxisArcmin != null
                             ? "${target.majorAxisArcmin!.toStringAsFixed(1)}'"
                             : "Point Source",
-                        style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                        style: TextStyle(fontSize: 11, color: palette.textSecondary),
                       ),
                     ],
                   ),
@@ -495,11 +440,11 @@ class _FavoritesViewState extends State<FavoritesView> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.rotate_right_rounded, size: 13, color: AstroColors.starGold),
+                        Icon(Icons.rotate_right_rounded, size: 13, color: palette.starGold),
                         const SizedBox(width: 3),
                         Text(
                           "PA ${target.positionAngleDeg!.toStringAsFixed(1)}°",
-                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
+                          style: TextStyle(fontSize: 11, color: palette.textSecondary),
                         ),
                       ],
                     ),
@@ -509,7 +454,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                     style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 10,
-                      color: textColor.withValues(alpha: 0.6),
+                      color: palette.textSecondary,
                     ),
                   ),
                 ],
@@ -528,7 +473,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       side: BorderSide(
-                        color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                        color: palette.border,
                       ),
                     ),
                     onPressed: () => _openFramingDialog(target),
@@ -552,8 +497,8 @@ class _FavoritesViewState extends State<FavoritesView> {
     );
   }
 
-  Widget _buildBadge(String text, Color color, bool isRed) {
-    final badgeColor = isRed ? AstroColors.nightVisionRed : color;
+  Widget _buildBadge(String text, Color color, AstroPalette palette) {
+    final badgeColor = palette.isRedNightMode ? palette.accent : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -574,9 +519,8 @@ class _FavoritesViewState extends State<FavoritesView> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
+    final palette = AstroPalette.of(context);
+    final heartColor = palette.isRedNightMode ? palette.accent : Colors.pinkAccent;
 
     final isWide = MediaQuery.of(context).size.width >= 900;
     final allFavorites = FavoritesManager.instance.favorites;
@@ -585,7 +529,7 @@ class _FavoritesViewState extends State<FavoritesView> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: allFavorites.isEmpty
-          ? _buildEmptyState(textColor, accentColor)
+          ? _buildEmptyState(palette)
           : Column(
               children: [
                 // Top Header Bar
@@ -598,7 +542,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                         children: [
                           Icon(
                             Icons.favorite_rounded,
-                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                            color: heartColor,
                             size: 24,
                           ),
                           const SizedBox(width: 8),
@@ -616,7 +560,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w700,
-                                          color: textColor,
+                                          color: palette.textPrimary,
                                         ),
                                       ),
                                     ),
@@ -624,8 +568,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
-                                            .withValues(alpha: 0.18),
+                                        color: heartColor.withValues(alpha: 0.18),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
@@ -633,7 +576,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,
-                                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                                          color: heartColor,
                                         ),
                                       ),
                                     ),
@@ -645,7 +588,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: textColor.withValues(alpha: 0.6),
+                                    color: palette.textSecondary,
                                   ),
                                 ),
                               ],
@@ -705,11 +648,11 @@ class _FavoritesViewState extends State<FavoritesView> {
                   child: TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
-                    style: TextStyle(color: textColor, fontSize: 13),
+                    style: TextStyle(color: palette.textPrimary, fontSize: 13),
                     decoration: InputDecoration(
                       hintText: "Search favorites by name, catalog, constellation...",
-                      hintStyle: TextStyle(color: textColor.withValues(alpha: 0.4), fontSize: 13),
-                      prefixIcon: Icon(Icons.search_rounded, size: 18, color: textColor.withValues(alpha: 0.5)),
+                      hintStyle: TextStyle(color: palette.textTertiary, fontSize: 13),
+                      prefixIcon: Icon(Icons.search_rounded, size: 18, color: palette.textTertiary),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear_rounded, size: 16),
@@ -722,16 +665,14 @@ class _FavoritesViewState extends State<FavoritesView> {
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       filled: true,
-                      fillColor: widget.isRedNightMode
-                          ? AstroColors.nightVisionSurfaceVariant
-                          : AstroColors.spaceDarkSurfaceVariant,
+                      fillColor: palette.surfaceVariant,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: borderColor),
+                        borderSide: BorderSide(color: palette.border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: borderColor),
+                        borderSide: BorderSide(color: palette.border),
                       ),
                     ),
                   ),
@@ -745,7 +686,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                       ? Center(
                           child: Text(
                             "No favorites matching '$_searchQuery'",
-                            style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                            style: TextStyle(color: palette.textSecondary),
                           ),
                         )
                       : isWide
@@ -760,7 +701,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                     itemBuilder: (context, index) {
                                       final target = filteredFavorites[index];
                                       final isSelected = _selectedTarget?.id == target.id;
-                                      return _buildFavoriteCard(target, isSelected, isWide, textColor, accentColor);
+                                      return _buildFavoriteCard(target, isSelected, isWide, palette);
                                     },
                                   ),
                                 ),
@@ -785,7 +726,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                                       : Center(
                                           child: Text(
                                             "Select a target to view details",
-                                            style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                                            style: TextStyle(color: palette.textSecondary),
                                           ),
                                         ),
                                 ),
@@ -796,7 +737,7 @@ class _FavoritesViewState extends State<FavoritesView> {
                               itemCount: filteredFavorites.length,
                               itemBuilder: (context, index) {
                                 final target = filteredFavorites[index];
-                                return _buildFavoriteCard(target, false, isWide, textColor, accentColor);
+                                return _buildFavoriteCard(target, false, isWide, palette);
                               },
                             ),
                 ),

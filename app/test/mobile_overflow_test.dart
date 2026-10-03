@@ -93,7 +93,7 @@ void main() {
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                             ),
                             Text(
-                              l10n?.appSubtitle ?? "Astro Target & Session Planner",
+                              l10n.appSubtitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 10),
@@ -285,7 +285,6 @@ void main() {
       await tester.pumpWidget(
         createTestApp(
           EquipmentDialog(
-            isRedNightMode: false,
             onSaved: () {},
           ),
           locale: const Locale('pt', 'BR'),
@@ -316,7 +315,6 @@ void main() {
         createTestApp(
           ObservingListsView(
             lists: const [],
-            isRedNightMode: false,
             onCreateList: (_, _, _) {},
             onDeleteList: (_) {},
             onRemoveItem: (_, _) {},

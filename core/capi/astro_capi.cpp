@@ -4,7 +4,7 @@
 #include "astro/horizon.hpp"
 #include "astro/storage.hpp"
 #include "astro/time.hpp"
-#include "astro/units.hpp"
+#include "astro/target_filter_service.hpp"
 
 #include <cstring>
 #include <deque>
@@ -15,7 +15,8 @@
 #include <vector>
 
 struct AstroEngineContext {
-    std::unique_ptr<astro::storage::SqliteStorage> storage;
+    std::unique_ptr<astro::storage::IStorage> storage;
+    std::unique_ptr<astro::services::TargetFilterService> filter_service;
     std::string last_error;
     std::string cached_moon_phase;
 };
@@ -81,17 +82,34 @@ static void apply_criteria_extra(const AstroFilterCriteria* criteria, astro::vis
     }
 }
 
-AstroEngine* astro_engine_create(const char* db_path) {
+static std::string g_init_error;
+
+AstroEngine* astro_engine_create_with_user_db(const char* catalog_db_path, const char* user_db_path) {
     try {
+        g_init_error.clear();
         auto ctx = std::make_unique<AstroEngineContext>();
-        ctx->storage = std::make_unique<astro::storage::SqliteStorage>(db_path ? db_path : "");
-        if (!ctx->storage->is_open()) {
+        auto storage = std::make_unique<astro::storage::SqliteStorage>(
+            catalog_db_path ? catalog_db_path : "",
+            user_db_path ? user_db_path : ""
+        );
+        if (!storage->is_open()) {
+            g_init_error = storage->last_error().empty() ? "Failed to open SQLite database" : storage->last_error();
             return nullptr;
         }
+        ctx->filter_service = std::make_unique<astro::services::TargetFilterService>(*storage);
+        ctx->storage = std::move(storage);
         return reinterpret_cast<AstroEngine*>(ctx.release());
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        g_init_error = e.what();
+        return nullptr;
+    } catch (...) {
+        g_init_error = "Unknown error during astro_engine_create";
         return nullptr;
     }
+}
+
+AstroEngine* astro_engine_create(const char* db_path) {
+    return astro_engine_create_with_user_db(db_path, nullptr);
 }
 
 void astro_engine_destroy(AstroEngine* engine) {
@@ -101,7 +119,9 @@ void astro_engine_destroy(AstroEngine* engine) {
 }
 
 const char* astro_engine_get_last_error(AstroEngine* engine) {
-    if (!engine) return "Engine is null";
+    if (!engine) {
+        return g_init_error.empty() ? "Engine is null" : g_init_error.c_str();
+    }
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
     if (!ctx->last_error.empty()) {
         return ctx->last_error.c_str();
@@ -160,9 +180,13 @@ int32_t astro_get_night_summary(
         out_summary->moon_phase_name = get_static_moon_phase_name(moon.phase_type);
         out_summary->has_astronomical_night = night.has_astronomical_night ? 1 : 0;
 
+        ctx->last_error.clear();
         return 1;
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_get_night_summary";
         return 0;
     }
 }
@@ -218,7 +242,7 @@ AstroTargetList* astro_filter_targets(
         apply_criteria_extra(criteria, vis_crit);
 
         int step = step_minutes > 0 ? step_minutes : 10;
-        auto results = ctx->storage->filter_targets(obs, filter_opts, vis_crit, step);
+        auto results = ctx->filter_service->filter_targets(obs, filter_opts, vis_crit, step);
 
         auto impl = std::make_unique<AstroTargetListImpl>();
         impl->items.reserve(results.size());
@@ -262,9 +286,13 @@ AstroTargetList* astro_filter_targets(
         impl->public_list.items = impl->items.data();
         impl->public_list.count = impl->items.size();
 
+        ctx->last_error.clear();
         return reinterpret_cast<AstroTargetList*>(impl.release());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return nullptr;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_filter_targets";
         return nullptr;
     }
 }
@@ -335,7 +363,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
         astro::time::JulianDate end_jd = astro::time::unix_to_julian_date(period_end_utc);
 
         int step = step_minutes > 0 ? step_minutes : 10;
-        auto results = ctx->storage->filter_targets_period(obs, filter_opts, vis_crit, start_jd, end_jd, step);
+        auto results = ctx->filter_service->filter_targets_period(obs, filter_opts, vis_crit, start_jd, end_jd, step);
 
         auto impl = std::make_unique<AstroPeriodTargetListImpl>();
         impl->items.reserve(results.size());
@@ -382,9 +410,13 @@ AstroPeriodTargetList* astro_filter_targets_period(
         impl->public_list.items = impl->items.data();
         impl->public_list.count = impl->items.size();
 
+        ctx->last_error.clear();
         return reinterpret_cast<AstroPeriodTargetList*>(impl.release());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return nullptr;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_filter_targets_period";
         return nullptr;
     }
 }
@@ -422,6 +454,8 @@ AstroCurveData* astro_generate_curve(
         auto start_jd = astro::time::unix_to_julian_date(start_utc);
         auto end_jd = astro::time::unix_to_julian_date(end_utc);
 
+        astro::services::TargetFilterService::decorate_solar_system_body(*dso, start_jd, obs);
+
         int step = step_minutes > 0 ? step_minutes : 5;
         std::vector<astro::visibility::AltitudePoint> points;
         if (dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
@@ -454,9 +488,13 @@ AstroCurveData* astro_generate_curve(
         impl->public_curve.points = impl->points.data();
         impl->public_curve.count = impl->points.size();
 
+        ctx->last_error.clear();
         return reinterpret_cast<AstroCurveData*>(impl.release());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return nullptr;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_generate_curve";
         return nullptr;
     }
 }
@@ -685,7 +723,18 @@ const char* astro_get_target_yearly_visibility_json(
             crit.min_duration_hours = 2.0;
         }
 
-        int sim_year = year > 1900 ? year : 2026;
+        int sim_year = year;
+        if (sim_year <= 1900) {
+            auto now = std::chrono::system_clock::now();
+            auto tt = std::chrono::system_clock::to_time_t(now);
+            std::tm tm_buf{};
+#if defined(_WIN32)
+            gmtime_s(&tm_buf, &tt);
+#else
+            gmtime_r(&tt, &tm_buf);
+#endif
+            sim_year = tm_buf.tm_year + 1900;
+        }
         astro::visibility::YearlyVisibilityResult res;
         if (opt_dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
             int pid_num = static_cast<int>(target_id - 90000);
@@ -732,9 +781,13 @@ const char* astro_get_target_yearly_visibility_json(
         }
         ss << "]}";
 
+        ctx->last_error.clear();
         return duplicate_string(ss.str());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return duplicate_string("{}");
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_get_target_yearly_visibility_json";
         return duplicate_string("{}");
     }
 }
@@ -759,9 +812,13 @@ const char* astro_get_target_description_json(AstroEngine* engine, const char* t
            << "\"source\":\"" << escape_json(rec->source) << "\""
            << "}";
 
+        ctx->last_error.clear();
         return duplicate_string(ss.str());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return nullptr;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_get_target_description_json";
         return nullptr;
     }
 }
@@ -790,9 +847,17 @@ int32_t astro_save_target_description(
             source ? source : "Wikipedia",
             aliases
         );
+        if (ok) {
+            ctx->last_error.clear();
+        } else {
+            ctx->last_error = ctx->storage->last_error();
+        }
         return ok ? 1 : 0;
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_save_target_description";
         return 0;
     }
 }

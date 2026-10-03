@@ -38,7 +38,7 @@ class _FilterDialogState extends State<FilterDialog> {
   int _getPresetIndex() => _controller.presetIndex;
 
   String _cardinalName(double az, [AppLocalizations? l10n]) {
-    final isPt = l10n?.localeName == 'pt';
+    final isPt = l10n != null && l10n.localeName.startsWith('pt');
     return FilterDialogController.cardinalName(az, isPt: isPt);
   }
 
@@ -94,7 +94,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    l10n?.filterDialogTitle ?? "Target Filter Parameters",
+                    l10n.filterDialogTitle,
                     style: TextStyle(
                       fontSize: isNarrow ? 16 : 18,
                       fontWeight: FontWeight.w700,
@@ -123,7 +123,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                     // Section 1: Observing Time Window (Telescopius Rule)
-                    _buildSectionHeader(l10n?.observingTimeWindow ?? "Observing Time Window", Icons.schedule_rounded),
+                    _buildSectionHeader(l10n.observingTimeWindow, Icons.schedule_rounded),
                     const SizedBox(height: 8),
 
                     // Toggle: Astronomical Darkness vs Custom Time Limit
@@ -168,7 +168,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                     const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
-                                        isNarrow ? (l10n?.astroDarknessShort ?? "Astro Darkness") : (l10n?.astronomicalDarkness ?? "Astronomical Darkness"),
+                                        isNarrow ? (l10n.astroDarknessShort) : (l10n.astronomicalDarkness),
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
@@ -214,7 +214,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                     const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
-                                        isNarrow ? (l10n?.customWindowShort ?? "Custom Window") : (l10n?.customTimeLimit ?? "Custom Time Limit"),
+                                        isNarrow ? (l10n.customWindowShort) : (l10n.customTimeLimit),
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
@@ -239,7 +239,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           children: [
                             Expanded(
                               child: _buildTimeBox(
-                                label: l10n?.startTime ?? "START TIME",
+                                label: l10n.startTime,
                                 hour: _state.customStartHour,
                                 minute: _state.customStartMinute,
                                 onTap: () => _pickTime(isStart: true),
@@ -253,7 +253,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             ),
                             Expanded(
                               child: _buildTimeBox(
-                                label: l10n?.endTime ?? "END TIME",
+                                label: l10n.endTime,
                                 hour: _state.customEndHour,
                                 minute: _state.customEndMinute,
                                 onTap: () => _pickTime(isStart: false),
@@ -276,11 +276,11 @@ class _FilterDialogState extends State<FilterDialog> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "${l10n?.window ?? "WINDOW"}: ",
+                                "${l10n.window}: ",
                                 style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: accentColor),
                               ),
                               Text(
-                                "${_state.windowDurationHours.toStringAsFixed(1)} ${l10n?.hoursShort ?? "hrs"}",
+                                "${_state.windowDurationHours.toStringAsFixed(1)} ${l10n.hoursShort}",
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -295,7 +295,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           children: [
                             Expanded(
                               child: _buildTimeBox(
-                                label: l10n?.startTime ?? "START TIME",
+                                label: l10n.startTime,
                                 hour: _state.customStartHour,
                                 minute: _state.customStartMinute,
                                 onTap: () => _pickTime(isStart: true),
@@ -309,7 +309,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             ),
                             Expanded(
                               child: _buildTimeBox(
-                                label: l10n?.endTime ?? "END TIME",
+                                label: l10n.endTime,
                                 hour: _state.customEndHour,
                                 minute: _state.customEndMinute,
                                 onTap: () => _pickTime(isStart: false),
@@ -329,11 +329,11 @@ class _FilterDialogState extends State<FilterDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    l10n?.window ?? "WINDOW",
+                                    l10n.window,
                                     style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: accentColor),
                                   ),
                                   Text(
-                                    "${_state.windowDurationHours.toStringAsFixed(1)} ${l10n?.hoursShort ?? "hrs"}",
+                                    "${_state.windowDurationHours.toStringAsFixed(1)} ${l10n.hoursShort}",
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -393,14 +393,14 @@ class _FilterDialogState extends State<FilterDialog> {
                           ),
                           if (widget.night != null) ...[
                             _buildPresetChip(
-                              l10n?.duskMidnight ?? "Dusk - Midnight",
+                              l10n.duskMidnight,
                               () => _setCustomWindow(
                                   widget.night!.astronomicalDusk.hour, widget.night!.astronomicalDusk.minute, 0, 0),
                               textColor,
                               accentColor,
                             ),
                             _buildPresetChip(
-                              l10n?.midnightDawn ?? "Midnight - Dawn",
+                              l10n.midnightDawn,
                               () => _setCustomWindow(
                                   0, 0, widget.night!.astronomicalDawn.hour, widget.night!.astronomicalDawn.minute),
                               textColor,
@@ -414,7 +414,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 2: Altitude & Duration (Telescopius core)
-                    _buildSectionHeader(l10n?.visibilityAltitudeRange ?? "Visibility & Altitude Range", Icons.terrain_rounded),
+                    _buildSectionHeader(l10n.visibilityAltitudeRange, Icons.terrain_rounded),
                     const SizedBox(height: 8),
                     Builder(builder: (context) {
                       const double minAltMin = 10.0;
@@ -460,8 +460,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l10n?.minimumAltitude(minAltVal.round().toString()) ??
-                                      "Minimum Altitude: ${minAltVal.round()}°",
+                                  l10n.minimumAltitude(minAltVal.round().toString()),
                                   style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
@@ -479,8 +478,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l10n?.maximumAltitude(maxAltVal.round().toString()) ??
-                                      "Maximum Altitude: ${maxAltVal.round()}°${maxAltVal == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
+                                  "${l10n.maximumAltitude(maxAltVal.round().toString())}${maxAltVal == 90.0 ? ' (${l10n.zenith})' : ''}",
                                   style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
@@ -499,8 +497,8 @@ class _FilterDialogState extends State<FilterDialog> {
                               children: [
                                 Text(
                                   _state.useCustomTimeWindow
-                                      ? "${l10n?.minimumDuration(clampedDur.toStringAsFixed(1)) ?? "Minimum Duration: ${clampedDur.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
-                                      : (l10n?.minimumDuration(clampedDur.toStringAsFixed(1)) ?? "Minimum Duration: ${clampedDur.toStringAsFixed(1)} hrs"),
+                                      ? "${l10n.minimumDuration(clampedDur.toStringAsFixed(1))} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : (l10n.minimumDuration(clampedDur.toStringAsFixed(1))),
                                   style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
@@ -524,8 +522,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l10n?.minAltitudeLabel(minAltVal.round().toString()) ??
-                                      "Min Altitude: ${minAltVal.round()}°",
+                                  l10n.minAltitudeLabel(minAltVal.round().toString()),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
@@ -545,7 +542,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "${l10n?.maxAltitudeLabel(maxAltVal.round().toString()) ?? "Max Altitude: ${maxAltVal.round()}°"}${maxAltVal == 90.0 ? ' ${l10n?.zenith ?? "(Zenith)"}' : ''}",
+                                  "${l10n.maxAltitudeLabel(maxAltVal.round().toString())}${maxAltVal == 90.0 ? ' ${l10n.zenith}' : ''}",
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                 ),
                                 Slider(
@@ -566,8 +563,8 @@ class _FilterDialogState extends State<FilterDialog> {
                               children: [
                                 Text(
                                   _state.useCustomTimeWindow
-                                      ? "${l10n?.durationLabel(clampedDur.toStringAsFixed(1)) ?? "Duration: ${clampedDur.toStringAsFixed(1)}h"} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
-                                      : (l10n?.durationLabel(clampedDur.toStringAsFixed(1)) ?? "Duration: ${clampedDur.toStringAsFixed(1)} hrs"),
+                                      ? "${l10n.durationLabel(clampedDur.toStringAsFixed(1))} (max ${_state.windowDurationHours.toStringAsFixed(1)}h)"
+                                      : (l10n.durationLabel(clampedDur.toStringAsFixed(1))),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.9)),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -589,7 +586,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 2: Direction / Quadrant & Azimuth
-                    _buildSectionHeader(l10n?.directionAzimuthRange ?? "Direction & Azimuth Range", Icons.explore_rounded),
+                    _buildSectionHeader(l10n.directionAzimuthRange, Icons.explore_rounded),
                     const SizedBox(height: 8),
 
                     if (isNarrow)
@@ -610,7 +607,7 @@ class _FilterDialogState extends State<FilterDialog> {
                             initialValue: _getPresetIndex(),
                             isExpanded: true,
                             decoration: InputDecoration(
-                              labelText: l10n?.directionPresetMode ?? "Direction Preset / Mode",
+                              labelText: l10n.directionPresetMode,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             ),
                             dropdownColor: widget.isRedNightMode
@@ -638,7 +635,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               SizedBox(
                                 width: 110,
                                 child: Text(
-                                  l10n?.minAzimuthLabel(_state.minAzimuth.round().toString(), _cardinalName(_state.minAzimuth, l10n)) ?? "Min: ${_state.minAzimuth.round()}° (${_cardinalName(_state.minAzimuth)})",
+                                  l10n.minAzimuthLabel(_state.minAzimuth.round().toString(), _cardinalName(_state.minAzimuth, l10n)),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                                 ),
                               ),
@@ -659,7 +656,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               SizedBox(
                                 width: 110,
                                 child: Text(
-                                  l10n?.maxAzimuthLabel(_state.maxAzimuth.round().toString(), _cardinalName(_state.maxAzimuth, l10n)) ?? "Max: ${_state.maxAzimuth.round()}° (${_cardinalName(_state.maxAzimuth)})",
+                                  l10n.maxAzimuthLabel(_state.maxAzimuth.round().toString(), _cardinalName(_state.maxAzimuth, l10n)),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                                 ),
                               ),
@@ -700,7 +697,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   initialValue: _getPresetIndex(),
                                   isExpanded: true,
                                   decoration: InputDecoration(
-                                    labelText: l10n?.directionPresetMode ?? "Direction Preset / Mode",
+                                    labelText: l10n.directionPresetMode,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
                                   dropdownColor: widget.isRedNightMode
@@ -730,7 +727,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                     SizedBox(
                                       width: 115,
                                       child: Text(
-                                        l10n?.minAzimuthLabel(_state.minAzimuth.round().toString(), _cardinalName(_state.minAzimuth, l10n)) ?? "Min: ${_state.minAzimuth.round()}° (${_cardinalName(_state.minAzimuth)})",
+                                        l10n.minAzimuthLabel(_state.minAzimuth.round().toString(), _cardinalName(_state.minAzimuth, l10n)),
                                         style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                                       ),
                                     ),
@@ -753,7 +750,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                     SizedBox(
                                       width: 115,
                                       child: Text(
-                                        l10n?.maxAzimuthLabel(_state.maxAzimuth.round().toString(), _cardinalName(_state.maxAzimuth, l10n)) ?? "Max: ${_state.maxAzimuth.round()}° (${_cardinalName(_state.maxAzimuth)})",
+                                        l10n.maxAzimuthLabel(_state.maxAzimuth.round().toString(), _cardinalName(_state.maxAzimuth, l10n)),
                                         style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                                       ),
                                     ),
@@ -778,7 +775,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 2b: Custom Horizon Obstruction Mask (Horizon Maker)
-                    _buildSectionHeader(l10n?.customHorizonMask ?? "Custom Horizon Obstruction Mask", Icons.terrain_rounded),
+                    _buildSectionHeader(l10n.customHorizonMask, Icons.terrain_rounded),
                     const SizedBox(height: 8),
 
                     Container(
@@ -815,7 +812,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      l10n?.customHorizonProfile ?? "Custom Horizon Profile",
+                                      l10n.customHorizonProfile,
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
@@ -824,8 +821,8 @@ class _FilterDialogState extends State<FilterDialog> {
                                     ),
                                     Text(
                                       _state.horizonPoints.isEmpty
-                                          ? (l10n?.noObstaclePoints ?? "No obstacle points defined yet (flat horizon)")
-                                          : (l10n?.obstaclePointsCount(_state.horizonPoints.length) ?? "${_state.horizonPoints.length} obstacle points configured across 360°"),
+                                          ? (l10n.noObstaclePoints)
+                                          : (l10n.obstaclePointsCount(_state.horizonPoints.length)),
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: textColor.withValues(alpha: 0.6),
@@ -870,7 +867,7 @@ class _FilterDialogState extends State<FilterDialog> {
                                   ),
                                   icon: Icon(Icons.draw_rounded, size: 16, color: accentColor),
                                   label: Text(
-                                    _state.horizonPoints.isEmpty ? (l10n?.createHorizonProfile ?? "Create Horizon Profile...") : (l10n?.openHorizonMaker ?? "Open Horizon Maker..."),
+                                    _state.horizonPoints.isEmpty ? (l10n.createHorizonProfile) : (l10n.openHorizonMaker),
                                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
                                   ),
                                   onPressed: () {
@@ -897,10 +894,10 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 3: Moon Separation
-                    _buildSectionHeader(l10n?.moonDistance ?? "Moon Distance", Icons.brightness_3_rounded),
+                    _buildSectionHeader(l10n.moonDistance, Icons.brightness_3_rounded),
                     const SizedBox(height: 8),
                     Text(
-                      l10n?.minMoonDistanceLabel(_state.minMoonSeparation.round().toString()) ?? "Min distance from Moon: ${_state.minMoonSeparation.round()}°",
+                      l10n.minMoonDistanceLabel(_state.minMoonSeparation.round().toString()),
                       style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.9)),
                     ),
                     Slider(
@@ -915,7 +912,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 4: Catalogs
-                    _buildSectionHeader(l10n?.catalogs ?? "Catalogs", Icons.auto_stories_rounded),
+                    _buildSectionHeader(l10n.catalogs, Icons.auto_stories_rounded),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -933,7 +930,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 5: Object Types
-                    _buildSectionHeader(l10n?.objectTypes ?? "Object Types", Icons.blur_circular_rounded),
+                    _buildSectionHeader(l10n.objectTypes, Icons.blur_circular_rounded),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -951,7 +948,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     const SizedBox(height: 16),
 
                     // Section 6: Magnitude & Size
-                    _buildSectionHeader(l10n?.magnitudeApparentSize ?? "Magnitude & Apparent Size", Icons.straighten_rounded),
+                    _buildSectionHeader(l10n.magnitudeApparentSize, Icons.straighten_rounded),
                     const SizedBox(height: 8),
                     if (isNarrow)
                       Column(
@@ -961,12 +958,12 @@ class _FilterDialogState extends State<FilterDialog> {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                l10n?.faintestLimitLabel(_state.maxMagnitude.toStringAsFixed(1)) ?? "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
+                                l10n.faintestLimitLabel(_state.maxMagnitude.toStringAsFixed(1)),
                                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                l10n?.lowerBrighter ?? "(lower = brighter)",
+                                l10n.lowerBrighter,
                                 style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                               ),
                             ],
@@ -981,7 +978,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            l10n?.minSizeLabelAlt(_state.minSizeArcmin.round().toString()) ?? "Min Size: ${_state.minSizeArcmin.round()}'",
+                            l10n.minSizeLabelAlt(_state.minSizeArcmin.round().toString()),
                             style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
                           ),
                           Slider(
@@ -1005,12 +1002,12 @@ class _FilterDialogState extends State<FilterDialog> {
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text(
-                                      l10n?.faintestLimitLabel(_state.maxMagnitude.toStringAsFixed(1)) ?? "Faintest Limit (Max Mag): ${_state.maxMagnitude.toStringAsFixed(1)}",
+                                      l10n.faintestLimitLabel(_state.maxMagnitude.toStringAsFixed(1)),
                                       style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      l10n?.lowerBrighter ?? "(lower = brighter)",
+                                      l10n.lowerBrighter,
                                       style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                                     ),
                                   ],
@@ -1032,7 +1029,7 @@ class _FilterDialogState extends State<FilterDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  l10n?.minSizeLabelAlt(_state.minSizeArcmin.round().toString()) ?? "Min Size: ${_state.minSizeArcmin.round()}'",
+                                  l10n.minSizeLabelAlt(_state.minSizeArcmin.round().toString()),
                                   style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
                                 ),
                                 Slider(
@@ -1067,7 +1064,7 @@ class _FilterDialogState extends State<FilterDialog> {
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              child: Text(l10n?.cleanDataCancel ?? "Cancel"),
+                              child: Text(l10n.cleanDataCancel),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
                           ),
@@ -1075,7 +1072,7 @@ class _FilterDialogState extends State<FilterDialog> {
                           Expanded(
                             child: FilledButton.icon(
                               icon: const Icon(Icons.check_rounded, size: 16),
-                              label: Text(l10n?.applyFilters ?? "Apply Filters"),
+                              label: Text(l10n.applyFilters),
                               style: FilledButton.styleFrom(backgroundColor: accentColor),
                               onPressed: () {
                                 widget.onApply(_state);
@@ -1089,7 +1086,7 @@ class _FilterDialogState extends State<FilterDialog> {
                       Center(
                         child: TextButton.icon(
                           icon: const Icon(Icons.refresh_rounded, size: 16),
-                          label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
+                          label: Text(l10n.resetAllFilters),
                           style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
                           onPressed: () => _controller.resetToDefaults(),
                         ),
@@ -1101,20 +1098,20 @@ class _FilterDialogState extends State<FilterDialog> {
                     children: [
                       TextButton.icon(
                         icon: const Icon(Icons.refresh_rounded, size: 16),
-                        label: Text(l10n?.resetAllFilters ?? "Reset Filters"),
+                        label: Text(l10n.resetAllFilters),
                         style: TextButton.styleFrom(foregroundColor: textColor.withValues(alpha: 0.6)),
                         onPressed: () => _controller.resetToDefaults(),
                       ),
                       Row(
                         children: [
                           OutlinedButton(
-                            child: Text(l10n?.cleanDataCancel ?? "Cancel"),
+                            child: Text(l10n.cleanDataCancel),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                           const SizedBox(width: 12),
                           FilledButton.icon(
                             icon: const Icon(Icons.check_rounded, size: 16),
-                            label: Text(l10n?.applyFilters ?? "Apply Filters"),
+                            label: Text(l10n.applyFilters),
                             style: FilledButton.styleFrom(backgroundColor: accentColor),
                             onPressed: () {
                               widget.onApply(_controller.state);
@@ -1277,14 +1274,14 @@ class AzimuthCompassDial extends StatelessWidget {
   final double minAzimuth;
   final double maxAzimuth;
   final bool isRedNightMode;
-  final AppLocalizations? l10n;
+  final AppLocalizations l10n;
 
   const AzimuthCompassDial({
     super.key,
     required this.minAzimuth,
     required this.maxAzimuth,
     this.isRedNightMode = false,
-    this.l10n,
+    required this.l10n,
   });
 
   @override
@@ -1318,10 +1315,10 @@ class AzimuthCompassDial extends StatelessWidget {
   String _spanLabel() {
     final min = minAzimuth.round();
     final max = maxAzimuth.round();
-    if (min == 0 && max == 360) return l10n?.compassAll360 ?? "All 360°";
-    if (min == max) return l10n?.compassClosed ?? "0° (Closed)";
+    if (min == 0 && max == 360) return l10n.compassAll360;
+    if (min == max) return l10n.compassClosed;
     final span = (max >= min) ? (max - min) : (360 - min + max);
-    return l10n?.compassSpan(span.toString()) ?? "Span: $span°";
+    return l10n.compassSpan(span.toString());
   }
 }
 
@@ -1329,13 +1326,13 @@ class _CompassPainter extends CustomPainter {
   final double minAz;
   final double maxAz;
   final bool isRed;
-  final AppLocalizations? l10n;
+  final AppLocalizations l10n;
 
   _CompassPainter({
     required this.minAz,
     required this.maxAz,
     required this.isRed,
-    this.l10n,
+    required this.l10n,
   });
 
   @override
@@ -1411,7 +1408,7 @@ class _CompassPainter extends CustomPainter {
       tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
     }
 
-    final isPt = l10n?.localeName == 'pt';
+    final isPt = l10n.localeName == 'pt';
     drawCardinal("N", Offset(center.dx, center.dy - radius - 6));
     drawCardinal(isPt ? "L" : "E", Offset(center.dx + radius + 6, center.dy));
     drawCardinal("S", Offset(center.dx, center.dy + radius + 6));
@@ -1472,6 +1469,8 @@ class _MiniHorizonPreviewPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _MiniHorizonPreviewPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MiniHorizonPreviewPainter oldDelegate) =>
+      oldDelegate.isRedNightMode != isRedNightMode ||
+      oldDelegate.points != points;
 }
 

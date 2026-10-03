@@ -189,13 +189,18 @@ class ObservingSite {
     );
   }
 
+  static const double defaultLatitude = -22.2819;
+  static const double defaultLongitude = -42.5311;
+  static const double defaultElevation = 858.0;
+  static const String defaultSiteName = 'Nova Friburgo, Rio de Janeiro, Brazil';
+
   /// Default fallback site when no saved configurations exist
   static const ObservingSite defaultSite = ObservingSite(
     id: 'site_default',
-    name: 'Nova Friburgo, Rio de Janeiro, Brazil',
-    latitude: -22.2819,
-    longitude: -42.5311,
-    elevation: 858.0,
+    name: defaultSiteName,
+    latitude: defaultLatitude,
+    longitude: defaultLongitude,
+    elevation: defaultElevation,
     bortleClass: 4,
     notes: 'Default observing site',
   );

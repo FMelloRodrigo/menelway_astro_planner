@@ -195,6 +195,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
   final Color accent;
   final Color text;
   final Color textDim;
+  final Color starGold;
+  final Color nebulaIndigo;
+  final Color deepSkyTeal;
+  final Color visibleGreen;
   final bool isRedNightMode;
 
   const AstroPalette({
@@ -205,8 +209,17 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
     required this.accent,
     required this.text,
     required this.textDim,
+    required this.starGold,
+    required this.nebulaIndigo,
+    required this.deepSkyTeal,
+    required this.visibleGreen,
     required this.isRedNightMode,
   });
+
+  Color get textPrimary => text;
+  Color get textSecondary => textDim;
+  Color get textTertiary => textDim.withValues(alpha: 0.6);
+  Color get starlightCyan => isRedNightMode ? accent : AstroColors.starlightCyan;
 
   static AstroPalette of(BuildContext context) {
     return Theme.of(context).extension<AstroPalette>() ?? defaultDark;
@@ -220,6 +233,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
     accent: AstroColors.starlightCyan,
     text: Colors.white,
     textDim: Color(0xB3FFFFFF),
+    starGold: AstroColors.starGold,
+    nebulaIndigo: AstroColors.nebulaIndigo,
+    deepSkyTeal: AstroColors.deepSkyTeal,
+    visibleGreen: AstroColors.visibleGreen,
     isRedNightMode: false,
   );
 
@@ -231,6 +248,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
     accent: AstroColors.nightVisionRed,
     text: AstroColors.nightVisionRed,
     textDim: AstroColors.nightVisionRedDim,
+    starGold: AstroColors.nightVisionRed,
+    nebulaIndigo: AstroColors.nightVisionRedDim,
+    deepSkyTeal: AstroColors.nightVisionRed,
+    visibleGreen: AstroColors.nightVisionRed,
     isRedNightMode: true,
   );
 
@@ -243,6 +264,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
     Color? accent,
     Color? text,
     Color? textDim,
+    Color? starGold,
+    Color? nebulaIndigo,
+    Color? deepSkyTeal,
+    Color? visibleGreen,
     bool? isRedNightMode,
   }) {
     return AstroPalette(
@@ -253,6 +278,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
       accent: accent ?? this.accent,
       text: text ?? this.text,
       textDim: textDim ?? this.textDim,
+      starGold: starGold ?? this.starGold,
+      nebulaIndigo: nebulaIndigo ?? this.nebulaIndigo,
+      deepSkyTeal: deepSkyTeal ?? this.deepSkyTeal,
+      visibleGreen: visibleGreen ?? this.visibleGreen,
       isRedNightMode: isRedNightMode ?? this.isRedNightMode,
     );
   }
@@ -268,6 +297,10 @@ class AstroPalette extends ThemeExtension<AstroPalette> {
       accent: Color.lerp(accent, other.accent, t) ?? accent,
       text: Color.lerp(text, other.text, t) ?? text,
       textDim: Color.lerp(textDim, other.textDim, t) ?? textDim,
+      starGold: Color.lerp(starGold, other.starGold, t) ?? starGold,
+      nebulaIndigo: Color.lerp(nebulaIndigo, other.nebulaIndigo, t) ?? nebulaIndigo,
+      deepSkyTeal: Color.lerp(deepSkyTeal, other.deepSkyTeal, t) ?? deepSkyTeal,
+      visibleGreen: Color.lerp(visibleGreen, other.visibleGreen, t) ?? visibleGreen,
       isRedNightMode: t < 0.5 ? isRedNightMode : other.isRedNightMode,
     );
   }

@@ -3,8 +3,7 @@ import '../models/yearly_visibility.dart';
 import 'app_localizations.dart';
 
 /// Helper to translate astronomical object types from canonical DB strings into the user's active language.
-String localizeObjectType(String rawType, AppLocalizations? l10n) {
-  if (l10n == null) return rawType;
+String localizeObjectType(String rawType, AppLocalizations l10n) {
   switch (rawType) {
     case 'Galaxy':
       return l10n.objGalaxy;
@@ -34,21 +33,7 @@ String localizeObjectType(String rawType, AppLocalizations? l10n) {
 }
 
 /// Helper to get localized quadrant preset options for azimuth filter dropdown.
-List<String> getQuadrantOptions(AppLocalizations? l10n) {
-  if (l10n == null) {
-    return const [
-      'All Directions (0° - 360°)',
-      'North (315° - 45°)',
-      'East (45° - 135°)',
-      'South (135° - 225°)',
-      'West (225° - 315°)',
-      'North-East (0° - 90°)',
-      'South-East (90° - 180°)',
-      'South-West (180° - 270°)',
-      'North-West (270° - 360°)',
-      'Custom Degree Range',
-    ];
-  }
+List<String> getQuadrantOptions(AppLocalizations l10n) {
   return [
     l10n.quadrantAll,
     l10n.quadrantN,
@@ -64,8 +49,7 @@ List<String> getQuadrantOptions(AppLocalizations? l10n) {
 }
 
 /// Helper to translate moon phases into the user's active language.
-String localizeMoonPhase(String rawPhase, AppLocalizations? l10n) {
-  if (l10n == null) return rawPhase;
+String localizeMoonPhase(String rawPhase, AppLocalizations l10n) {
   final clean = rawPhase.trim().toLowerCase();
   switch (clean) {
     case 'new moon':
@@ -91,9 +75,9 @@ String localizeMoonPhase(String rawPhase, AppLocalizations? l10n) {
 }
 
 /// Helper to get localized 3-letter month abbreviation.
-String localizeMonthAbbr(int month, AppLocalizations? l10n) {
+String localizeMonthAbbr(int month, [AppLocalizations? l10n]) {
   if (month < 1 || month > 12) return '';
-  final isPt = l10n?.localeName.startsWith('pt') == true;
+  final isPt = l10n != null && l10n.localeName.startsWith('pt');
   if (isPt) {
     const ptMonths = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return ptMonths[month - 1];
@@ -103,9 +87,7 @@ String localizeMonthAbbr(int month, AppLocalizations? l10n) {
 }
 
 /// Helper to localize the yearly visibility best window summary string.
-String localizeBestWindowSummary(YearlyVisibilityModel y, AppLocalizations? l10n) {
-  if (l10n == null) return y.bestWindowSummary;
-
+String localizeBestWindowSummary(YearlyVisibilityModel y, AppLocalizations l10n) {
   if (!y.canEverReachMinAlt) {
     return l10n.neverReachesLatitude(
       y.theoreticalMaxAltitudeDeg.round().toString(),
@@ -136,9 +118,7 @@ String localizeBestWindowSummary(YearlyVisibilityModel y, AppLocalizations? l10n
 }
 
 /// Helper to localize the period observability summary for period targets.
-String localizePeriodObservabilitySummary(PeriodTargetItem target, AppLocalizations? l10n) {
-  if (l10n == null) return target.periodObservabilitySummary;
-
+String localizePeriodObservabilitySummary(PeriodTargetItem target, AppLocalizations l10n) {
   if (!target.isObservable || target.observableDaysCount == 0) {
     return l10n.periodNotObservableSummary;
   }
@@ -153,4 +133,3 @@ String localizePeriodObservabilitySummary(PeriodTargetItem target, AppLocalizati
   final endM = localizeMonthAbbr(target.endMonth, l10n);
   return '$ratio ($startM ${target.startDay} – $endM ${target.endDay})';
 }
-

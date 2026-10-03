@@ -20,7 +20,6 @@ void main() {
               showDialog(
                 context: context,
                 builder: (_) => SettingsDialog(
-                  isRedNightMode: isRedNightMode,
                   onResetFilters: onResetFilters,
                   onCleanAllData: onCleanAllData,
                 ),
@@ -165,7 +164,6 @@ void main() {
                 showDialog(
                   context: context,
                   builder: (_) => SettingsDialog(
-                    isRedNightMode: false,
                     maxTargets: 20,
                     onMaxTargetsChanged: (count) {
                       updatedLimit = count;

@@ -10,10 +10,10 @@ H400_URL = "https://raw.githubusercontent.com/maphilli14/NINACatalogs/main/Hersc
 def build_arp_map():
     print("Downloading Arp catalog from VizieR...")
     req_ord = urllib.request.Request(ARPORD_URL, headers={'User-Agent': 'Mozilla/5.0'})
-    arpord = urllib.request.urlopen(req_ord).read().decode('ascii', errors='replace')
+    arpord = urllib.request.urlopen(req_ord, timeout=15).read().decode('ascii', errors='replace')
 
     req_list = urllib.request.Request(ARPLIST_URL, headers={'User-Agent': 'Mozilla/5.0'})
-    arplist = urllib.request.urlopen(req_list).read().decode('ascii', errors='replace')
+    arplist = urllib.request.urlopen(req_list, timeout=15).read().decode('ascii', errors='replace')
 
     # key -> list of arp numbers
     # Also keep standalone views
@@ -88,7 +88,7 @@ def build_arp_map():
 def build_h400_map():
     print("Downloading Herschel 400 catalog...")
     req = urllib.request.Request(H400_URL, headers={'User-Agent': 'Mozilla/5.0'})
-    h400_txt = urllib.request.urlopen(req).read().decode('utf-8')
+    h400_txt = urllib.request.urlopen(req, timeout=15).read().decode('utf-8')
 
     h400_by_name = {}
     for line in h400_txt.splitlines()[1:]:

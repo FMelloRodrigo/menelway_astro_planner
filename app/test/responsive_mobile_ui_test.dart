@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/models/filter_state.dart';
 import 'package:app/models/night_summary.dart';
@@ -56,6 +57,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetSearchView(
               targets: [testTarget],
@@ -80,7 +83,7 @@ void main() {
 
       // Verify "Filters" button and Sort dropdown are present in row 2 on mobile (defaulting to Brightness)
       expect(find.text("Filters"), findsOneWidget);
-      expect(find.text("Brightness (Mag)"), findsOneWidget);
+      expect(find.text("Magnitude (Brightest)"), findsOneWidget);
 
       // Type search text into search bar
       await tester.enterText(searchFieldFinder, "TestSearchQuery");
@@ -103,6 +106,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetSearchView(
               targets: [testTarget],
@@ -132,6 +137,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FilterDialog(
               initialFilters: FilterState(),
@@ -143,7 +150,7 @@ void main() {
       );
 
       // Verify header and action buttons render without overflow
-      expect(find.text('Target Filter Parameters'), findsOneWidget);
+      expect(find.text('Filter Targets'), findsOneWidget);
       expect(find.text('Apply Filters'), findsOneWidget);
       expect(find.text('Reset Filters'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
@@ -157,6 +164,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetDetailsSheet(
               target: testTarget,
@@ -173,8 +182,8 @@ void main() {
 
       // Verify details sheet renders title and mobile Add button
       expect(find.text('M42 (Orion Nebula)'), findsOneWidget);
-      expect(find.text('Add to Observing List'), findsOneWidget);
-      expect(find.text('Peak Altitude'), findsOneWidget);
+      expect(find.text('Add to List'), findsOneWidget);
+      expect(find.text('Peak Alt'), findsOneWidget);
       expect(find.text('68.4°'), findsOneWidget);
       expect(find.text('Visible Duration'), findsOneWidget);
       expect(find.text('4.5 hrs'), findsOneWidget);
@@ -188,6 +197,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetDetailsSheet(
               target: testTarget,

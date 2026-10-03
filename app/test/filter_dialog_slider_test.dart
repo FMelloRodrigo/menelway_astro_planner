@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/models/filter_state.dart';
 import 'package:app/views/filter_dialog.dart';
@@ -20,6 +21,8 @@ void main() {
     testWidgets('Min altitude slider has step size of 5 with default maxAltitude (90°)', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FilterDialog(
               initialFilters: FilterState(minAltitude: 30.0, maxAltitude: 90.0),
@@ -48,6 +51,8 @@ void main() {
     testWidgets('Min altitude slider maintains step size of 5 when maxAltitude is 70° (preventing 19, 24, 28 bug)', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FilterDialog(
               initialFilters: FilterState(minAltitude: 20.0, maxAltitude: 70.0),
@@ -69,6 +74,8 @@ void main() {
     testWidgets('Max altitude slider maintains step size of 5 when minAltitude is 50°', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: FilterDialog(
               initialFilters: FilterState(minAltitude: 50.0, maxAltitude: 90.0),

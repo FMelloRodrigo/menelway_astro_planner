@@ -178,7 +178,6 @@ void main() {
                   showDialog(
                     context: ctx,
                     builder: (_) => SettingsDialog(
-                      isRedNightMode: false,
                       onResetFilters: () {},
                       onCleanAllData: () {},
                       onReplayTour: () {

@@ -7,6 +7,7 @@ import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../theme/astro_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../utils/astro_formatters.dart';
 
 enum ChartViewMode {
   skyline360,
@@ -100,17 +101,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
     });
   }
 
-  static String _cardinal(double az) {
-    final a = ((az % 360) + 360) % 360;
-    if (a >= 337.5 || a < 22.5) return "N";
-    if (a < 67.5) return "NE";
-    if (a < 112.5) return "E";
-    if (a < 157.5) return "SE";
-    if (a < 202.5) return "S";
-    if (a < 247.5) return "SW";
-    if (a < 292.5) return "W";
-    return "NW";
-  }
+  static String _cardinal(double az) => AstroFormatters.cardinalFromAzimuth(az);
 
   void _setZoom(double newZoom, {double? centerFrac}) {
     final clampedZoom = newZoom.clamp(1.0, 6.0);
@@ -154,8 +145,9 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     const chartCanvasHeight = 340.0;
 
@@ -163,15 +155,15 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
       return Container(
         height: chartCanvasHeight,
         decoration: BoxDecoration(
-          color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+          color: palette.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+            color: palette.border,
           ),
         ),
         child: Center(
           child: Text(
-            l10n?.noAltitudeData ?? "No altitude data available for window",
+            l10n.noAltitudeData,
             style: const TextStyle(color: Colors.white54),
           ),
         ),
@@ -327,13 +319,13 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           child: Text(
                             _viewMode == ChartViewMode.skyline360
                                 ? (isNarrow ? "Skyline: ${widget.targetName}" : "Skyline (0°–360° NWES): ${widget.targetName}")
-                                : (l10n?.altitudeVsTimeTarget(widget.targetName) ?? "Altitude vs. Time: ${widget.targetName}"),
+                                : (l10n.altitudeVsTimeTarget(widget.targetName)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white70,
+                              color: palette.textPrimary,
                             ),
                           ),
                         ),
@@ -345,12 +337,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                   Container(
                     height: 28,
                     decoration: BoxDecoration(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionSurfaceVariant
-                          : AstroColors.spaceDarkSurfaceVariant,
+                      color: palette.surfaceVariant,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                        color: palette.border,
                       ),
                     ),
                     child: Row(
@@ -370,7 +360,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                         Container(
                           width: 1,
                           height: 16,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                          color: palette.border,
                         ),
                         _modeButton(
                           label: isNarrow ? "Timeline" : "Timeline (Hours)",
@@ -428,12 +418,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                   // Zoom Controls (Buttons only - scroll wheel zoom removed to enable page scrolling)
                   Container(
                     decoration: BoxDecoration(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionSurfaceVariant
-                          : AstroColors.spaceDarkSurfaceVariant,
+                      color: palette.surfaceVariant,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                        color: palette.border,
                       ),
                     ),
                     child: Row(
@@ -484,12 +472,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
+                    color: palette.surfaceVariant,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                      color: palette.border,
                     ),
                   ),
                   child: SingleChildScrollView(
@@ -652,8 +638,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           Container(width: 1, height: 12, color: textColor.withValues(alpha: 0.2)),
                           const SizedBox(width: 10),
                           Text(
-                            l10n?.moonSeparationShort(hoveredPoint.moonSeparation.toStringAsFixed(0)) ??
-                                "Moon: ${hoveredPoint.moonSeparation.toStringAsFixed(0)}°",
+                            l10n.moonSeparationShort(hoveredPoint.moonSeparation.toStringAsFixed(0)),
                             style: TextStyle(
                               fontSize: 11,
                               fontFamily: 'monospace',
@@ -727,9 +712,9 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                   child: Container(
                     height: chartCanvasHeight,
                     decoration: BoxDecoration(
-                      color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+                      color: palette.surface,
                       border: Border.all(
-                        color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                        color: palette.border,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -779,12 +764,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                    color: palette.border,
                   ),
                 ),
                 child: constraints.maxWidth < 640
@@ -857,10 +840,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                             const SizedBox(width: 6),
 
                             // Quick Cardinal Presets
-                            _quickCenterPresetBtn("N", 0.0, accentColor),
-                            _quickCenterPresetBtn("E", 90.0, accentColor),
-                            _quickCenterPresetBtn("S", 180.0, accentColor),
-                            _quickCenterPresetBtn("W", 270.0, accentColor),
+                            _quickCenterPresetBtn("N", 0.0, accentColor, textColor),
+                            _quickCenterPresetBtn("E", 90.0, accentColor, textColor),
+                            _quickCenterPresetBtn("S", 180.0, accentColor, textColor),
+                            _quickCenterPresetBtn("W", 270.0, accentColor, textColor),
                           ],
                         ),
                       )
@@ -929,10 +912,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                           const SizedBox(width: 6),
 
                           // Quick Cardinal Presets
-                          _quickCenterPresetBtn("N", 0.0, accentColor),
-                          _quickCenterPresetBtn("E", 90.0, accentColor),
-                          _quickCenterPresetBtn("S", 180.0, accentColor),
-                          _quickCenterPresetBtn("W", 270.0, accentColor),
+                          _quickCenterPresetBtn("N", 0.0, accentColor, textColor),
+                          _quickCenterPresetBtn("E", 90.0, accentColor, textColor),
+                          _quickCenterPresetBtn("S", 180.0, accentColor, textColor),
+                          _quickCenterPresetBtn("W", 270.0, accentColor, textColor),
                         ],
                       ),
               ),
@@ -941,12 +924,10 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                    color: palette.border,
                   ),
                 ),
                 child: Row(
@@ -1052,14 +1033,14 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.bold,
-            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+            color: accentColor,
           ),
         ),
       ),
     );
   }
 
-  Widget _quickCenterPresetBtn(String label, double centerAz, Color accentColor) {
+  Widget _quickCenterPresetBtn(String label, double centerAz, Color accentColor, Color textColor) {
     final isSelected = (_skylineCenterAz - centerAz).abs() < 1.0;
     return InkWell(
       onTap: () => setState(() => _skylineCenterAz = centerAz),
@@ -1077,7 +1058,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
           style: TextStyle(
             fontSize: 9.5,
             fontWeight: FontWeight.bold,
-            color: widget.isRedNightMode ? AstroColors.nightVisionRed : (isSelected ? Colors.white : AstroColors.starlightCyan),
+            color: isSelected ? textColor : accentColor,
           ),
         ),
       ),
@@ -1099,7 +1080,7 @@ class _Skyline360Painter extends CustomPainter {
   final bool isRedNightMode;
   final double zoomLevel;
   final double centerAzimuth;
-  final AppLocalizations? l10n;
+  final AppLocalizations l10n;
 
   _Skyline360Painter({
     required this.points,
@@ -1111,7 +1092,7 @@ class _Skyline360Painter extends CustomPainter {
     required this.isRedNightMode,
     this.zoomLevel = 1.0,
     this.centerAzimuth = 180.0,
-    this.l10n,
+    required this.l10n,
   });
 
   @override
@@ -1585,7 +1566,7 @@ class _AltitudeChartPainter extends CustomPainter {
   final DateTime? customWindowEnd;
   final FilterState? filterState;
   final bool showHorizonSilhouette;
-  final AppLocalizations? l10n;
+  final AppLocalizations l10n;
 
   _AltitudeChartPainter({
     required this.points,
@@ -1602,7 +1583,7 @@ class _AltitudeChartPainter extends CustomPainter {
     this.customWindowEnd,
     this.filterState,
     this.showHorizonSilhouette = true,
-    this.l10n,
+    required this.l10n,
   });
 
   static String _cardinal(double az) {
@@ -1989,7 +1970,7 @@ class _AltitudeChartPainter extends CustomPainter {
       );
       final tp = TextPainter(
         text: TextSpan(
-          text: l10n?.astronomicalDarkness.toUpperCase() ?? "ASTRONOMICAL DARKNESS",
+          text: l10n.astronomicalDarkness.toUpperCase(),
           style: labelStyle,
         ),
         textDirection: TextDirection.ltr,
@@ -2048,7 +2029,7 @@ class _AltitudeChartPainter extends CustomPainter {
       );
       final tp = TextPainter(
         text: TextSpan(
-          text: l10n?.observingWindowLabel.toUpperCase() ?? "OBSERVING WINDOW",
+          text: l10n.observingWindowLabel.toUpperCase(),
           style: labelStyle,
         ),
         textDirection: TextDirection.ltr,

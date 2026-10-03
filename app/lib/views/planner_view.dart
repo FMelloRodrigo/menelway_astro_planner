@@ -122,7 +122,7 @@ class _PlannerViewState extends State<PlannerView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                l10n?.errorCalculatingPeriodTargets(e.toString()) ?? "Error calculating period targets: $e",
+                l10n.errorCalculatingPeriodTargets(e.toString()),
               ),
             ),
           );
@@ -182,12 +182,13 @@ class _PlannerViewState extends State<PlannerView> {
       initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
       builder: (context, child) {
         return Theme(
-          data: widget.isRedNightMode ? ThemeData.dark() : ThemeData.dark(),
+          data: widget.isRedNightMode ? AstroTheme.redNightVisionTheme() : AstroTheme.darkTheme(),
           child: child!,
         );
       },
     );
 
+    if (!mounted) return;
     if (picked != null) {
       setState(() {
         _startDate = picked.start;
@@ -280,8 +281,9 @@ class _PlannerViewState extends State<PlannerView> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final localeStr = Localizations.localeOf(context).toString();
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
     final isWide = MediaQuery.of(context).size.width >= 900;
 
     final displayTargets = _filteredAndSortedTargets;
@@ -294,10 +296,10 @@ class _PlannerViewState extends State<PlannerView> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
           decoration: BoxDecoration(
-            color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+            color: palette.surface,
             border: Border(
               bottom: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                color: palette.border,
               ),
             ),
           ),
@@ -317,7 +319,7 @@ class _PlannerViewState extends State<PlannerView> {
                         isNarrow
                             ? Expanded(
                                 child: Text(
-                                  (l10n?.futureObservationPlanner ?? "FUTURE OBSERVATION PLANNER").toUpperCase(),
+                                  (l10n.futureObservationPlanner).toUpperCase(),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
@@ -329,7 +331,7 @@ class _PlannerViewState extends State<PlannerView> {
                                 ),
                               )
                             : Text(
-                                (l10n?.futureObservationPlanner ?? "FUTURE OBSERVATION PLANNER").toUpperCase(),
+                                (l10n.futureObservationPlanner).toUpperCase(),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -362,7 +364,7 @@ class _PlannerViewState extends State<PlannerView> {
                             isNarrow
                                 ? Expanded(
                                     child: Text(
-                                      "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n?.daysCountSuffix(totalDays) ?? '($totalDays d)'}",
+                                      "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n.daysCountSuffix(totalDays)}",
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -373,7 +375,7 @@ class _PlannerViewState extends State<PlannerView> {
                                     ),
                                   )
                                 : Text(
-                                    "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n?.daysCountSuffix(totalDays) ?? '($totalDays d)'}",
+                                    "${dateFormat.format(_startDate)} – ${dateFormat.format(_endDate)} ${l10n.daysCountSuffix(totalDays)}",
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -418,15 +420,15 @@ class _PlannerViewState extends State<PlannerView> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildPresetChip(l10n?.presetNext7Days ?? "Next 7 Days", _setPresetNext7Days),
+                    _buildPresetChip(l10n.presetNext7Days, _setPresetNext7Days),
                     const SizedBox(width: 6),
-                    _buildPresetChip(l10n?.presetThisWeekend ?? "This Weekend", _setPresetThisWeekend),
+                    _buildPresetChip(l10n.presetThisWeekend, _setPresetThisWeekend),
                     const SizedBox(width: 6),
-                    _buildPresetChip(l10n?.presetNextMonth ?? "Next Month", _setPresetNextMonth),
+                    _buildPresetChip(l10n.presetNextMonth, _setPresetNextMonth),
                     const SizedBox(width: 6),
-                    _buildPresetChip(l10n?.presetNext30Days ?? "Next 30 Days", _setPresetNext30Days),
+                    _buildPresetChip(l10n.presetNext30Days, _setPresetNext30Days),
                     const SizedBox(width: 6),
-                    _buildPresetChip(l10n?.presetCustomPeriod ?? "Custom Period...", _pickCustomRange, isSpecial: true),
+                    _buildPresetChip(l10n.presetCustomPeriod, _pickCustomRange, isSpecial: true),
                   ],
                 ),
               ),
@@ -443,30 +445,26 @@ class _PlannerViewState extends State<PlannerView> {
                         children: [
                           _buildFilterChip(
                             widget.filters.useCustomTimeWindow
-                                ? (l10n?.plannerWindowCustom(
+                                ? (l10n.plannerWindowCustom(
                                       "${widget.filters.customStartHour.toString().padLeft(2, '0')}:${widget.filters.customStartMinute.toString().padLeft(2, '0')}",
                                       "${widget.filters.customEndHour.toString().padLeft(2, '0')}:${widget.filters.customEndMinute.toString().padLeft(2, '0')}",
-                                    ) ??
-                                    "Window: ${widget.filters.customStartHour.toString().padLeft(2, '0')}:${widget.filters.customStartMinute.toString().padLeft(2, '0')} – ${widget.filters.customEndHour.toString().padLeft(2, '0')}:${widget.filters.customEndMinute.toString().padLeft(2, '0')}")
-                                : (l10n?.plannerWindowFullNight ?? "Window: Full Night"),
+                                    ))
+                                : (l10n.plannerWindowFullNight),
                             Icons.access_time_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            l10n?.plannerDirectionLabel(_quadrantName(widget.filters.quadrant, l10n)) ??
-                                "Direction: ${_quadrantName(widget.filters.quadrant, l10n)}",
+                            l10n.plannerDirectionLabel(_quadrantName(widget.filters.quadrant, l10n)),
                             Icons.explore_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            l10n?.plannerAltMinLabel(widget.filters.minAltitude.round().toString()) ??
-                                "Alt ≥ ${widget.filters.minAltitude.round()}°",
+                            l10n.plannerAltMinLabel(widget.filters.minAltitude.round().toString()),
                             Icons.north_east_rounded,
                           ),
                           const SizedBox(width: 6),
                           _buildFilterChip(
-                            l10n?.plannerDurationMinLabel(widget.filters.minDurationHours.toStringAsFixed(1)) ??
-                                "Duration ≥ ${widget.filters.minDurationHours.toStringAsFixed(1)}h",
+                            l10n.plannerDurationMinLabel(widget.filters.minDurationHours.toStringAsFixed(1)),
                             Icons.timer_rounded,
                           ),
                         ],
@@ -490,7 +488,7 @@ class _PlannerViewState extends State<PlannerView> {
                           Icon(Icons.tune_rounded, size: 12, color: accentColor),
                           const SizedBox(width: 4),
                           Text(
-                            l10n?.filtersButton ?? "Filters",
+                            l10n.filtersButton,
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                           ),
                         ],
@@ -507,10 +505,10 @@ class _PlannerViewState extends State<PlannerView> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+            color: palette.surface,
             border: Border(
               bottom: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                color: palette.border,
               ),
             ),
           ),
@@ -528,8 +526,8 @@ class _PlannerViewState extends State<PlannerView> {
                   decoration: InputDecoration(
                     isDense: true,
                     hintText: isNarrowSearch
-                        ? (l10n?.searchPeriodTargetsHintShort ?? "Search period targets...")
-                        : (l10n?.searchPeriodTargetsHint ?? "Search period targets (e.g. M42, Rosette, Nebula)..."),
+                        ? (l10n.searchPeriodTargetsHintShort)
+                        : (l10n.searchPeriodTargetsHint),
                     hintStyle: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.4)),
                     prefixIcon: Icon(Icons.search_rounded, size: 16, color: accentColor),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -565,7 +563,7 @@ class _PlannerViewState extends State<PlannerView> {
                     value: _sortBy,
                     isDense: true,
                     isExpanded: isNarrowSearch,
-                    dropdownColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+                    dropdownColor: palette.surface,
                     icon: Icon(Icons.sort_rounded, size: 16, color: accentColor),
                     onChanged: (newSort) {
                       if (newSort != null) setState(() => _sortBy = newSort);
@@ -573,19 +571,19 @@ class _PlannerViewState extends State<PlannerView> {
                     items: [
                       DropdownMenuItem(
                         value: PeriodSortBy.days,
-                        child: Text(l10n?.sortMostObservableDays ?? "Most Observable Days", style: const TextStyle(fontSize: 12)),
+                        child: Text(l10n.sortMostObservableDays, style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.peakDate,
-                        child: Text(l10n?.sortPeakDate ?? "Peak Date", style: const TextStyle(fontSize: 12)),
+                        child: Text(l10n.sortPeakDate, style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.peakAltitude,
-                        child: Text(l10n?.sortHighestAltitude ?? "Highest Altitude", style: const TextStyle(fontSize: 12)),
+                        child: Text(l10n.sortHighestAltitude, style: const TextStyle(fontSize: 12)),
                       ),
                       DropdownMenuItem(
                         value: PeriodSortBy.magnitude,
-                        child: Text(l10n?.sortBrightestFirst ?? "Brightest First", style: const TextStyle(fontSize: 12)),
+                        child: Text(l10n.sortBrightestFirst, style: const TextStyle(fontSize: 12)),
                       ),
                     ],
                   ),
@@ -623,7 +621,7 @@ class _PlannerViewState extends State<PlannerView> {
                       CircularProgressIndicator(color: accentColor),
                       const SizedBox(height: 12),
                       Text(
-                        l10n?.simulatingSkyPeriod(totalDays) ?? "Simulating sky across $totalDays nights...",
+                        l10n.simulatingSkyPeriod(totalDays),
                         style: TextStyle(color: textColor.withValues(alpha: 0.6)),
                       ),
                     ],
@@ -640,7 +638,7 @@ class _PlannerViewState extends State<PlannerView> {
                             ),
                             Container(
                               width: 1,
-                              color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                              color: palette.border,
                             ),
                             Expanded(
                               flex: 6,
@@ -669,7 +667,7 @@ class _PlannerViewState extends State<PlannerView> {
     );
   }
 
-  Widget _buildEmptyState(Color textColor, Color accentColor, AppLocalizations? l10n) {
+  Widget _buildEmptyState(Color textColor, Color accentColor, AppLocalizations l10n) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -679,17 +677,16 @@ class _PlannerViewState extends State<PlannerView> {
             Icon(Icons.filter_alt_off_rounded, size: 48, color: textColor.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             Text(
-              l10n?.noTargetsMatchPeriod ?? "No Targets Match This Period",
+              l10n.noTargetsMatchPeriod,
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor),
             ),
             const SizedBox(height: 8),
             Text(
-              l10n?.noTargetsPeriodSubtitle(
+              l10n.noTargetsPeriodSubtitle(
                     widget.filters.minAltitude.round().toString(),
                     _quadrantName(widget.filters.quadrant, l10n),
-                  ) ??
-                  "None of the catalog candidates meet your active limits (Alt ≥ ${widget.filters.minAltitude.round()}°, ${_quadrantName(widget.filters.quadrant, l10n)}) during this timeframe.\nTry selecting a broader date range or relaxing direction limits.",
+                  ),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6), height: 1.4),
             ),
@@ -697,7 +694,7 @@ class _PlannerViewState extends State<PlannerView> {
             ElevatedButton.icon(
               onPressed: _openFilterDialog,
               icon: const Icon(Icons.tune_rounded, size: 14),
-              label: Text(l10n?.adjustFiltersBtn ?? "Adjust Filters"),
+              label: Text(l10n.adjustFiltersBtn),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor.withValues(alpha: 0.2),
                 foregroundColor: accentColor,
@@ -724,17 +721,18 @@ class _PlannerViewState extends State<PlannerView> {
 
   Widget _buildPeriodTargetCard(PeriodTargetItem target, bool isSelected) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
     final isObservable = target.isObservable && target.observableDaysCount > 0;
 
     final cardBg = isSelected
         ? accentColor.withValues(alpha: 0.12)
-        : (widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface);
+        : palette.surface;
 
     final borderColor = isSelected
         ? accentColor
-        : (widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder);
+        : palette.border;
 
     final ratio = target.totalPeriodDays > 0
         ? target.observableDaysCount / target.totalPeriodDays
@@ -755,25 +753,21 @@ class _PlannerViewState extends State<PlannerView> {
           if (isWide) {
             setState(() => _selectedTarget = target);
           } else {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => TargetDetailsSheet(
-                target: target.toTargetItem(date: target.peakDate ?? _startDate),
-                night: _getNightForPeriodTarget(target),
-                latitude: widget.filters.observerLat,
-                longitude: widget.filters.observerLon,
-                elevation: widget.filters.observerElevation,
-                isRedNightMode: widget.isRedNightMode,
-                availableLists: widget.availableLists,
-                onAddToList: widget.onAddToList,
-                filters: widget.filters,
-                engine: widget.engine,
-                periodTarget: target,
-                plannedStartDate: _startDate,
-                plannedEndDate: _endDate,
-              ),
+            TargetDetailsSheet.show(
+              context,
+              target: target.toTargetItem(date: target.peakDate ?? _startDate),
+              night: _getNightForPeriodTarget(target),
+              latitude: widget.filters.observerLat,
+              longitude: widget.filters.observerLon,
+              elevation: widget.filters.observerElevation,
+              isRedNightMode: widget.isRedNightMode,
+              availableLists: widget.availableLists,
+              onAddToList: widget.onAddToList,
+              filters: widget.filters,
+              engine: widget.engine,
+              periodTarget: target,
+              plannedStartDate: _startDate,
+              plannedEndDate: _endDate,
             );
           }
         },
@@ -800,7 +794,7 @@ class _PlannerViewState extends State<PlannerView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${l10n?.targetInConstellation(localizeObjectType(target.objectType, l10n), target.constellation) ?? '${localizeObjectType(target.objectType, l10n)} in ${target.constellation}'}${target.magnitude != null ? ' • ${l10n?.magnitudeLabel ?? "Mag"} ${target.magnitude!.toStringAsFixed(1)}' : ''}",
+                          "${l10n.targetInConstellation(localizeObjectType(target.objectType, l10n), target.constellation)}${target.magnitude != null ? ' • ${l10n.magnitudeLabel} ${target.magnitude!.toStringAsFixed(1)}' : ''}",
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withValues(alpha: 0.6),
@@ -813,7 +807,7 @@ class _PlannerViewState extends State<PlannerView> {
                   // Add to Observing List action button
                   IconButton(
                     icon: Icon(Icons.playlist_add_rounded, size: 20, color: accentColor),
-                    tooltip: l10n?.addToObservingList ?? "Add to Observing List",
+                    tooltip: l10n.addToObservingList,
                     onPressed: () => _showAddToListDialog(target),
                   ),
                 ],
@@ -826,12 +820,12 @@ class _PlannerViewState extends State<PlannerView> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: isObservable
-                      ? AstroColors.visibleGreen.withValues(alpha: 0.12)
+                      ? palette.visibleGreen.withValues(alpha: 0.12)
                       : Colors.orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isObservable
-                        ? AstroColors.visibleGreen.withValues(alpha: 0.35)
+                        ? palette.visibleGreen.withValues(alpha: 0.35)
                         : Colors.orange.withValues(alpha: 0.35),
                   ),
                 ),
@@ -840,7 +834,7 @@ class _PlannerViewState extends State<PlannerView> {
                     Icon(
                       isObservable ? Icons.check_circle_outline_rounded : Icons.filter_alt_off_rounded,
                       size: 15,
-                      color: isObservable ? AstroColors.visibleGreen : Colors.orange,
+                      color: isObservable ? palette.visibleGreen : Colors.orange,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -853,23 +847,21 @@ class _PlannerViewState extends State<PlannerView> {
                               Expanded(
                                 child: Text(
                                   isObservable
-                                      ? (l10n?.periodDaysObservableShort(target.observableDaysCount, target.totalPeriodDays) ??
-                                          "${target.observableDaysCount} of ${target.totalPeriodDays} days observable")
-                                      : (l10n?.outsideFiltersInPeriod ?? "Outside active filters in this period"),
+                                      ? (l10n.periodDaysObservableShort(target.observableDaysCount, target.totalPeriodDays))
+                                      : (l10n.outsideFiltersInPeriod),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    color: isObservable ? AstroColors.visibleGreen : Colors.orange,
+                                    color: isObservable ? palette.visibleGreen : Colors.orange,
                                   ),
                                 ),
                               ),
                               if (target.peakDate != null && isObservable) ...[
                                 const SizedBox(width: 6),
                                 Text(
-                                  l10n?.periodPeakDate(DateFormat('MMM d', Localizations.localeOf(context).toString()).format(target.peakDate!)) ??
-                                      "Period Peak: ${DateFormat('MMM d').format(target.peakDate!)}",
+                                  l10n.periodPeakDate(DateFormat('MMM d', Localizations.localeOf(context).toString()).format(target.peakDate!)),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -888,7 +880,7 @@ class _PlannerViewState extends State<PlannerView> {
                                 minHeight: 3,
                                 backgroundColor: Colors.white.withValues(alpha: 0.1),
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  isObservable ? AstroColors.visibleGreen : Colors.orange,
+                                  isObservable ? palette.visibleGreen : Colors.orange,
                                 ),
                               ),
                             ),
@@ -910,10 +902,8 @@ class _PlannerViewState extends State<PlannerView> {
                 children: [
                   Text(
                     target.isObservable
-                        ? (l10n?.periodPeakAltAndMaxHours(target.peakAltitudeDeg.toStringAsFixed(1), target.maxHoursObservable.toStringAsFixed(1)) ??
-                            "Peak Alt: ${target.peakAltitudeDeg.toStringAsFixed(1)}° • Max: ${target.maxHoursObservable.toStringAsFixed(1)}h/night")
-                        : (l10n?.periodNeverClearsAlt(widget.filters.minAltitude.round().toString()) ??
-                            "Never clears ${widget.filters.minAltitude.round()}° in active window"),
+                        ? (l10n.periodPeakAltAndMaxHours(target.peakAltitudeDeg.toStringAsFixed(1), target.maxHoursObservable.toStringAsFixed(1)))
+                        : (l10n.periodNeverClearsAlt(widget.filters.minAltitude.round().toString())),
                     style: TextStyle(
                       fontSize: 10,
                       fontStyle: FontStyle.italic,
@@ -939,14 +929,15 @@ class _PlannerViewState extends State<PlannerView> {
 
   void _showAddToListDialog(PeriodTargetItem target) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     if (widget.availableLists.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n?.noObservingListsFound ?? "No observing lists exist yet. Create one in the Observing Lists tab first!"),
-          action: SnackBarAction(label: l10n?.okBtn ?? "OK", onPressed: () {}),
+          content: Text(l10n.noObservingListsFound),
+          action: SnackBarAction(label: l10n.okBtn, onPressed: () {}),
         ),
       );
       return;
@@ -955,8 +946,8 @@ class _PlannerViewState extends State<PlannerView> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        title: Text(l10n?.addToObservingList ?? "Add to Observing List", style: TextStyle(color: textColor, fontSize: 16)),
+        backgroundColor: palette.surface,
+        title: Text(l10n.addToObservingList, style: TextStyle(color: textColor, fontSize: 16)),
         content: SizedBox(
           width: 320,
           child: Column(
@@ -964,7 +955,7 @@ class _PlannerViewState extends State<PlannerView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n?.addNamedTargetTo(target.displayName) ?? "Add ${target.displayName} to:",
+                l10n.addNamedTargetTo(target.displayName),
                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 10),
@@ -981,7 +972,7 @@ class _PlannerViewState extends State<PlannerView> {
                       leading: Icon(Icons.playlist_play_rounded, color: accentColor),
                       title: Text(list.name, style: TextStyle(color: textColor, fontSize: 13)),
                       subtitle: Text(
-                        "${l10n?.observingListItemCount(list.items.length) ?? '${list.items.length} items'}${list.sessionDate.isNotEmpty ? ' • ${list.sessionDate}' : ''}",
+                        "${l10n.observingListItemCount(list.items.length)}${list.sessionDate.isNotEmpty ? ' • ${list.sessionDate}' : ''}",
                         style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
                       ),
                       onTap: () {
@@ -989,7 +980,7 @@ class _PlannerViewState extends State<PlannerView> {
                         Navigator.of(ctx).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(l10n?.addedTargetToList(target.displayName, list.name) ?? "Added ${target.displayName} to '${list.name}'!"),
+                            content: Text(l10n.addedTargetToList(target.displayName, list.name)),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -1004,7 +995,7 @@ class _PlannerViewState extends State<PlannerView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n?.cancel ?? "Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+            child: Text(l10n.cancel, style: TextStyle(color: textColor.withValues(alpha: 0.7))),
           ),
         ],
       ),
@@ -1012,8 +1003,9 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   Widget _buildPresetChip(String label, VoidCallback onTap, {bool isSpecial = false}) {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     return InkWell(
       onTap: onTap,
@@ -1042,8 +1034,9 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   Widget _buildFilterChip(String text, IconData icon) {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final accentColor = palette.accent;
+    final textColor = palette.textPrimary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -1066,7 +1059,7 @@ class _PlannerViewState extends State<PlannerView> {
     );
   }
 
-  String _quadrantName(int q, AppLocalizations? l10n) {
+  String _quadrantName(int q, AppLocalizations l10n) {
     final opts = getQuadrantOptions(l10n);
     if (q >= 0 && q < opts.length) {
       return opts[q];

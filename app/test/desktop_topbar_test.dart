@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/models/filter_state.dart';
 import 'package:app/models/night_summary.dart';
@@ -50,6 +51,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
         theme: AstroTheme.darkTheme(),
         home: Scaffold(
           body: TargetSearchView(

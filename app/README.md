@@ -1,17 +1,20 @@
-# app
+# Menelway Astro Planner - Flutter Application
 
-A new Flutter project.
+Frontend desktop application for visual astronomy and deep-sky astrophotography planning.
 
-## Getting Started
+## Architecture
 
-This project is a starting point for a Flutter application.
+- **`lib/core/`**: Dart FFI bridges to C++ native calculation engine (`astro_core`), catalog manager, and application logging.
+- **`lib/models/`**: Domain models including `TargetItem`, `FilterState`, `NightSummary`, `YearlyVisibility`, and user lists.
+- **`lib/theme/`**: Theme system supporting standard Deep Space Obsidian and dark-adaptation Red Night-Vision mode via `AstroPalette`.
+- **`lib/views/`**: Master/detail view layouts for Targets, Solar System, Bright Stars, Planner, Favorites, and Observing Lists.
+- **`lib/widgets/`**: Custom painters and interactive components (`AltitudeCurveChart`, `TargetPreviewCanvas`, `FovProjector`).
 
-A few resources to get you started if this is your first Flutter project:
+## Testing & Quality
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Run the test suite and static analysis:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter analyze
+flutter test
+```

@@ -9,10 +9,9 @@ import '../core/sky_image_service.dart';
 import '../models/equipment_profile.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
-import '../views/equipment_dialog.dart';
-import '../views/equipment_framing_dialog.dart';
 import '../l10n/app_localizations.dart';
 import 'fov_projector.dart';
+import 'target_renderers/target_body_renderer.dart';
 
 enum PreviewDisplayMode {
   photoWithReticle,
@@ -22,18 +21,22 @@ enum PreviewDisplayMode {
 
 class TargetPreviewCanvas extends StatefulWidget {
   final TargetItem target;
-  final bool isRedNightMode;
+  final bool? isRedNightMode;
   final double height;
   final bool enableExpandDialog;
   final bool initialFramingEnabled;
+  final VoidCallback? onOpenFramingDialog;
+  final VoidCallback? onOpenEquipmentDialog;
 
   const TargetPreviewCanvas({
     super.key,
     required this.target,
-    required this.isRedNightMode,
+    this.isRedNightMode,
     this.height = 240.0,
     this.enableExpandDialog = true,
     this.initialFramingEnabled = false,
+    this.onOpenFramingDialog,
+    this.onOpenEquipmentDialog,
   });
 
   @override
@@ -257,33 +260,21 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
   void _openFramingSimulatorDialog() {
     if (!widget.enableExpandDialog) return;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => EquipmentFramingDialog(
-        target: widget.target,
-        isRedNightMode: widget.isRedNightMode,
-      ),
-    );
+    widget.onOpenFramingDialog?.call();
   }
 
   void _openEquipmentManagerDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => EquipmentDialog(
-        isRedNightMode: widget.isRedNightMode,
-        onSaved: () => setState(() {}),
-      ),
-    );
+    widget.onOpenEquipmentDialog?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
-    final surfaceColor = widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
+    final borderColor = palette.border;
+    final surfaceColor = palette.surfaceVariant;
 
     final fovArcmin = _fovDeg * 60.0;
     final fovString = fovArcmin >= 60.0
@@ -329,8 +320,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     fit: BoxFit.cover,
                     gaplessPlayback: true,
                     filterQuality: FilterQuality.medium,
-                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : null,
-                    colorBlendMode: widget.isRedNightMode ? BlendMode.modulate : null,
+                    color: (widget.isRedNightMode ?? palette.isRedNightMode) ? AstroColors.nightVisionRed : null,
+                    colorBlendMode: (widget.isRedNightMode ?? palette.isRedNightMode) ? BlendMode.modulate : null,
                   ),
                 ),
 
@@ -339,7 +330,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                 painter: TargetVectorPainter(
                   target: widget.target,
                   fovDeg: _fovDeg,
-                  isRedNightMode: widget.isRedNightMode,
+                  isRedNightMode: widget.isRedNightMode ?? palette.isRedNightMode,
                   isVectorOnly: _displayMode == PreviewDisplayMode.vectorOnly || (!showPhoto && !isPhotoOnly),
                   isPhotoOnly: isPhotoOnly,
                   showReticle: showReticle,
@@ -403,7 +394,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         const Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
                         const SizedBox(width: 6),
                         Text(
-                          l10n?.offlineSkyFallback ?? "Offline Sky Fallback",
+                          l10n.offlineSkyFallback,
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                         ),
                       ],
@@ -436,8 +427,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     children: [
               // Survey Selector Chip
               PopupMenuButton<String>(
-                tooltip: l10n?.selectSkySurveyTooltip ?? "Select Sky Survey",
-                color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+                tooltip: l10n.selectSkySurveyTooltip,
+                color: palette.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                   side: BorderSide(color: borderColor),
@@ -468,9 +459,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   height: 38,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
+                    color: surfaceColor,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: borderColor),
                   ),
@@ -499,7 +488,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               if (widget.enableExpandDialog) ...[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: l10n?.openFramingSimulatorTooltip ?? "Open Full Framing Simulator",
+                  message: l10n.openFramingSimulatorTooltip,
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -509,12 +498,10 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         height: 38,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionSurfaceVariant
-                              : AstroColors.spaceDarkSurfaceVariant,
+                          color: palette.surfaceVariant,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            color: palette.starGold,
                             width: 1.2,
                           ),
                         ),
@@ -524,15 +511,15 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                             Icon(
                               Icons.open_in_full_rounded,
                               size: 15,
-                              color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                              color: palette.starGold,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              l10n?.framingSimulatorShort ?? "Simulator",
+                              l10n.framingSimulatorShort,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                                color: palette.starGold,
                               ),
                             ),
                           ],
@@ -547,7 +534,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
 
               // Framing Simulator Mode Toggle
               Tooltip(
-                message: l10n?.toggleFramingBoxTooltip ?? "Toggle Sensor Framing Box",
+                message: l10n.toggleFramingBoxTooltip,
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -563,16 +550,12 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: _isFramingEnabled
-                            ? (widget.isRedNightMode
-                                ? AstroColors.nightVisionRed.withValues(alpha: 0.22)
-                                : AstroColors.starGold.withValues(alpha: 0.22))
-                            : (widget.isRedNightMode
-                                ? AstroColors.nightVisionSurfaceVariant
-                                : AstroColors.spaceDarkSurfaceVariant),
+                            ? palette.starGold.withValues(alpha: 0.22)
+                            : palette.surfaceVariant,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _isFramingEnabled
-                              ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                              ? palette.starGold
                               : borderColor,
                           width: _isFramingEnabled ? 1.4 : 1.0,
                         ),
@@ -584,17 +567,17 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                             Icons.crop_rotate_rounded,
                             size: 16,
                             color: _isFramingEnabled
-                                ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                ? palette.starGold
                                 : textColor,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            l10n?.framingModeShort ?? "Framing",
+                            l10n.framingModeShort,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: _isFramingEnabled
-                                  ? (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
+                                  ? palette.starGold
                                   : textColor,
                             ),
                           ),
@@ -612,9 +595,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                 height: 38,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: borderColor),
                 ),
@@ -638,9 +619,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                 height: 38,
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: borderColor),
                 ),
@@ -649,7 +628,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   children: [
                     _buildModeBtn(
                       icon: Icons.filter_center_focus_rounded,
-                      tooltip: l10n?.photoReticleTooltip ?? "Photo + Reticle",
+                      tooltip: l10n.photoReticleTooltip,
                       isSelected: _displayMode == PreviewDisplayMode.photoWithReticle,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoWithReticle),
@@ -657,7 +636,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     const SizedBox(width: 2),
                     _buildModeBtn(
                       icon: Icons.image_rounded,
-                      tooltip: l10n?.photoCleanTooltip ?? "Photo Mode (Clean Image)",
+                      tooltip: l10n.photoCleanTooltip,
                       isSelected: _displayMode == PreviewDisplayMode.photoOnly,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.photoOnly),
@@ -665,7 +644,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     const SizedBox(width: 2),
                     _buildModeBtn(
                       icon: Icons.draw_rounded,
-                      tooltip: l10n?.vectorSizeTooltip ?? "Vector Apparent Size",
+                      tooltip: l10n.vectorSizeTooltip,
                       isSelected: _displayMode == PreviewDisplayMode.vectorOnly,
                       accentColor: accentColor,
                       onTap: () => setState(() => _displayMode = PreviewDisplayMode.vectorOnly),
@@ -697,7 +676,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     children: [
                       _buildLargeActionButton(
                         icon: Icons.remove_rounded,
-                        tooltip: l10n?.zoomOutTooltip ?? "Zoom Out (Wider FOV)",
+                        tooltip: l10n.zoomOutTooltip,
                         onTap: _zoomOut,
                         color: textColor,
                         borderColor: borderColor,
@@ -705,7 +684,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       const SizedBox(width: 8),
                       _buildLargeActionButton(
                         icon: Icons.add_rounded,
-                        tooltip: l10n?.zoomInTooltip ?? "Zoom In (Closer FOV)",
+                        tooltip: l10n.zoomInTooltip,
                         onTap: _zoomIn,
                         color: textColor,
                         borderColor: borderColor,
@@ -713,7 +692,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       const SizedBox(width: 8),
                       _buildLargeActionButton(
                         icon: Icons.restart_alt_rounded,
-                        tooltip: l10n?.resetFovTooltip ?? "Reset Framing FOV",
+                        tooltip: l10n.resetFovTooltip,
                         onTap: _resetFov,
                         color: textColor,
                         borderColor: borderColor,
@@ -724,9 +703,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         height: 44,
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
                         decoration: BoxDecoration(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionSurfaceVariant
-                              : AstroColors.spaceDarkSurfaceVariant,
+                          color: surfaceColor,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: borderColor),
                         ),
@@ -764,14 +741,10 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       height: 46,
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: widget.isRedNightMode
-                            ? AstroColors.nightVisionSurfaceVariant
-                            : AstroColors.spaceDarkSurfaceVariant,
+                        color: surfaceColor,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                              : AstroColors.starGold.withValues(alpha: 0.6),
+                          color: palette.starGold.withValues(alpha: 0.6),
                           width: 1.2,
                         ),
                       ),
@@ -780,7 +753,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         children: [
                           _buildRotatorButton(
                             icon: Icons.rotate_left_rounded,
-                            tooltip: l10n?.rotateMinus15 ?? "Rotate -15°",
+                            tooltip: l10n.rotateMinus15,
                             onTap: () => EquipmentManager.instance.rotateBy(-15),
                             color: textColor,
                           ),
@@ -795,12 +768,10 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                                        .withValues(alpha: 0.16),
+                                    color: palette.starGold.withValues(alpha: 0.16),
                                     borderRadius: BorderRadius.circular(6),
                                     border: Border.all(
-                                      color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                                          .withValues(alpha: 0.35),
+                                      color: palette.starGold.withValues(alpha: 0.35),
                                     ),
                                   ),
                                   child: Text(
@@ -809,7 +780,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                                       fontSize: 13,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 0.5,
-                                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                                      color: palette.starGold,
                                     ),
                                   ),
                                 ),
@@ -819,7 +790,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           const SizedBox(width: 6),
                           _buildRotatorButton(
                             icon: Icons.rotate_right_rounded,
-                            tooltip: l10n?.rotatePlus15 ?? "Rotate +15°",
+                            tooltip: l10n.rotatePlus15,
                             onTap: () => EquipmentManager.instance.rotateBy(15),
                             color: textColor,
                           ),
@@ -832,10 +803,10 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           const SizedBox(width: 10),
                           _buildTextActionButton(
                             icon: Icons.fit_screen_rounded,
-                            label: l10n?.fitToSensor ?? "Fit",
-                            tooltip: l10n?.fitFovToSensorTooltip ?? "Fit FOV to Sensor Size",
+                            label: l10n.fitToSensor,
+                            tooltip: l10n.fitFovToSensorTooltip,
                             onTap: _fitToSensor,
-                            accentColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                            accentColor: palette.starGold,
                           ),
                         ],
                       ),
@@ -858,13 +829,10 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: (widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold)
-                        .withValues(alpha: 0.4),
+                    color: palette.starGold.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Row(
@@ -872,7 +840,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     Icon(
                       Icons.tune_rounded,
                       size: 14,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                      color: palette.starGold,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -881,7 +849,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                          color: palette.starGold,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -991,6 +959,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     required Color color,
     required Color borderColor,
   }) {
+    final palette = AstroPalette.of(context);
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -1002,9 +971,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: widget.isRedNightMode
-                  ? AstroColors.nightVisionSurfaceVariant
-                  : AstroColors.spaceDarkSurfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: borderColor),
             ),
@@ -1215,419 +1182,18 @@ class TargetVectorPainter extends CustomPainter {
     // Only in Vector mode or Photo + Reticle mode; in Photo Mode, do not draw target apparent vectors or circles.
     if (!isPhotoOnly) {
       final radii = projector.calculateTargetRadii(target.majorAxisArcmin, target.surfaceBrightness);
-      final lowerType = target.objectType.toLowerCase();
-      final isPlanet = target.catalog == 'Solar System' || (lowerType.contains('planet') && !lowerType.contains('planetary'));
-      final isStar = lowerType.contains('star') && !lowerType.contains('cluster');
-
-      if (isPlanet) {
-        // Render Planetary disk with authentic physical features
-        final radPixels = radii.width > 0 ? radii.width : 14.0;
-        final planetR = radPixels.clamp(9.0, 140.0);
-
-        canvas.save();
-        canvas.translate(targetCenter.dx, targetCenter.dy);
-
-        final pName = target.name;
-        if (pName == 'Saturn') {
-          // 3D Ring System:
-          final ringAngle = -26.0 * math.pi / 180.0;
-          final ringOuterW = planetR * 4.6;
-          final ringOuterH = planetR * 1.7;
-          final ringInnerW = planetR * 2.8;
-          final ringInnerH = planetR * 1.05;
-
-          // 1. Back half of rings: clip to top half (y <= 0)
-          canvas.save();
-          canvas.rotate(ringAngle);
-          canvas.save();
-          canvas.clipRect(Rect.fromLTRB(-ringOuterW, -ringOuterH, ringOuterW, 0));
-          final ringBackPaint = Paint()
-            ..color = (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFD4B26F)).withValues(alpha: 0.7)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = (ringOuterH - ringInnerH) * 0.45;
-          canvas.drawOval(
-            Rect.fromCenter(center: Offset.zero, width: (ringOuterW + ringInnerW) / 2, height: (ringOuterH + ringInnerH) / 2),
-            ringBackPaint,
-          );
-          canvas.restore();
-          canvas.restore();
-
-          // 2. Planet Sphere
-          final bodyPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.9,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF350A0A)]
-                  : [const Color(0xFFF3E5AB), const Color(0xFFC29B38), const Color(0xFF785E23)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, bodyPaint);
-
-          // Subtle Saturn atmospheric belt
-          final beltPaint = Paint()
-            ..color = (isRedNightMode ? Colors.black : const Color(0xFF8B6B23)).withValues(alpha: 0.3)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = planetR * 0.22;
-          canvas.drawArc(Rect.fromCenter(center: Offset.zero, width: planetR * 2, height: planetR * 0.8), -0.2, 3.5, false, beltPaint);
-
-          // 3. Front half of rings: clip to bottom half (y > 0)
-          canvas.save();
-          canvas.rotate(ringAngle);
-          canvas.save();
-          canvas.clipRect(Rect.fromLTRB(-ringOuterW, 0, ringOuterW, ringOuterH));
-          final ringFrontPaint = Paint()
-            ..color = (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFE2C485)).withValues(alpha: 0.85)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = (ringOuterH - ringInnerH) * 0.45;
-          canvas.drawOval(
-            Rect.fromCenter(center: Offset.zero, width: (ringOuterW + ringInnerW) / 2, height: (ringOuterH + ringInnerH) / 2),
-            ringFrontPaint,
-          );
-          // Cassini division gap line
-          final cassiniPaint = Paint()
-            ..color = Colors.black.withValues(alpha: 0.6)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.2;
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: ringOuterW * 0.84, height: ringOuterH * 0.84), cassiniPaint);
-          canvas.restore();
-          canvas.restore();
-
-        } else if (pName == 'Jupiter') {
-          // Jovian sphere with atmospheric belts & Red Spot
-          final jupPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.3, -0.3),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF380808)]
-                  : [const Color(0xFFFFF8E7), const Color(0xFFE0B984), const Color(0xFF9E6B38)],
-              stops: const [0.0, 0.7, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, jupPaint);
-
-          canvas.save();
-          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
-
-          final beltColor = (isRedNightMode ? Colors.black : const Color(0xFF8B4513)).withValues(alpha: 0.45);
-          final beltPaint = Paint()
-            ..color = beltColor
-            ..style = PaintingStyle.fill;
-          canvas.drawRect(Rect.fromLTRB(-planetR, -planetR * 0.38, planetR, -planetR * 0.12), beltPaint);
-          canvas.drawRect(Rect.fromLTRB(-planetR, planetR * 0.12, planetR, planetR * 0.38), beltPaint);
-
-          final faintBelt = Paint()
-            ..color = beltColor.withValues(alpha: 0.25)
-            ..style = PaintingStyle.fill;
-          canvas.drawRect(Rect.fromLTRB(-planetR, planetR * 0.52, planetR, planetR * 0.65), faintBelt);
-          canvas.drawRect(Rect.fromLTRB(-planetR, -planetR * 0.65, planetR, -planetR * 0.52), faintBelt);
-
-          // Great Red Spot
-          final grsPaint = Paint()
-            ..color = (isRedNightMode ? Colors.white : const Color(0xFFCC4422)).withValues(alpha: 0.75)
-            ..style = PaintingStyle.fill;
-          canvas.drawOval(Rect.fromCenter(center: Offset(planetR * 0.35, planetR * 0.25), width: planetR * 0.4, height: planetR * 0.22), grsPaint);
-
-          canvas.restore();
-
-        } else if (pName == 'Mars') {
-          // Mars: terracotta sphere with polar ice cap
-          final marsPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF400A0A)]
-                  : [const Color(0xFFFF7A45), const Color(0xFFC84B20), const Color(0xFF6B1D0B)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, marsPaint);
-
-          canvas.save();
-          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
-          final capPaint = Paint()
-            ..color = Colors.white.withValues(alpha: 0.85)
-            ..style = PaintingStyle.fill;
-          canvas.drawOval(Rect.fromCenter(center: Offset(0, -planetR * 0.82), width: planetR * 0.7, height: planetR * 0.3), capPaint);
-          canvas.restore();
-
-        } else if (pName == 'Moon') {
-          // Moon: cratered lunar sphere
-          final moonPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.3, -0.3),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF300808)]
-                  : [const Color(0xFFF0F2F5), const Color(0xFFB0B4BC), const Color(0xFF4A4E57)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, moonPaint);
-
-          canvas.save();
-          canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: planetR)));
-          final mariaPaint = Paint()
-            ..color = Colors.black.withValues(alpha: 0.22)
-            ..style = PaintingStyle.fill;
-          canvas.drawCircle(Offset(-planetR * 0.28, -planetR * 0.25), planetR * 0.32, mariaPaint);
-          canvas.drawCircle(Offset(planetR * 0.22, -planetR * 0.15), planetR * 0.25, mariaPaint);
-          canvas.drawCircle(Offset(planetR * 0.15, planetR * 0.3), planetR * 0.28, mariaPaint);
-          canvas.restore();
-
-        } else if (pName == 'Sun') {
-          // Radiant Sun disk with corona flares
-          final coronaPaint = Paint()
-            ..shader = RadialGradient(
-              colors: [
-                (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFFFB300)).withValues(alpha: 0.35),
-                (isRedNightMode ? AstroColors.nightVisionRed : const Color(0xFFFF6D00)).withValues(alpha: 0.1),
-                Colors.transparent,
-              ],
-              stops: const [0.5, 0.8, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR * 1.6));
-          canvas.drawCircle(Offset.zero, planetR * 1.6, coronaPaint);
-
-          final sunPaint = Paint()
-            ..shader = RadialGradient(
-              center: Alignment.center,
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [Colors.white, AstroColors.nightVisionRed]
-                  : [const Color(0xFFFFFFE0), const Color(0xFFFFD700), const Color(0xFFFF8C00)],
-              stops: const [0.0, 0.55, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, sunPaint);
-
-        } else if (pName == 'Venus') {
-          // Venus: brilliant pearlescent sphere
-          final venusPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF350A0A)]
-                  : [const Color(0xFFFFFDF5), const Color(0xFFEADBBE), const Color(0xFF9E8E72)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, venusPaint);
-
-        } else if (pName == 'Uranus') {
-          // Uranus: soft aquamarine sphere
-          final uranusPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF280808)]
-                  : [const Color(0xFFD6F9FA), const Color(0xFF7CE4EC), const Color(0xFF2C7D88)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, uranusPaint);
-
-        } else if (pName == 'Neptune') {
-          // Neptune: deep azure/cobalt sphere
-          final nepPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF200505)]
-                  : [const Color(0xFF8AB8FD), const Color(0xFF386FE0), const Color(0xFF142B75)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, nepPaint);
-
-        } else {
-          // Mercury / Pluto / Default
-          final defPaint = Paint()
-            ..shader = RadialGradient(
-              center: const Alignment(-0.35, -0.35),
-              radius: 0.85,
-              colors: isRedNightMode
-                  ? [AstroColors.nightVisionRed, const Color(0xFF200505)]
-                  : [const Color(0xFFD8D8D8), const Color(0xFF8A8A8A), const Color(0xFF3B3B3B)],
-              stops: const [0.0, 0.65, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: planetR));
-          canvas.drawCircle(Offset.zero, planetR, defPaint);
-        }
-
-        // Precision outline ring
-        final borderPaint = Paint()
-          ..color = (isRedNightMode ? AstroColors.nightVisionRed : primaryColor).withValues(alpha: 0.45)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0;
-        canvas.drawCircle(Offset.zero, planetR, borderPaint);
-
-        canvas.restore();
-
-      } else if (isStar) {
-        // Bright Stellar Object: diffraction spikes + stellar glow halo + brilliant core
-        final mag = target.magnitude ?? 2.0;
-        final coreR = (4.0 - (mag * 0.35)).clamp(2.5, 6.0);
-        final spikeLen = (32.0 - (mag * 2.8)).clamp(12.0, 42.0);
-
-        canvas.save();
-        canvas.translate(targetCenter.dx, targetCenter.dy);
-
-        // 1. Soft stellar halo glow
-        final haloPaint = Paint()
-          ..shader = RadialGradient(
-            colors: [
-              (isRedNightMode ? AstroColors.nightVisionRed : goldColor).withValues(alpha: 0.55),
-              (isRedNightMode ? AstroColors.nightVisionRed : primaryColor).withValues(alpha: 0.15),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.45, 1.0],
-          ).createShader(Rect.fromCircle(center: Offset.zero, radius: spikeLen * 0.9));
-        canvas.drawCircle(Offset.zero, spikeLen * 0.9, haloPaint);
-
-        // 2. 4-point Diffraction Cross (Telescope Spider Spikes)
-        final spikePaint = Paint()
-          ..color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.1;
-        canvas.drawLine(Offset(-spikeLen, 0), Offset(spikeLen, 0), spikePaint);
-        canvas.drawLine(Offset(0, -spikeLen), Offset(0, spikeLen), spikePaint);
-
-        // Diagonal soft micro-spikes for 1st magnitude stars
-        if (mag < 1.5) {
-          final diagLen = spikeLen * 0.45;
-          final diagPaint = Paint()
-            ..color = (isRedNightMode ? AstroColors.nightVisionRed : goldColor).withValues(alpha: 0.5)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.8;
-          canvas.drawLine(Offset(-diagLen, -diagLen), Offset(diagLen, diagLen), diagPaint);
-          canvas.drawLine(Offset(-diagLen, diagLen), Offset(diagLen, -diagLen), diagPaint);
-        }
-
-        // 3. Central Brilliant White Star Core
-        final corePaint = Paint()
-          ..color = isRedNightMode ? AstroColors.nightVisionRed : Colors.white
-          ..style = PaintingStyle.fill;
-        canvas.drawCircle(Offset.zero, coreR, corePaint);
-
-        // 4. Secondary companion for double stars
-        if (lowerType.contains('double')) {
-          final compOffset = Offset(coreR * 3.2, -coreR * 2.2);
-          final compSpike = spikeLen * 0.5;
-          canvas.drawLine(compOffset + Offset(-compSpike, 0), compOffset + Offset(compSpike, 0), spikePaint);
-          canvas.drawLine(compOffset + Offset(0, -compSpike), compOffset + Offset(0, compSpike), spikePaint);
-          canvas.drawCircle(compOffset, coreR * 0.65, corePaint);
-        }
-
-        canvas.restore();
-
-      } else if (radii != Size.zero) {
-        final radX = radii.width;
-        final radY = radii.height;
-
-        canvas.save();
-        canvas.translate(targetCenter.dx, targetCenter.dy);
-        final paRad = target.positionAngleDeg != null
-            ? (target.positionAngleDeg! * math.pi / 180.0)
-            : (math.pi / 5.0);
-        canvas.rotate(paRad);
-
-        if (lowerType.contains('galaxy')) {
-          // GALAXY
-          final haloPaint = Paint()
-            ..shader = RadialGradient(
-              colors: [
-                primaryColor.withValues(alpha: isVectorOnly ? 0.45 : 0.25),
-                primaryColor.withValues(alpha: 0.0),
-              ],
-              stops: const [0.2, 1.0],
-            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), haloPaint);
-
-          final corePaint = Paint()
-            ..shader = RadialGradient(
-              colors: [
-                (isRedNightMode ? Colors.white : goldColor).withValues(alpha: 0.9),
-                primaryColor.withValues(alpha: 0.0),
-              ],
-            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4));
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 0.4, height: radY * 0.4), corePaint);
-
-          final outlinePaint = Paint()
-            ..color = primaryColor.withValues(alpha: 0.6)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.2;
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
-        } else if (lowerType.contains('planetary')) {
-          // PLANETARY NEBULA
-          final ringPaint = Paint()
-            ..color = (isRedNightMode ? AstroColors.nightVisionRed : AstroColors.deepSkyTeal).withValues(alpha: 0.7)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(2.0, radX * 0.25);
-          canvas.drawCircle(Offset.zero, radX, ringPaint);
-
-          final dwarfPaint = Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.fill;
-          canvas.drawCircle(Offset.zero, 1.8, dwarfPaint);
-        } else if (lowerType.contains('globular')) {
-          // GLOBULAR CLUSTER
-          final globPaint = Paint()
-            ..shader = RadialGradient(
-              colors: [
-                (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85),
-                goldColor.withValues(alpha: 0.4),
-                primaryColor.withValues(alpha: 0.0),
-              ],
-              stops: const [0.0, 0.4, 1.0],
-            ).createShader(Rect.fromCircle(center: Offset.zero, radius: radX));
-          canvas.drawCircle(Offset.zero, radX, globPaint);
-
-          final globBorder = Paint()
-            ..color = goldColor.withValues(alpha: 0.5)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0;
-          canvas.drawCircle(Offset.zero, radX, globBorder);
-        } else if (lowerType.contains('open cluster') || lowerType.contains('cluster')) {
-          // OPEN CLUSTER
-          final clusterBorder = Paint()
-            ..color = goldColor.withValues(alpha: 0.55)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0;
-          canvas.drawCircle(Offset.zero, radX, clusterBorder);
-
-          final starP = Paint()..style = PaintingStyle.fill;
-          final cRand = math.Random(target.id * 7);
-          for (var i = 0; i < 18; i++) {
-            final r = math.sqrt(cRand.nextDouble()) * radX * 0.9;
-            final th = cRand.nextDouble() * 2 * math.pi;
-            starP.color = (isRedNightMode ? AstroColors.nightVisionRed : Colors.white).withValues(alpha: 0.85);
-            canvas.drawCircle(Offset(r * math.cos(th), r * math.sin(th)), 1.2, starP);
-          }
-        } else {
-          // NEBULA / SUPERNOVA REMNANT
-          final nebPaint = Paint()
-            ..shader = RadialGradient(
-              colors: [
-                secondaryColor.withValues(alpha: isVectorOnly ? 0.5 : 0.3),
-                primaryColor.withValues(alpha: isVectorOnly ? 0.25 : 0.12),
-                primaryColor.withValues(alpha: 0.0),
-              ],
-              stops: const [0.0, 0.6, 1.0],
-            ).createShader(Rect.fromCenter(center: Offset.zero, width: radX * 2.2, height: radY * 2.2));
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), nebPaint);
-
-          final outlinePaint = Paint()
-            ..color = secondaryColor.withValues(alpha: 0.6)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.2;
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: radX * 2.0, height: radY * 2.0), outlinePaint);
-        }
-
-        canvas.restore();
-      } else {
-        final pointPaint = Paint()
-          ..color = goldColor.withValues(alpha: 0.8)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2;
-        canvas.drawCircle(targetCenter, 6.0, pointPaint);
-      }
+      final renderer = TargetBodyRenderer.selectRenderer(target);
+      renderer.render(
+        canvas,
+        target: target,
+        projector: projector,
+        radii: radii,
+        isRedNightMode: isRedNightMode,
+        isVectorOnly: isVectorOnly,
+        primaryColor: primaryColor,
+        secondaryColor: secondaryColor,
+        goldColor: goldColor,
+      );
     }
 
     // 3. Equipment Framing Simulator Sensor Frame Overlay

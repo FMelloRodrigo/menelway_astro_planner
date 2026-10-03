@@ -10,14 +10,12 @@ import '../theme/astro_theme.dart';
 /// Modal dialog allowing the observer to view, switch, add, edit, and delete
 /// observing sites, complete with an interactive Visual Bortle Darkness Selector.
 class ObservingSitesDialog extends StatefulWidget {
-  final bool isRedNightMode;
   final String? initialEditSiteId;
   final bool startInAddMode;
   final void Function(ObservingSite activeSite)? onActiveSiteChanged;
 
   const ObservingSitesDialog({
     super.key,
-    required this.isRedNightMode,
     this.initialEditSiteId,
     this.startInAddMode = false,
     this.onActiveSiteChanged,
@@ -119,7 +117,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
     _addressError = null;
   }
 
-  Future<void> _doCitySearch(AppLocalizations? l10n) async {
+  Future<void> _doCitySearch(AppLocalizations l10n) async {
     final q = _searchController.text.trim();
     if (q.length < 2) return;
 
@@ -135,14 +133,14 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
         _searchResults = results;
         _isSearching = false;
         if (results.isEmpty) {
-          _searchError = l10n?.locationNotFound(q) ?? "No matching cities found for '$q'.";
+          _searchError = l10n.locationNotFound(q);
         }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSearching = false;
-        _searchError = l10n?.connectionError ?? "Connection error. Check internet connection.";
+        _searchError = l10n.connectionError;
       });
     }
   }
@@ -178,13 +176,24 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
   void _saveSite() {
     final l10n = AppLocalizations.of(context);
     final rawName = _nameController.text.trim();
-    final name = rawName.isNotEmpty ? rawName : (l10n?.siteName ?? 'Observing Site');
+    final name = rawName.isNotEmpty ? rawName : (l10n.siteName);
 
-    final lat = (double.tryParse(_latController.text.replaceAll(',', '.')) ?? -22.2819)
+    final activeSite = ObservingSiteManager.instance.activeSite;
+    final fallbackLat = _editingSiteId != null
+        ? (ObservingSiteManager.instance.sites.where((s) => s.id == _editingSiteId).firstOrNull?.latitude ?? activeSite.latitude)
+        : activeSite.latitude;
+    final fallbackLon = _editingSiteId != null
+        ? (ObservingSiteManager.instance.sites.where((s) => s.id == _editingSiteId).firstOrNull?.longitude ?? activeSite.longitude)
+        : activeSite.longitude;
+    final fallbackEle = _editingSiteId != null
+        ? (ObservingSiteManager.instance.sites.where((s) => s.id == _editingSiteId).firstOrNull?.elevation ?? activeSite.elevation)
+        : activeSite.elevation;
+
+    final lat = (double.tryParse(_latController.text.replaceAll(',', '.')) ?? fallbackLat)
         .clamp(ObservingSite.minLatitude, ObservingSite.maxLatitude);
-    final lon = (double.tryParse(_lonController.text.replaceAll(',', '.')) ?? -42.5311)
+    final lon = (double.tryParse(_lonController.text.replaceAll(',', '.')) ?? fallbackLon)
         .clamp(ObservingSite.minLongitude, ObservingSite.maxLongitude);
-    final ele = (double.tryParse(_eleController.text.replaceAll(',', '.')) ?? 858.0)
+    final ele = (double.tryParse(_eleController.text.replaceAll(',', '.')) ?? fallbackEle)
         .clamp(ObservingSite.minElevation, ObservingSite.maxElevation);
 
     final siteId = _editingSiteId ?? 'site_${DateTime.now().millisecondsSinceEpoch}';
@@ -215,7 +224,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(l10n?.siteSaved ?? "Observing site saved."),
+        content: Text(l10n.siteSaved),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
       ),
@@ -227,7 +236,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
     if (ObservingSiteManager.instance.sites.length <= 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n?.cannotDeleteLastSite ?? "You must keep at least one observing site."),
+          content: Text(l10n.cannotDeleteLastSite),
           backgroundColor: Colors.orangeAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -238,12 +247,12 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n?.deleteSite ?? "Delete Site"),
-        content: Text("${l10n?.deleteSiteConfirm ?? "Are you sure you want to delete this observing site?"}\n\n\"${site.name}\""),
+        title: Text(l10n.deleteSite),
+        content: Text("${l10n.deleteSiteConfirm}\n\n\"${site.name}\""),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n?.cancel ?? "Cancel"),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -256,7 +265,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
               }
               setState(() {});
             },
-            child: Text(l10n?.deleteSite ?? "Delete"),
+            child: Text(l10n.deleteSite),
           ),
         ],
       ),
@@ -266,10 +275,11 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final surfaceColor = widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface;
-    final borderColor = widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
+    final surfaceColor = palette.surface;
+    final borderColor = palette.border;
 
     return Dialog(
       backgroundColor: surfaceColor,
@@ -312,7 +322,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
     );
   }
 
-  Widget _buildHeader(AppLocalizations? l10n, Color textColor, Color accentColor) {
+  Widget _buildHeader(AppLocalizations l10n, Color textColor, Color accentColor) {
     return Row(
       children: [
         Icon(
@@ -324,10 +334,10 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
         Expanded(
           child: Text(
             _mode == _DialogMode.list
-                ? (l10n?.observingSites ?? "Observing Sites")
+                ? (l10n.observingSites)
                 : (_editingSiteId == null
-                    ? (l10n?.addNewSite ?? "Add New Site")
-                    : (l10n?.editSite ?? "Edit Site")),
+                    ? (l10n.addNewSite)
+                    : (l10n.editSite)),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -339,14 +349,12 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
-                  : AstroColors.starlightCyan.withValues(alpha: 0.15),
+              backgroundColor: accentColor.withValues(alpha: 0.18),
               foregroundColor: accentColor,
               side: BorderSide(color: accentColor.withValues(alpha: 0.6)),
             ),
             icon: const Icon(Icons.add_location_alt_rounded, size: 16),
-            label: Text(l10n?.addNewSite ?? "Add Site", style: const TextStyle(fontSize: 12)),
+            label: Text(l10n.addNewSite, style: const TextStyle(fontSize: 12)),
             onPressed: () {
               setState(() {
                 _mode = _DialogMode.edit;
@@ -357,7 +365,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
           )
         else
           IconButton(
-            tooltip: l10n?.cancel ?? "Back to List",
+            tooltip: l10n.cancel,
             icon: const Icon(Icons.arrow_back_rounded),
             color: textColor.withValues(alpha: 0.7),
             onPressed: () {
@@ -374,9 +382,10 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
   // -------------------------------------------------------------
   // LIST VIEW: ALL OBSERVING SITES
   // -------------------------------------------------------------
-  Widget _buildListView(AppLocalizations? l10n, Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildListView(AppLocalizations l10n, Color textColor, Color accentColor, Color borderColor) {
     final sites = ObservingSiteManager.instance.sites;
     final activeId = ObservingSiteManager.instance.activeSiteId;
+    final palette = AstroPalette.of(context);
 
     return ListView.separated(
       itemCount: sites.length,
@@ -390,12 +399,8 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isActive
-                ? (widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.12)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.08))
-                : (widget.isRedNightMode
-                    ? AstroColors.nightVisionSurfaceVariant
-                    : AstroColors.spaceDarkSurfaceVariant),
+                ? accentColor.withValues(alpha: 0.12)
+                : palette.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isActive ? accentColor : borderColor,
@@ -454,7 +459,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                                   border: Border.all(color: accentColor.withValues(alpha: 0.5)),
                                 ),
                                 child: Text(
-                                  l10n?.activeSite ?? "Active",
+                                  l10n.activeSite,
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -533,7 +538,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, size: 18),
-                        tooltip: l10n?.editSite ?? "Edit Site",
+                        tooltip: l10n.editSite,
                         color: textColor.withValues(alpha: 0.7),
                         onPressed: () {
                           setState(() {
@@ -545,7 +550,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                        tooltip: l10n?.deleteSite ?? "Delete Site",
+                        tooltip: l10n.deleteSite,
                         color: sites.length > 1 ? Colors.redAccent.withValues(alpha: 0.8) : textColor.withValues(alpha: 0.2),
                         onPressed: sites.length > 1 ? () => _confirmDeleteSite(site) : null,
                       ),
@@ -563,7 +568,8 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
   // -------------------------------------------------------------
   // EDITOR VIEW: ADD OR EDIT OBSERVING SITE
   // -------------------------------------------------------------
-  Widget _buildEditorView(AppLocalizations? l10n, Color textColor, Color accentColor, Color borderColor) {
+  Widget _buildEditorView(AppLocalizations l10n, Color textColor, Color accentColor, Color borderColor) {
+    final palette = AstroPalette.of(context);
     final bortleInfo = BortleInfo.get(_bortleClass);
     // Dynamic derivation of slider divisions according to Engineering Standards
     final bortleDivisions = math.max(1, ((ObservingSite.maxBortle - ObservingSite.minBortle) / 1).round());
@@ -576,7 +582,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
-              labelText: l10n?.siteName ?? "Site Name",
+              labelText: l10n.siteName,
               hintText: "e.g. Home Backyard, Dark Sky Mountain Camp",
               prefixIcon: const Icon(Icons.label_outline_rounded, size: 18),
             ),
@@ -590,8 +596,8 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    labelText: l10n?.searchCityOnline ?? "Search City & Country (Online)",
-                    hintText: l10n?.searchCityHint ?? "Type city",
+                    labelText: l10n.searchCityOnline,
+                    hintText: l10n.searchCityHint,
                     prefixIcon: const Icon(Icons.search_rounded, size: 18),
                     suffixIcon: _isSearching
                         ? const Padding(
@@ -604,7 +610,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                           )
                         : IconButton(
                             icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                            tooltip: l10n?.searchOnlineTooltip ?? "Search online",
+                            tooltip: l10n.searchOnlineTooltip,
                             onPressed: () => _doCitySearch(l10n),
                           ),
                   ),
@@ -627,7 +633,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
             Container(
               constraints: const BoxConstraints(maxHeight: 160),
               decoration: BoxDecoration(
-                color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: borderColor),
               ),
@@ -680,7 +686,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    l10n?.searchAddressTooltip ?? "Search specific street / neighborhood (optional)",
+                    l10n.searchAddressTooltip,
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: accentColor),
                   ),
                 ],
@@ -692,7 +698,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
             TextField(
               controller: _addressController,
               decoration: InputDecoration(
-                hintText: l10n?.searchAddressHint ?? "Type street name, neighborhood, city",
+                hintText: l10n.searchAddressHint,
                 prefixIcon: const Icon(Icons.pin_drop_outlined, size: 18),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.arrow_forward_rounded, size: 18),
@@ -714,7 +720,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
               Container(
                 constraints: const BoxConstraints(maxHeight: 140),
                 decoration: BoxDecoration(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                  color: palette.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: borderColor),
                 ),
@@ -761,7 +767,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                 child: TextField(
                   controller: _latController,
                   decoration: InputDecoration(
-                    labelText: l10n?.latitude ?? "Latitude (°)",
+                    labelText: l10n.latitude,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 ),
@@ -771,7 +777,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                 child: TextField(
                   controller: _lonController,
                   decoration: InputDecoration(
-                    labelText: l10n?.longitude ?? "Longitude (°)",
+                    labelText: l10n.longitude,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 ),
@@ -781,7 +787,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                 child: TextField(
                   controller: _eleController,
                   decoration: InputDecoration(
-                    labelText: l10n?.elevation ?? "Elevation (m)",
+                    labelText: l10n.elevation,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 ),
@@ -797,7 +803,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+              color: palette.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor),
             ),
@@ -816,7 +822,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                         Icon(Icons.brightness_medium_rounded, size: 16, color: accentColor),
                         const SizedBox(width: 6),
                         Text(
-                          l10n?.bortleDarkness ?? "Bortle Sky Darkness",
+                          l10n.bortleDarkness,
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -963,7 +969,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
             controller: _notesController,
             maxLines: 2,
             decoration: InputDecoration(
-              labelText: l10n?.siteNotes ?? "Notes (Optional)",
+              labelText: l10n.siteNotes,
               hintText: "e.g. Backyard with roof obstruction to the South, power outlet available",
               prefixIcon: const Icon(Icons.notes_rounded, size: 18),
             ),
@@ -973,7 +979,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
     );
   }
 
-  Widget _buildFooterActions(AppLocalizations? l10n, Color accentColor) {
+  Widget _buildFooterActions(AppLocalizations l10n, Color accentColor) {
     if (_mode == _DialogMode.list) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -984,7 +990,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
               foregroundColor: Colors.black,
             ),
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.closeBtn ?? "Close"),
+            child: Text(l10n.closeBtn),
           ),
         ],
       );
@@ -999,7 +1005,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
                 _editingSiteId = null;
               });
             },
-            child: Text(l10n?.cancel ?? "Cancel"),
+            child: Text(l10n.cancel),
           ),
           FilledButton.icon(
             style: FilledButton.styleFrom(
@@ -1007,7 +1013,7 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
               foregroundColor: Colors.black,
             ),
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: Text(l10n?.saveSite ?? "Save Site"),
+            label: Text(l10n.saveSite),
             onPressed: _saveSite,
           ),
         ],

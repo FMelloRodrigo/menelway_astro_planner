@@ -6,39 +6,9 @@ import '../models/period_target_item.dart';
 import '../models/target_description.dart';
 import '../models/target_item.dart';
 import '../models/yearly_visibility.dart';
-import 'astro_bridge.dart';
 
-/// Abstract contract for astronomy computation and catalog operations.
-/// Decouples views and controllers from direct native C++ / FFI dependencies.
-abstract class AstroEngine {
-  static AstroEngine? _instance;
-
-  /// Retrieves the globally active astronomy engine instance.
-  /// Defaults to the native FFI [AstroBridge] if not overridden.
-  static AstroEngine get instance {
-    _instance ??= AstroBridge.instance;
-    return _instance!;
-  }
-
-  /// Injects a custom or mock engine instance (e.g., during tests).
-  static set instance(AstroEngine engine) {
-    _instance = engine;
-  }
-
-  /// Resets the engine instance back to the default native FFI bridge.
-  static void reset() {
-    _instance = null;
-  }
-
-  /// Initializes the underlying engine with the SQLite catalogs database.
-  void initEngine(String dbPath);
-
-  /// Releases native resources and database handles.
-  void dispose();
-
-  /// Returns the most recent error message from the engine.
-  String getLastError();
-
+/// Contract for ephemeris, visibility computation, and target filtering.
+abstract class EphemerisEngine {
   /// Calculates astronomical night transitions, dusk/dawn, and moon ephemeris.
   NightSummary getNightSummary({
     required double latitude,
@@ -69,7 +39,6 @@ abstract class AstroEngine {
   });
 
   /// Filters targets across an extended multi-night period.
-
   List<PeriodTargetItem> filterTargetsPeriod({
     required FilterState filters,
     required DateTime periodStart,
@@ -88,6 +57,21 @@ abstract class AstroEngine {
     int stepMinutes = 5,
   });
 
+  /// Computes monthly visibility statistics for a target across an entire calendar year.
+  YearlyVisibilityModel? getTargetYearlyVisibility({
+    required int targetId,
+    required double latitude,
+    required double longitude,
+    required double elevation,
+    FilterState? filters,
+    double minAltitude = 30.0,
+    double minDurationHours = 2.0,
+    int? year,
+  });
+}
+
+/// Contract for persistent storage and management of user observing lists.
+abstract class ObservingListRepository {
   /// Creates a new user observing list.
   int createObservingList(String name, String description, String sessionDate);
 
@@ -105,22 +89,54 @@ abstract class AstroEngine {
 
   /// Clears all user observing lists.
   bool clearAllObservingLists();
+}
 
-  /// Computes monthly visibility statistics for a target across an entire calendar year.
-  YearlyVisibilityModel? getTargetYearlyVisibility({
-    required int targetId,
-    required double latitude,
-    required double longitude,
-    required double elevation,
-    FilterState? filters,
-    double minAltitude = 30.0,
-    double minDurationHours = 2.0,
-    int? year,
-  });
-
+/// Contract for descriptive overview prose and target aliases.
+abstract class DescriptionRepository {
   /// Retrieves the pre-baked or cached descriptive prose for a celestial target.
   TargetDescription? getTargetDescription(String targetName);
 
   /// Saves a target description and its associated lookup aliases into the local cache database.
   bool saveTargetDescription(TargetDescription desc, {List<String>? aliases});
+}
+
+typedef AstroEngineFactory = AstroEngine Function();
+
+/// Unified astronomy engine contract adhering to SOLID Interface Segregation & Dependency Inversion.
+/// Pure abstract contract decoupling callers from low-level native C++ / FFI bindings.
+abstract class AstroEngine implements EphemerisEngine, ObservingListRepository, DescriptionRepository {
+  static AstroEngine? _instance;
+  static AstroEngineFactory? defaultFactory;
+
+  /// Retrieves the globally active astronomy engine instance.
+  static AstroEngine get instance {
+    if (_instance != null) return _instance!;
+    if (defaultFactory != null) {
+      _instance = defaultFactory!();
+      return _instance!;
+    }
+    throw StateError(
+      'AstroEngine.instance is not initialized. '
+      'Call AstroEngine.instance = ... or configure AstroEngine.defaultFactory.',
+    );
+  }
+
+  /// Injects a custom or mock engine instance (e.g., during tests).
+  static set instance(AstroEngine engine) {
+    _instance = engine;
+  }
+
+  /// Resets the active engine instance.
+  static void reset() {
+    _instance = null;
+  }
+
+  /// Initializes the underlying engine with the SQLite catalogs database.
+  void initEngine(String dbPath);
+
+  /// Releases native resources and database handles.
+  void dispose();
+
+  /// Returns the most recent error message from the engine.
+  String getLastError();
 }

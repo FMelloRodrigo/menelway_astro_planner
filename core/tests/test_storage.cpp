@@ -1,4 +1,5 @@
 #include "astro/storage.hpp"
+#include "astro/target_filter_service.hpp"
 #include "astro/ephemeris.hpp"
 #include "astro/time.hpp"
 #include "test_helpers.hpp"
@@ -15,12 +16,15 @@ static std::string find_catalog_db() {
         "../data/catalogs.db",
         "../../data/catalogs.db",
         "data/catalogs.db",
-        "catalogs.db"
+        "catalogs.db",
+        "app/assets/catalogs.db",
+        "../app/assets/catalogs.db",
+        "../../app/assets/catalogs.db"
     };
     for (const auto& p : candidates) {
         if (std::filesystem::exists(p)) return p;
     }
-    return "core/data/catalogs.db";
+    return "app/assets/catalogs.db";
 }
 
 void test_sqlite_catalog(const std::string& db_path) {
@@ -211,6 +215,107 @@ void test_period_performance(const std::string& db_path) {
     std::cout << "  ✓ Period visibility filter performance benchmark passed (" << ms << " ms)\n";
 }
 
+void test_target_filter_service(const std::string& db_path) {
+    std::cout << "[TEST] TargetFilterService Domain Compute & Planet Decoration...\n";
+    astro::storage::SqliteStorage storage(db_path);
+    ASTRO_CHECK(storage.is_open());
+
+    astro::services::TargetFilterService service(storage);
+
+    // Test planet decoration
+    auto moon_obj = storage.get_object_by_id(90008);
+    ASTRO_CHECK(moon_obj.has_value());
+    ASTRO_CHECK(moon_obj->name == "Moon");
+
+    astro::coordinates::ObserverLocation obs{
+        astro::units::Degrees{-22.2819},
+        astro::units::Degrees{-42.5311},
+        858.0
+    };
+    auto jd = astro::time::datetime_to_julian_date({2026, 10, 3, 21, 0, 0.0});
+    astro::services::TargetFilterService::decorate_solar_system_body(*moon_obj, jd, obs);
+    ASTRO_CHECK(moon_obj->magnitude.has_value());
+    ASTRO_CHECK(moon_obj->major_axis_arcmin.has_value());
+    ASTRO_CHECK(*moon_obj->major_axis_arcmin > 28.0 && *moon_obj->major_axis_arcmin < 34.0);
+
+    // Test filter_targets over service
+    astro::visibility::VisibilityCriteria crit;
+    crit.min_altitude = astro::units::Degrees{20.0};
+    crit.min_duration_hours = 1.0;
+    crit.window_start = jd;
+    crit.window_end = astro::time::JulianDate{jd.value + 0.3};
+
+    astro::catalog::DsoFilterOptions opts;
+    opts.catalogs.push_back("Solar System");
+    auto planet_results = service.filter_targets(obs, opts, crit, 10);
+    ASTRO_CHECK(!planet_results.empty());
+    std::cout << "  ✓ TargetFilterService successfully filtered " << planet_results.size() << " solar system targets\n";
+}
+
+void test_separate_user_db(const std::string& catalog_db) {
+    std::cout << "[TEST] Separate User Database (Read-Only Catalog + Read-Write User DB)...\n";
+    std::string user_db = std::filesystem::path(catalog_db).parent_path().string() + "/test_user_isolated.db";
+
+    std::error_code ec;
+    std::filesystem::remove(user_db, ec);
+
+    {
+        astro::storage::SqliteStorage storage(catalog_db, user_db);
+        ASTRO_CHECK(storage.is_open());
+        ASTRO_CHECK(storage.has_separate_user_db());
+
+        // Create an observing list in the isolated user database
+        int64_t list_id = storage.create_list("User Isolated Showcase", "Separate DB test", "2026-10-03");
+        ASTRO_CHECK(list_id > 0);
+
+        // Add M31 (id=1 or query by name)
+        auto m31 = storage.query_objects([]{
+            astro::catalog::DsoFilterOptions o;
+            o.search_query = "M31";
+            o.limit = 1;
+            return o;
+        }());
+        ASTRO_CHECK(!m31.empty());
+
+        bool added = storage.add_target_to_list(list_id, m31[0].id, "Target stored in user DB");
+        ASTRO_CHECK(added);
+
+        // Save description in user DB
+        bool saved_desc = storage.save_target_description(
+            "User Target Test",
+            "Description in isolated DB",
+            "Extract in isolated DB",
+            "thumb",
+            "page",
+            "Custom",
+            {"Alias1", "Alias2"}
+        );
+        ASTRO_CHECK(saved_desc);
+    }
+
+    // Verify user database file exists on disk independently
+    ASTRO_CHECK(std::filesystem::exists(user_db));
+
+    // Reopen with separate user DB and verify persistence
+    {
+        astro::storage::SqliteStorage storage(catalog_db, user_db);
+        ASTRO_CHECK(storage.is_open());
+        ASTRO_CHECK(storage.has_separate_user_db());
+
+        auto lists = storage.get_all_lists();
+        ASTRO_CHECK(lists.size() == 1);
+        ASTRO_CHECK(lists[0].name == "User Isolated Showcase");
+        ASTRO_CHECK(lists[0].items.size() == 1);
+
+        auto desc = storage.get_target_description("Alias1");
+        ASTRO_CHECK(desc.has_value());
+        ASTRO_CHECK(desc->title == "User Target Test");
+        std::cout << "  ✓ Isolated user database persisted lists and descriptions successfully.\n";
+    }
+
+    std::filesystem::remove(user_db, ec);
+}
+
 int main() {
     std::cout << "========================================\n";
     std::cout << "  RUNNING SQLITE STORAGE TESTS          \n";
@@ -229,6 +334,8 @@ int main() {
     try {
         test_sqlite_catalog(temp_db);
         test_target_descriptions(temp_db);
+        test_target_filter_service(temp_db);
+        test_separate_user_db(temp_db);
         test_period_performance(temp_db);
     } catch (...) {
         std::filesystem::remove(temp_db, ec);

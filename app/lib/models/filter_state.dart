@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'observing_site.dart';
 import 'terrain_profile_model.dart';
 
 class HorizonPointModel {
@@ -105,10 +106,10 @@ class FilterState {
     this.customStartMinute = 0,
     this.customEndHour = 23,
     this.customEndMinute = 0,
-    this.observerLat = -22.2819,
-    this.observerLon = -42.5311,
-    this.observerElevation = 858.0,
-    this.observerLocationName = 'Nova Friburgo, Rio de Janeiro, Brazil',
+    this.observerLat = ObservingSite.defaultLatitude,
+    this.observerLon = ObservingSite.defaultLongitude,
+    this.observerElevation = ObservingSite.defaultElevation,
+    this.observerLocationName = ObservingSite.defaultSiteName,
   })  : date = date != null
             ? DateTime(date.year, date.month, date.day)
             : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),

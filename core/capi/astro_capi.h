@@ -155,6 +155,7 @@ typedef struct {
 
 // Lifecycle
 ASTRO_API AstroEngine* astro_engine_create(const char* db_path);
+ASTRO_API AstroEngine* astro_engine_create_with_user_db(const char* catalog_db_path, const char* user_db_path);
 ASTRO_API void astro_engine_destroy(AstroEngine* engine);
 ASTRO_API const char* astro_engine_get_last_error(AstroEngine* engine);
 

@@ -238,7 +238,7 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
 
   Widget _buildCalloutCard({
     required BuildContext context,
-    required AppLocalizations? l10n,
+    required AppLocalizations l10n,
     required Rect? targetRect,
     required Size screenSize,
     required SpotlightTourStep currentStep,
@@ -321,8 +321,7 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                         Icon(currentStep.icon, size: 14, color: accentColor),
                         const SizedBox(width: 6),
                         Text(
-                          l10n?.tourStepIndicator(_currentIndex + 1, widget.steps.length) ??
-                              "Step ${_currentIndex + 1} of ${widget.steps.length}",
+                          l10n.tourStepIndicator(_currentIndex + 1, widget.steps.length),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -342,7 +341,7 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                     ),
                     onPressed: widget.onDismiss,
                     child: Text(
-                      l10n?.tourSkip ?? "Skip Tour",
+                      l10n.tourSkip,
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -392,7 +391,7 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                         ),
                         onPressed: _prev,
                         child: Text(
-                          l10n?.tourBack ?? "← Back",
+                          l10n.tourBack,
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -410,8 +409,8 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                       ),
                       label: Text(
                         isLastStep
-                            ? (l10n?.tourFinish ?? "Start Exploring")
-                            : (l10n?.tourNext ?? "Next →"),
+                            ? (l10n.tourFinish)
+                            : (l10n.tourNext),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                       ),
                       onPressed: _next,

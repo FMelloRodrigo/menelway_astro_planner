@@ -7,7 +7,6 @@ import 'about_dialog.dart';
 /// A dedicated Settings & Data window dialog that houses target filter
 /// resets, storage maintenance, and provides an extensible foundation for future settings.
 class SettingsDialog extends StatefulWidget {
-  final bool isRedNightMode;
   final VoidCallback onResetFilters;
   final VoidCallback onCleanAllData;
   final VoidCallback? onReplayTour;
@@ -16,7 +15,6 @@ class SettingsDialog extends StatefulWidget {
 
   const SettingsDialog({
     super.key,
-    required this.isRedNightMode,
     required this.onResetFilters,
     required this.onCleanAllData,
     this.onReplayTour,
@@ -49,18 +47,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isNarrow = MediaQuery.of(context).size.width < 600;
-    final isRedNightMode = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
 
-    final bgColor = isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface;
-    final cardBgColor = isRedNightMode
-        ? AstroColors.nightVisionSurfaceVariant
-        : AstroColors.spaceDarkSurfaceVariant;
-    final borderColor = isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder;
-    final textColor = isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final textSubColor = isRedNightMode
-        ? AstroColors.nightVisionRed.withValues(alpha: 0.75)
-        : Colors.white.withValues(alpha: 0.75);
-    final accentColor = isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final bgColor = palette.surface;
+    final cardBgColor = palette.surfaceVariant;
+    final borderColor = palette.border;
+    final textColor = palette.textPrimary;
+    final textSubColor = palette.textSecondary;
+    final accentColor = palette.accent;
 
     return Dialog(
       backgroundColor: bgColor,
@@ -105,7 +99,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n?.settingsDialogTitle ?? "Settings & Data",
+                          l10n.settingsDialogTitle,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -115,8 +109,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          l10n?.settingsDialogSubtitle ??
-                              "Manage filter presets and application data storage.",
+                          l10n.settingsDialogSubtitle,
                           style: TextStyle(
                             fontSize: 12,
                             color: textSubColor,
@@ -126,7 +119,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     ),
                   ),
                   IconButton(
-                    tooltip: l10n?.closeBtn ?? "Close",
+                    tooltip: l10n.closeBtn,
                     icon: Icon(Icons.close_rounded, size: 20, color: textColor.withValues(alpha: 0.8)),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -151,9 +144,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         textSubColor: textSubColor,
                         icon: Icons.tune_rounded,
                         iconColor: accentColor,
-                        title: l10n?.settingsSectionFilters ?? "Target Filters",
-                        description: l10n?.resetFiltersDesc ??
-                            "Clear filter limits & keep observer location",
+                        title: l10n.settingsSectionFilters,
+                        description: l10n.resetFiltersDesc,
                         actionWidget: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: accentColor,
@@ -163,7 +155,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           ),
                           icon: const Icon(Icons.restore_rounded, size: 16),
                           label: Text(
-                            l10n?.resetFilters ?? "Reset Target Filters",
+                            l10n.resetFilters,
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                           onPressed: () {
@@ -186,9 +178,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         textSubColor: textSubColor,
                         icon: Icons.filter_list_rounded,
                         iconColor: accentColor,
-                        title: l10n?.settingsSectionTargetLimits ?? "Target Display Limits",
-                        description: l10n?.maxTargetsDesc ??
-                            "Controls the maximum number of visible targets calculated and shown in Targets and Planner (Default: 20).",
+                        title: l10n.settingsSectionTargetLimits,
+                        description: l10n.maxTargetsDesc,
                         actionWidget: Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -208,9 +199,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                     }
                                   : null,
                               selectedColor: accentColor.withValues(alpha: 0.22),
-                              backgroundColor: isRedNightMode
-                                  ? AstroColors.nightVisionSurface
-                                  : AstroColors.spaceDarkSurface,
+                              backgroundColor: bgColor,
                               side: BorderSide(
                                 color: isSelected ? accentColor : borderColor,
                                 width: isSelected ? 1.5 : 1.0,
@@ -236,9 +225,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         textSubColor: textSubColor,
                         icon: Icons.storage_rounded,
                         iconColor: Colors.redAccent,
-                        title: l10n?.settingsSectionData ?? "Storage & Local Data",
-                        description: l10n?.cleanDataDesc ??
-                            "Wipe lists, custom location, & local settings",
+                        title: l10n.settingsSectionData,
+                        description: l10n.cleanDataDesc,
                         actionWidget: FilledButton.icon(
                           style: FilledButton.styleFrom(
                             backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
@@ -249,7 +237,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           ),
                           icon: const Icon(Icons.delete_forever_rounded, size: 16),
                           label: Text(
-                            l10n?.cleanData ?? "Clean All Saved Data...",
+                            l10n.cleanData,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                           onPressed: () {
@@ -271,9 +259,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           textSubColor: textSubColor,
                           icon: Icons.explore_rounded,
                           iconColor: accentColor,
-                          title: l10n?.settingsSectionTour ?? "Quick Tour & Guide",
-                          description: l10n?.settingsTourDesc ??
-                              "Revisit the initial walkthrough highlighting location, optics, and filters.",
+                          title: l10n.settingsSectionTour,
+                          description: l10n.settingsTourDesc,
                           actionWidget: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: accentColor,
@@ -283,7 +270,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             ),
                             icon: const Icon(Icons.play_circle_outline_rounded, size: 16),
                             label: Text(
-                              l10n?.settingsReplayTourBtn ?? "Replay Quick Tour",
+                              l10n.settingsReplayTourBtn,
                               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
                             onPressed: () {
@@ -305,7 +292,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         textSubColor: textSubColor,
                         icon: Icons.info_outline_rounded,
                         iconColor: accentColor,
-                        title: l10n?.settingsSectionAbout ?? "About Menelway",
+                        title: l10n.settingsSectionAbout,
                         actionWidget: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: accentColor,
@@ -315,15 +302,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           ),
                           icon: const Icon(Icons.menu_book_rounded, size: 16),
                           label: Text(
-                            l10n?.aboutBtn ?? "About Menelway",
+                            l10n.aboutBtn,
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder: (ctx) => AboutDialogView(
-                                isRedNightMode: isRedNightMode,
-                              ),
+                              builder: (ctx) => const AboutDialogView(),
                             );
                           },
                         ),

@@ -3,11 +3,11 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/observing_list.dart';
+import '../services/csv_export_service.dart';
 import '../theme/astro_theme.dart';
 
 class ObservingListsView extends StatefulWidget {
   final List<ObservingListModel> lists;
-  final bool isRedNightMode;
   final void Function(String name, String description, String date) onCreateList;
   final void Function(int listId) onDeleteList;
   final void Function(int listId, int dsoId) onRemoveItem;
@@ -15,7 +15,6 @@ class ObservingListsView extends StatefulWidget {
   const ObservingListsView({
     super.key,
     required this.lists,
-    this.isRedNightMode = false,
     required this.onCreateList,
     required this.onDeleteList,
     required this.onRemoveItem,
@@ -39,14 +38,13 @@ class _ObservingListsViewState extends State<ObservingListsView> {
     showDialog(
       context: context,
       builder: (ctx) {
+        final palette = AstroPalette.of(ctx);
         return AlertDialog(
-          backgroundColor: widget.isRedNightMode
-              ? AstroColors.nightVisionSurface
-              : AstroColors.spaceDarkSurface,
+          backgroundColor: palette.surface,
           title: Text(
-            l10n?.createNewList ?? "Create New Observing List",
+            l10n.createNewList,
             style: TextStyle(
-              color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+              color: palette.textPrimary,
               fontSize: 16,
             ),
           ),
@@ -55,17 +53,17 @@ class _ObservingListsViewState extends State<ObservingListsView> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: "${l10n?.listName ?? "List Name"} (e.g. Bortle 4 Trip)"),
+                decoration: InputDecoration(labelText: "${l10n.listName} (e.g. Bortle 4 Trip)"),
                 style: TextStyle(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                  color: palette.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                decoration: InputDecoration(labelText: "${l10n?.listDescription ?? "Description"} / Notes"),
+                decoration: InputDecoration(labelText: "${l10n.listDescription} / Notes"),
                 style: TextStyle(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                  color: palette.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -73,18 +71,18 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                 controller: dateController,
                 decoration: const InputDecoration(labelText: "Target Date (YYYY-MM-DD)"),
                 style: TextStyle(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                  color: palette.textPrimary,
                 ),
               ),
             ],
           ),
           actions: [
             TextButton(
-              child: Text(l10n?.cleanDataCancel ?? "Cancel"),
+              child: Text(l10n.cleanDataCancel),
               onPressed: () => Navigator.of(ctx).pop(),
             ),
             FilledButton(
-              child: Text(l10n?.createNewList ?? "Create"),
+              child: Text(l10n.createNewList),
               onPressed: () {
                 if (nameController.text.trim().isNotEmpty) {
                   widget.onCreateList(
@@ -107,54 +105,27 @@ class _ObservingListsViewState extends State<ObservingListsView> {
   }
 
   void _exportListCsv(ObservingListModel list) {
-    final buffer = StringBuffer();
-    buffer.writeln("Catalog Name,Display Name,Catalog,Type,Constellation,Magnitude,Notes,Status");
-    for (final item in list.items) {
-      buffer.writeln(
-        '"${item.name}","${item.displayName}","${item.catalog}","${item.objectType}","${item.constellation}",${item.magnitude ?? ''},"${item.notes}","${item.status}"',
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode
-            ? AstroColors.nightVisionSurface
-            : AstroColors.spaceDarkSurface,
-        title: Text(
-          "Exported CSV: ${list.name}",
-          style: TextStyle(color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white),
-        ),
-        content: SizedBox(
-          width: 500,
-          child: SelectableText(
-            buffer.toString(),
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Close"),
-            onPressed: () => Navigator.of(ctx).pop(),
-          ),
-        ],
-      ),
+    final csv = CsvExportService.exportObservingListCsv(list);
+    CsvExportService.showCsvDialog(
+      context,
+      title: "Exported CSV: ${list.name}",
+      csvContent: csv,
+      copiedMessage: "CSV copied to clipboard",
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accentColor,
+        backgroundColor: palette.accent,
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add_rounded),
-        label: Text(l10n?.createNewList ?? "New Observing List"),
+        label: Text(l10n.createNewList),
         onPressed: _showCreateDialog,
       ),
       body: widget.lists.isEmpty
@@ -165,21 +136,21 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.playlist_play_rounded, size: 56, color: textColor.withValues(alpha: 0.3)),
+                    Icon(Icons.playlist_play_rounded, size: 56, color: palette.textTertiary),
                     const SizedBox(height: 12),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 440),
                       child: Text(
-                        l10n?.emptyObservingLists ?? "No custom observing lists yet",
+                        l10n.emptyObservingLists,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.7)),
+                        style: TextStyle(fontSize: 16, color: palette.textSecondary),
                       ),
                     ),
                     const SizedBox(height: 16),
                     FilledButton.icon(
                       icon: const Icon(Icons.add_rounded),
-                      label: Text(l10n?.createNewList ?? "Create List"),
-                      style: FilledButton.styleFrom(backgroundColor: accentColor),
+                      label: Text(l10n.createNewList),
+                      style: FilledButton.styleFrom(backgroundColor: palette.accent),
                       onPressed: _showCreateDialog,
                     ),
                   ],
@@ -198,37 +169,35 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionBorder
-                          : AstroColors.spaceDarkBorder,
+                      color: palette.border,
                     ),
                   ),
                   child: Column(
                     children: [
                       ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: accentColor.withValues(alpha: 0.15),
-                          child: Icon(Icons.event_note_rounded, color: accentColor, size: 20),
+                          backgroundColor: palette.accent.withValues(alpha: 0.15),
+                          child: Icon(Icons.event_note_rounded, color: palette.accent, size: 20),
                         ),
                         title: Text(
                           list.name,
-                          style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
+                          style: TextStyle(fontWeight: FontWeight.w700, color: palette.textPrimary),
                         ),
                         subtitle: Text(
-                          "${list.sessionDate.isNotEmpty ? '${list.sessionDate} • ' : ''}${l10n?.listItemsPlannedCount(list.items.length) ?? '${list.items.length} targets planned'}",
-                          style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
+                          "${list.sessionDate.isNotEmpty ? '${list.sessionDate} • ' : ''}${l10n.listItemsPlannedCount(list.items.length)}",
+                          style: TextStyle(color: palette.textSecondary, fontSize: 12),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: const Icon(Icons.file_download_outlined, size: 20),
-                              tooltip: l10n?.exportCsvFramingTooltip ?? "Export CSV / Framing",
+                              tooltip: l10n.exportCsvFramingTooltip,
                               onPressed: () => _exportListCsv(list),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                              tooltip: l10n?.deleteListTooltip ?? "Delete list",
+                              tooltip: l10n.deleteListTooltip,
                               onPressed: () => widget.onDeleteList(list.id),
                             ),
                             IconButton(
@@ -250,8 +219,8 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                           Padding(
                             padding: const EdgeInsets.all(16),
                             child: Text(
-                              l10n?.noTargetsInList ?? "No targets in this list. Add targets from the search view!",
-                              style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 12),
+                              l10n.noTargetsInList,
+                              style: TextStyle(color: palette.textTertiary, fontSize: 12),
                             ),
                           )
                         else
@@ -269,13 +238,13 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
-                                    color: textColor,
+                                    color: palette.textPrimary,
                                   ),
                                 ),
                                 subtitle: Text(
                                   "${item.objectType} in ${item.constellation}${item.notes.isNotEmpty ? ' • Notes: ${item.notes}' : ''}",
                                   style: TextStyle(
-                                    color: textColor.withValues(alpha: 0.6),
+                                    color: palette.textSecondary,
                                     fontSize: 11,
                                   ),
                                 ),

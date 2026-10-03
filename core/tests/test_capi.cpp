@@ -13,12 +13,15 @@ static std::string find_catalog_db() {
         "../data/catalogs.db",
         "../../data/catalogs.db",
         "data/catalogs.db",
-        "catalogs.db"
+        "catalogs.db",
+        "app/assets/catalogs.db",
+        "../app/assets/catalogs.db",
+        "../../app/assets/catalogs.db"
     };
     for (const auto& p : candidates) {
         if (std::filesystem::exists(p)) return p;
     }
-    return "core/data/catalogs.db";
+    return "app/assets/catalogs.db";
 }
 
 int main() {

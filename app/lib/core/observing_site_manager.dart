@@ -5,20 +5,30 @@ import '../models/observing_site.dart';
 /// Central state manager for observer locations and observing sites.
 /// Provides reactive updates when active observing location changes.
 class ObservingSiteManager extends ChangeNotifier {
-  ObservingSiteManager._();
-  static final ObservingSiteManager instance = ObservingSiteManager._();
+  static ObservingSiteManager instance = ObservingSiteManager();
 
-  List<ObservingSite> _sites = [];
-  String _activeSiteId = '';
+  List<ObservingSite> _sites;
+  String _activeSiteId;
+
+  ObservingSiteManager({
+    List<ObservingSite>? sites,
+    String? activeSiteId,
+  })  : _sites = sites != null && sites.isNotEmpty
+            ? List.from(sites)
+            : [ObservingSite.defaultSite],
+        _activeSiteId = activeSiteId ??
+            (sites != null && sites.isNotEmpty
+                ? sites.first.id
+                : ObservingSite.defaultSite.id);
 
   List<ObservingSite> get sites => List.unmodifiable(_sites);
   String get activeSiteId => _activeSiteId;
 
   /// Returns the currently active site, falling back to the first available site or defaultSite.
+  /// Pure query getter with zero state mutation side-effects.
   ObservingSite get activeSite {
     if (_sites.isEmpty) {
-      _sites = [ObservingSite.defaultSite];
-      _activeSiteId = _sites.first.id;
+      return ObservingSite.defaultSite;
     }
     return _sites.firstWhere(
       (s) => s.id == _activeSiteId,
@@ -26,17 +36,10 @@ class ObservingSiteManager extends ChangeNotifier {
     );
   }
 
-  /// Initializes the manager from saved settings or builds a default site from FilterState.
-  void init({
-    List<ObservingSite>? savedSites,
-    String? savedActiveId,
-    FilterState? fallbackFilters,
-  }) {
-    if (savedSites != null && savedSites.isNotEmpty) {
-      _sites = List.from(savedSites);
-    } else if (fallbackFilters != null) {
-      // Migrate from single location in legacy settings
-      _sites = [
+  /// Builds the default observing sites list, optionally migrating from FilterState.
+  static List<ObservingSite> createDefaultSites(FilterState? fallbackFilters) {
+    if (fallbackFilters != null) {
+      return [
         ObservingSite(
           id: 'site_primary',
           name: fallbackFilters.observerLocationName.isNotEmpty
@@ -48,8 +51,20 @@ class ObservingSiteManager extends ChangeNotifier {
           bortleClass: 4,
         ),
       ];
+    }
+    return [ObservingSite.defaultSite];
+  }
+
+  /// Initializes the manager from saved settings or builds a default site from FilterState.
+  void init({
+    List<ObservingSite>? savedSites,
+    String? savedActiveId,
+    FilterState? fallbackFilters,
+  }) {
+    if (savedSites != null && savedSites.isNotEmpty) {
+      _sites = List.from(savedSites);
     } else {
-      _sites = [ObservingSite.defaultSite];
+      _sites = createDefaultSites(fallbackFilters);
     }
 
     if (savedActiveId != null && _sites.any((s) => s.id == savedActiveId)) {
@@ -61,15 +76,15 @@ class ObservingSiteManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sets the active observing site by its unique ID.
+  /// Sets the currently active observing site by its unique ID.
   void setActiveSite(String id) {
-    if (_sites.any((s) => s.id == id) && _activeSiteId != id) {
+    if (_sites.any((s) => s.id == id)) {
       _activeSiteId = id;
       notifyListeners();
     }
   }
 
-  /// Adds a new site and optionally sets it as active immediately.
+  /// Adds a new observing site and optionally activates it.
   void addSite(ObservingSite site, {bool setAsActive = true}) {
     _sites.add(site);
     if (setAsActive) {
@@ -78,7 +93,7 @@ class ObservingSiteManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Updates an existing site. If it was active, listeners will be notified of changes.
+  /// Updates an existing observing site.
   void updateSite(ObservingSite site) {
     final index = _sites.indexWhere((s) => s.id == site.id);
     if (index != -1) {
@@ -87,11 +102,10 @@ class ObservingSiteManager extends ChangeNotifier {
     }
   }
 
-  /// Deletes a site. Prevents deleting if only one site exists.
-  /// If the deleted site was active, selects the first remaining site.
+  /// Deletes an observing site by its unique ID.
+  /// Prevents deletion if only one site exists.
   bool deleteSite(String id) {
     if (_sites.length <= 1) return false;
-
     _sites.removeWhere((s) => s.id == id);
     if (_activeSiteId == id) {
       _activeSiteId = _sites.first.id;
@@ -102,22 +116,7 @@ class ObservingSiteManager extends ChangeNotifier {
 
   /// Resets sites to the default list or fallback filters.
   void resetToDefault({FilterState? fallbackFilters}) {
-    if (fallbackFilters != null) {
-      _sites = [
-        ObservingSite(
-          id: 'site_primary',
-          name: fallbackFilters.observerLocationName.isNotEmpty
-              ? fallbackFilters.observerLocationName
-              : 'Default Site',
-          latitude: fallbackFilters.observerLat,
-          longitude: fallbackFilters.observerLon,
-          elevation: fallbackFilters.observerElevation,
-          bortleClass: 4,
-        ),
-      ];
-    } else {
-      _sites = [ObservingSite.defaultSite];
-    }
+    _sites = createDefaultSites(fallbackFilters);
     _activeSiteId = _sites.first.id;
     notifyListeners();
   }

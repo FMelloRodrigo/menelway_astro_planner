@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/equipment_manager.dart';
 import 'package:app/models/target_item.dart';
@@ -31,6 +32,8 @@ void main() {
     testWidgets('Renders TargetPreviewCanvas with vector fallback and controls', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetPreviewCanvas(
               target: testTarget,
@@ -68,6 +71,8 @@ void main() {
     testWidgets('Renders in Red Night Mode cleanly without error', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetPreviewCanvas(
               target: testTarget,
@@ -85,6 +90,8 @@ void main() {
     testWidgets('Controls are located below image and framing controls toggle properly', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(
               child: TargetPreviewCanvas(
@@ -117,7 +124,7 @@ void main() {
       expect(find.byIcon(Icons.rotate_left_rounded), findsOneWidget);
       expect(find.byIcon(Icons.rotate_right_rounded), findsOneWidget);
       expect(find.text('Align'), findsNothing);
-      expect(find.text('Fit'), findsOneWidget);
+      expect(find.text('Fit to Sensor'), findsOneWidget);
       expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     });
 
@@ -130,6 +137,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: EquipmentFramingDialog(
               target: testTarget,
@@ -189,6 +198,8 @@ void main() {
     testWidgets('Photo Mode switches painter to isPhotoOnly and hides reticle/overlays', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetPreviewCanvas(
               target: testTarget,
@@ -238,6 +249,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: EquipmentFramingDialog(
               target: testTarget,
@@ -288,6 +301,8 @@ void main() {
     testWidgets('Zoom Step Size chips (10%, 25%, 50%) adjust step and zoom buttons scale FOV symmetrically', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: TargetPreviewCanvas(
               target: testTarget,

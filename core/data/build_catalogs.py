@@ -402,28 +402,29 @@ def main():
             identifiers = f"{identifiers},{h_str}" if identifiers else h_str
 
         # Primary catalog
-        catalog = "NGC"
+        catalog = "Other"
         catalog_number = ""
-        if raw_name.upper().startswith("NGC"):
+        m_ngc = re.match(r'^NGC\s*(\d+)', raw_name, re.IGNORECASE)
+        m_ic = re.match(r'^IC\s*(\d+)', raw_name, re.IGNORECASE)
+        m_sh2 = re.match(r'^(?:SH2|SH-2|SH\s*2)\s*(\d+)', raw_name, re.IGNORECASE)
+        m_messier = re.match(r'^(?:MESSIER|M)\s*(\d+)', raw_name, re.IGNORECASE)
+        m_barnard = re.match(r'^(?:BARNARD|B)\s*(\d+)', raw_name, re.IGNORECASE)
+
+        if m_ngc:
             catalog = "NGC"
-            num_m = re.search(r'\d+', raw_name)
-            if num_m: catalog_number = str(int(num_m.group(0)))
-        elif raw_name.upper().startswith("IC"):
+            catalog_number = str(int(m_ngc.group(1)))
+        elif m_ic:
             catalog = "IC"
-            num_m = re.search(r'\d+', raw_name)
-            if num_m: catalog_number = str(int(num_m.group(0)))
-        elif raw_name.upper().startswith("B"):
-            catalog = "Barnard"
-            num_m = re.search(r'\d+', raw_name)
-            if num_m: catalog_number = str(int(num_m.group(0)))
-        elif raw_name.upper().startswith("SH2"):
+            catalog_number = str(int(m_ic.group(1)))
+        elif m_sh2:
             catalog = "Sharpless"
-            num_m = re.search(r'\d+', raw_name)
-            if num_m: catalog_number = str(int(num_m.group(0)))
-        elif raw_name.upper().startswith("M"):
+            catalog_number = str(int(m_sh2.group(1)))
+        elif m_messier:
             catalog = "Messier"
-            num_m = re.search(r'\d+', raw_name)
-            if num_m: catalog_number = str(int(num_m.group(0)))
+            catalog_number = str(int(m_messier.group(1)))
+        elif m_barnard:
+            catalog = "Barnard"
+            catalog_number = str(int(m_barnard.group(1)))
         else:
             catalog = "Other"
 

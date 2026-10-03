@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/filter_state.dart';
@@ -7,6 +6,8 @@ import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import '../widgets/astro_chips.dart';
+import '../widgets/target_list_scaffold.dart';
 import 'target_details_sheet.dart';
 
 enum StarSortMode {
@@ -111,9 +112,8 @@ class _BrightStarsViewState extends State<BrightStarsView> {
     return list;
   }
 
-  Color _getStarColor(String name) {
-    if (widget.isRedNightMode) return AstroColors.nightVisionRed;
-    // Basic spectral tint approximation
+  Color _getStarColor(String name, AstroPalette palette) {
+    if (palette.isRedNightMode) return palette.accent;
     switch (name) {
       case 'Rigel':
       case 'Achernar':
@@ -138,304 +138,203 @@ class _BrightStarsViewState extends State<BrightStarsView> {
       case 'Arcturus':
       case 'Pollux':
       case 'Aldebaran':
-        return const Color(0xFFFFE082); // Orange
+        return const Color(0xFFFFE082); // Orange-yellow
       case 'Betelgeuse':
       case 'Antares':
-      case 'Gacrux':
-        return const Color(0xFFFF8A65); // Red giant
+        return const Color(0xFFFF8A65); // Red-orange supergiant
       default:
-        return AstroColors.starGold;
+        return Colors.white;
+    }
+  }
+
+  void _onStarSelected(TargetItem star, bool isWide) {
+    if (isWide) {
+      setState(() => _selectedStar = star);
+    } else {
+      TargetDetailsSheet.show(
+        context,
+        target: star,
+        night: widget.night,
+        latitude: widget.filters.observerLat,
+        longitude: widget.filters.observerLon,
+        elevation: widget.filters.observerElevation,
+        isRedNightMode: widget.isRedNightMode,
+        availableLists: widget.availableLists,
+        onAddToList: widget.onAddToList,
+        filters: widget.filters,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final isWideScreen = MediaQuery.of(context).size.width >= 900;
+    final palette = AstroPalette.of(context);
+    final isWide = MediaQuery.of(context).size.width >= 900;
     final displayStars = _sortedStars;
 
-    return Column(
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top Toolbar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-            border: Border(
-              bottom: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
-              ),
-            ),
-          ),
-          child: Column(
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isNarrow = constraints.maxWidth < 650;
-                  const double topBarHeight = 44.0;
-
-                  final searchField = SizedBox(
-                    height: topBarHeight,
-                    child: TextField(
-                      controller: _searchController,
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: "Search bright star (e.g. Sirius, Vega, Polaris, Betelgeuse)...",
-                        prefixIcon: Icon(Icons.search_rounded, size: 20, color: accentColor),
-                        prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                padding: EdgeInsets.zero,
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchFilter = '');
-                                },
-                              )
-                            : null,
-                      ),
-                      onChanged: (text) {
-                        setState(() => _searchFilter = text.trim());
-                      },
-                    ),
-                  );
-
-                  final sortDropdown = Container(
-                    height: topBarHeight,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionSurfaceVariant
-                          : AstroColors.spaceDarkSurfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<StarSortMode>(
-                        value: _sortMode,
-                        dropdownColor: widget.isRedNightMode
-                            ? AstroColors.nightVisionSurface
-                            : AstroColors.spaceDarkSurface,
-                        icon: Icon(Icons.sort_rounded, size: 18, color: accentColor),
-                        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
-                        items: [
-                          DropdownMenuItem(value: StarSortMode.brightness, child: Text(l10n?.sortBrightness ?? "Brightness")),
-                          DropdownMenuItem(value: StarSortMode.peakAltitude, child: Text(l10n?.sortPeakAltitude ?? "Peak Altitude")),
-                          DropdownMenuItem(value: StarSortMode.visibleDuration, child: Text(l10n?.sortVisibleDuration ?? "Observable Duration")),
-                          DropdownMenuItem(value: StarSortMode.transitTime, child: Text(l10n?.sortTransitTime ?? "Transit Time")),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _sortMode = val);
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 500;
+            final searchField = TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchFilter = val.trim()),
+              style: TextStyle(color: palette.text, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: "Search bright star (e.g. Sirius, Vega, Polaris, Betelgeuse)...",
+                hintStyle: TextStyle(color: palette.text.withValues(alpha: 0.4)),
+                prefixIcon: Icon(Icons.search_rounded, size: 18, color: palette.accent),
+                suffixIcon: _searchFilter.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchFilter = '');
                         },
-                      ),
-                    ),
-                  );
-
-                  if (isNarrow) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        searchField,
-                        const SizedBox(height: 8),
-                        sortDropdown,
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    children: [
-                      Expanded(child: searchField),
-                      const SizedBox(width: 12),
-                      sortDropdown,
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              // Summary Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildChip("Navigational Stars", Icons.star_rounded, AstroColors.starGold),
-                    const SizedBox(width: 6),
-                    _buildChip("${displayStars.length} stars cataloged", Icons.auto_awesome_rounded, textColor),
-                    const SizedBox(width: 6),
-                    _buildChip("Telescope Alignment & Focus", Icons.center_focus_strong_rounded, accentColor),
-                  ],
+                      )
+                    : null,
+                filled: true,
+                fillColor: palette.surfaceVariant,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: palette.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: palette.border),
                 ),
               ),
+            );
+
+            final sortDropdown = Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: palette.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: palette.border),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<StarSortMode>(
+                  value: _sortMode,
+                  dropdownColor: palette.surfaceVariant,
+                  icon: Icon(Icons.sort_rounded, size: 18, color: palette.accent),
+                  style: TextStyle(color: palette.text, fontSize: 13, fontWeight: FontWeight.w600),
+                  items: [
+                    DropdownMenuItem(value: StarSortMode.brightness, child: Text(l10n.sortBrightness)),
+                    DropdownMenuItem(value: StarSortMode.peakAltitude, child: Text(l10n.sortPeakAltitude)),
+                    DropdownMenuItem(value: StarSortMode.visibleDuration, child: Text(l10n.sortVisibleDuration)),
+                    DropdownMenuItem(value: StarSortMode.transitTime, child: Text(l10n.sortTransitTime)),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _sortMode = val);
+                  },
+                ),
+              ),
+            );
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  searchField,
+                  const SizedBox(height: 8),
+                  sortDropdown,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: searchField),
+                const SizedBox(width: 12),
+                sortDropdown,
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              InfoChip(label: "Navigational Stars", icon: Icons.star_rounded, color: palette.starGold),
+              const SizedBox(width: 6),
+              InfoChip(
+                label: "${displayStars.length} stars cataloged",
+                icon: Icons.auto_awesome_rounded,
+                color: palette.text,
+              ),
+              const SizedBox(width: 6),
+              InfoChip(label: "Telescope Alignment & Focus", icon: Icons.center_focus_strong_rounded, color: palette.accent),
             ],
           ),
         ),
-
-        // Main Content Area
-        Expanded(
-          child: widget.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : displayStars.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.star_border_rounded, size: 48, color: textColor.withValues(alpha: 0.3)),
-                          const SizedBox(height: 12),
-                          Text(
-                            "No stars match your search.",
-                            style: TextStyle(fontSize: 16, color: textColor.withValues(alpha: 0.6)),
-                          ),
-                        ],
-                      ),
-                    )
-                  : isWideScreen && _selectedStar != null
-                      ? CallbackShortcuts(
-                          bindings: {
-                            const SingleActivator(LogicalKeyboardKey.escape): () {
-                              setState(() => _selectedStar = null);
-                            },
-                          },
-                          child: Focus(
-                            autofocus: true,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 5,
-                                  child: _buildStarList(displayStars),
-                                ),
-                                Container(
-                                  width: 1,
-                                  color: widget.isRedNightMode
-                                      ? AstroColors.nightVisionBorder
-                                      : AstroColors.spaceDarkBorder,
-                                ),
-                                Expanded(
-                                  flex: 6,
-                                  child: TargetDetailsSheet(
-                                    target: _selectedStar!,
-                                    night: widget.night,
-                                    latitude: widget.filters.observerLat,
-                                    longitude: widget.filters.observerLon,
-                                    elevation: widget.filters.observerElevation,
-                                    isRedNightMode: widget.isRedNightMode,
-                                    availableLists: widget.availableLists,
-                                    onAddToList: widget.onAddToList,
-                                    filters: widget.filters,
-                                    onClose: () => setState(() => _selectedStar = null),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : _buildStarList(displayStars),
-        ),
       ],
     );
-  }
 
-  Widget _buildChip(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: widget.isRedNightMode
-            ? AstroColors.nightVisionSurfaceVariant
-            : AstroColors.spaceDarkSurfaceVariant,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: widget.isRedNightMode
-              ? AstroColors.nightVisionBorder
-              : AstroColors.spaceDarkBorder,
+    return TargetListScaffold<TargetItem>(
+      items: displayStars,
+      selectedItem: _selectedStar,
+      isLoading: widget.isLoading,
+      header: header,
+      onItemSelected: (star) => _onStarSelected(star, isWide),
+      emptyState: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.star_outline_rounded, size: 48, color: palette.text.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Text(
+              "No stars match your search.",
+              style: TextStyle(fontSize: 16, color: palette.text.withValues(alpha: 0.6)),
+            ),
+          ],
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
-        ],
+      itemBuilder: (context, star, isSelected) => _buildStarCard(star, isSelected, isWide),
+      detailBuilder: (context, star) => TargetDetailsSheet(
+        target: star,
+        night: widget.night,
+        latitude: widget.filters.observerLat,
+        longitude: widget.filters.observerLon,
+        elevation: widget.filters.observerElevation,
+        isRedNightMode: widget.isRedNightMode,
+        availableLists: widget.availableLists,
+        onAddToList: widget.onAddToList,
+        filters: widget.filters,
+        onClose: () => setState(() => _selectedStar = null),
       ),
     );
   }
 
-  Widget _buildStarList(List<TargetItem> stars) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: stars.length,
-      itemBuilder: (context, index) {
-        final star = stars[index];
-        final isSelected = _selectedStar?.id == star.id;
-        return _buildStarCard(star, isSelected);
-      },
-    );
-  }
+  Widget _buildStarCard(TargetItem star, bool isSelected, bool isWide) {
+    final palette = AstroPalette.of(context);
+    final textColor = palette.text;
+    final accentColor = palette.accent;
+    final starColor = _getStarColor(star.name, palette);
 
-  Widget _buildStarCard(TargetItem star, bool isSelected) {
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-    final starColor = _getStarColor(star.name);
-
-    final card = Card(
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isSelected
-          ? (widget.isRedNightMode
-              ? AstroColors.nightVisionSurfaceVariant
-              : AstroColors.spaceDarkSurfaceVariant)
-          : (widget.isRedNightMode
-              ? AstroColors.nightVisionSurface
-              : AstroColors.spaceDarkSurface),
+      color: isSelected ? palette.surfaceVariant : palette.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected
-              ? accentColor
-              : (widget.isRedNightMode
-                  ? AstroColors.nightVisionBorder
-                  : AstroColors.spaceDarkBorder),
+          color: isSelected ? accentColor : palette.border,
           width: isSelected ? 1.8 : 1.0,
         ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          final isWide = MediaQuery.of(context).size.width >= 900;
-          if (isWide) {
-            setState(() => _selectedStar = star);
-          } else {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (ctx) => FractionallySizedBox(
-                heightFactor: 0.9,
-                child: TargetDetailsSheet(
-                  target: star,
-                  night: widget.night,
-                  latitude: widget.filters.observerLat,
-                  longitude: widget.filters.observerLon,
-                  elevation: widget.filters.observerElevation,
-                  isRedNightMode: widget.isRedNightMode,
-                  availableLists: widget.availableLists,
-                  onAddToList: widget.onAddToList,
-                  filters: widget.filters,
-                ),
-              ),
-            );
-          }
-        },
+        onTap: () => _onStarSelected(star, isWide),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Star Icon, Name, Common Names, Magnitude
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -495,97 +394,67 @@ class _BrightStarsViewState extends State<BrightStarsView> {
                       ],
                     ),
                   ),
-                  // Magnitude Badge
                   if (star.magnitude != null)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AstroColors.starGold.withValues(alpha: 0.15),
+                        color: palette.starGold.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AstroColors.starGold.withValues(alpha: 0.4)),
+                        border: Border.all(color: palette.starGold.withValues(alpha: 0.4)),
                       ),
                       child: Text(
                         "Mag ${star.magnitude! >= 0 ? '+' : ''}${star.magnitude!.toStringAsFixed(2)}",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: AstroColors.starGold,
+                          color: palette.starGold,
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Visibility Metrics Row
-              Row(
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
                 children: [
-                  _buildMetricPill(
-                    Icons.trending_up_rounded,
-                    "${star.peakAltitudeDeg.round()}° peak",
-                    star.peakAltitudeDeg >= 30.0 ? accentColor : textColor.withValues(alpha: 0.6),
+                  MetricPill(
+                    icon: Icons.trending_up_rounded,
+                    label: "${star.peakAltitudeDeg.toStringAsFixed(1)}° peak",
+                    color: star.peakAltitudeDeg >= widget.filters.minAltitude
+                        ? palette.visibleGreen
+                        : textColor.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(width: 8),
-                  _buildMetricPill(
-                    Icons.timer_outlined,
-                    "${star.visibleDurationHours.toStringAsFixed(1)}h visible",
-                    star.visibleDurationHours > 0 ? AstroColors.deepSkyTeal : textColor.withValues(alpha: 0.5),
+                  MetricPill(
+                    icon: Icons.timer_outlined,
+                    label: "${star.visibleDurationHours.toStringAsFixed(1)} hrs",
+                    color: star.visibleDurationHours > 0 ? palette.deepSkyTeal : textColor.withValues(alpha: 0.5),
                   ),
-                  const SizedBox(width: 8),
-                  _buildMetricPill(
-                    Icons.explore_outlined,
-                    "${star.transitTime.toLocal().hour.toString().padLeft(2, '0')}:${star.transitTime.toLocal().minute.toString().padLeft(2, '0')} transit",
-                    textColor.withValues(alpha: 0.7),
+                  MetricPill(
+                    icon: Icons.explore_outlined,
+                    label:
+                        "${star.transitTime.toLocal().hour.toString().padLeft(2, '0')}:${star.transitTime.toLocal().minute.toString().padLeft(2, '0')} transit",
+                    color: textColor.withValues(alpha: 0.7),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-
-              // Observable Night Window Progress Bar
-              if (star.visibleDurationHours > 0)
+              if (star.visibleDurationHours > 0) ...[
+                const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: (star.visibleDurationHours / 10.0).clamp(0.05, 1.0),
-                    backgroundColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionSurfaceVariant
-                        : AstroColors.spaceDarkSurfaceVariant,
+                    backgroundColor: palette.surfaceVariant,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      star.meetsCriteria ? accentColor : Colors.amber,
+                      star.meetsCriteria ? accentColor : palette.starGold,
                     ),
                     minHeight: 4,
                   ),
                 ),
+              ],
             ],
           ),
         ),
-      ),
-    );
-
-    return card;
-  }
-
-  Widget _buildMetricPill(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }

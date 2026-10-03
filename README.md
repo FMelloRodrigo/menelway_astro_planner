@@ -1,5 +1,9 @@
 # MENELWAY — Astro Target & Session Planner
 
+[![CI](https://github.com/FMelloRodrigo/astro_targets_tool/actions/workflows/ci.yml/badge.svg)](https://github.com/FMelloRodrigo/astro_targets_tool/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://flutter.dev)
+
 **MENELWAY** is a high-performance, native desktop application for visual astronomy and deep-sky astrophotography session planning. It couples a blazing-fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
 
 ---
@@ -12,34 +16,106 @@
 - **Period Planner**: Search targets observable within future date intervals (e.g. upcoming 7 days, 14 days, next month) with Moon phase analysis.
 - **Equipment Framing Simulator**: Focal length and sensor dimension framing simulator with FOV overlays, visual target dimensions, and interactive panning and zooming.
 - **Observing Lists & Notes**: User-curated observing plans stored in a local SQLite database with SQLite FTS5 full-text search.
-- **Telescope Red Night-Vision Mode**: Complete dark-adaptation red theme with high contrast and zero blinding UI elements.
+- **Telescope Red Night-Vision Mode**: Complete dark-adaptation red theme with high contrast and zero blinding UI elements via `AstroPalette`.
 - **Bilingual Support**: Full internationalization for English and Portuguese (Brasil).
 
 ---
 
-## Architecture Overview
+## Architecture
+
+### System Topology
+
+```mermaid
+graph TD
+    subgraph UI ["Flutter Presentation Layer (Dart)"]
+        Views["Views (TargetSearch, Planner, Planets, Favorites)"]
+        Widgets["Widgets (AltitudeCurve, TargetPreviewCanvas, FovProjector)"]
+        Theme["AstroPalette & Obsidian/Red Themes"]
+    end
+
+    subgraph State ["Application & State Layer"]
+        Settings["SettingsService (Atomic JSON)"]
+        EquipMgr["EquipmentManager (Sensor / Optics Profiles)"]
+        SitesMgr["ObservingSiteManager (Custom Horizons / GPS)"]
+    end
+
+    subgraph Bridge ["Interoperability Layer (Dart FFI)"]
+        AstroEngine["AstroEngine (Interface / Dependency Inversion)"]
+        AstroBridge["AstroBridge (Native FFI Bindings)"]
+        FakeEngine["FakeAstroEngine (Headless Test Harness)"]
+    end
+
+    subgraph Native ["High-Performance C++20 Core (astro_core.dll)"]
+        CAPI["C-ABI Boundary (astro_capi.cpp - extern C)"]
+        Ephemeris["astro::ephemeris (VSOP87 / ELP2000)"]
+        Coord["astro::coordinates & astro::time (Meeus Algorithms)"]
+        Solver["astro::visibility (Period & Annual Solvers)"]
+        Storage["astro::storage (SQLite3 Amalgamation & FTS5)"]
+    end
+
+    UI --> State
+    UI --> AstroEngine
+    AstroEngine -.-> AstroBridge
+    AstroEngine -.-> FakeEngine
+    AstroBridge --> CAPI
+    CAPI --> Ephemeris
+    CAPI --> Coord
+    CAPI --> Solver
+    CAPI --> Storage
+```
+
+### Directory Structure
 
 ```
 astro_targets_tool/
-├── core/                       # C++ Engine & Storage
-│   ├── include/astro/          # C++ headers (ephemeris, coordinates, time, storage, catalogs)
+├── .github/workflows/          # Automated GitHub Actions CI workflow (C++, Python, Flutter)
+├── core/                       # High-Performance C++20 Core & C-ABI
+│   ├── include/astro/          # C++ headers (units, ephemeris, coordinates, time, storage)
 │   ├── src/                    # C++ implementations (VSOP87, ELP2000, Meeus algorithms)
-│   ├── capi/                   # C ABI export interface for Dart FFI (astro_capi.cpp / .h)
-│   ├── data/                   # Catalogs SQLite database and python seeding scripts
-│   └── tests/                  # Standalone C++ unit test suite (test_astro, test_storage, test_capi)
+│   ├── capi/                   # Exception-guarded C-ABI exports (astro_capi.cpp / .h)
+│   ├── data/                   # Catalogs SQLite database builder (build_catalogs.py)
+│   └── tests/                  # C++ test suites (test_astro, test_storage, test_capi)
 │
-├── app/                        # Flutter Desktop UI (Windows x64)
+├── app/                        # Modern Flutter Desktop UI (Windows x64)
 │   ├── lib/
-│   │   ├── core/               # Dart FFI bindings (AstroEngine, AstroBridge)
-│   │   ├── models/             # TargetItem, FilterState, NightSummary, YearlyVisibility
-│   │   ├── theme/              # Deep space dark & red night-vision themes (AstroPalette)
-│   │   └── views/              # Responsive desktop/mobile views and modular dialogs
-│   └── test/                   # Comprehensive Flutter unit and widget tests
+│   │   ├── core/               # Dart FFI bindings & bridge (AstroEngine, AstroBridge)
+│   │   ├── models/             # Domain models (TargetItem, FilterState, NightSummary)
+│   │   ├── theme/              # AstroPalette token system (Obsidian Dark & Night-Vision Red)
+│   │   ├── views/              # Master/detail responsive desktop views and dialogs
+│   │   └── widgets/            # Custom painters (AltitudeCurveChart, TargetPreviewCanvas)
+│   └── test/                   # 146+ comprehensive unit and widget tests
 │
 ├── dist/                       # Packaged standalone Windows portable releases
-├── scripts/data_tools/         # Data extraction and parsing utilities
-└── package_portable_release.ps1 # Automated release packaging pipeline
+├── scripts/data_tools/         # Python unit tests and catalog verification scripts
+└── package_portable_release.ps1 # Production portable distribution packager
 ```
+
+---
+
+## Astronomy Approximations & Accuracy
+
+Menelway is designed specifically for **session planning, telescope pointing, and astrophotography scheduling**. The calculation core employs analytical algorithms tailored for real-time responsiveness:
+
+1. **J2000 Coordinate System**:
+   - Deep-sky catalog coordinates (RA/Dec) are referenced to the **J2000.0 epoch**.
+   - Stellar proper motion and precession are not applied on the fly, introducing a nominal angular offset of ~0.36° across 26 years. This is well within typical finder scope and telescope field-of-view tolerances for targeting.
+
+2. **Geocentric Lunar Ephemeris**:
+   - The Moon's position is computed using an analytical ELP2000 truncation from the Earth's center without topocentric parallax correction.
+   - For an observer on Earth's surface, this introduces an angular position variation of up to ~1.0° relative to the background stars, which is sufficient for determining lunar phase, illumination percentage, and sky separation for deep-sky scheduling.
+
+3. **Yearly & Period Visibility Sampling**:
+   - The annual visibility solver computes altitude curves and twilight windows using local midnight sampling across 365 days.
+   - For stars and deep-sky objects whose equatorial coordinates are stationary, this gives exact seasonal windows. Rapidly moving solar system bodies (e.g. inner planets, Moon) vary continuously throughout the night.
+
+4. **Transit Times**:
+   - The reported `transit_time` in session summaries represents the time of **maximum altitude within the active darkness window** rather than mathematical meridian transit, ensuring observers know the peak imaging window during available night hours.
+
+5. **Analytical Truncations**:
+   - Planetary ephemerides use truncated analytical VSOP87 series. Positions are accurate to within arcseconds of NASA JPL Horizons ephemerides over the 1900–2100 window, providing high calculation throughput for scanning thousands of candidates in milliseconds.
+
+6. **Timezones and Daylight Saving**:
+   - The annual solver calculates projections using a fixed observer UTC offset; regional daylight saving transitions are not dynamically applied across historical or future annual spans.
 
 ---
 
@@ -50,44 +126,65 @@ astro_targets_tool/
 - **Windows 10/11 x64**
 - **Visual Studio 2022** with "Desktop development with C++" and MSBuild
 - **CMake 3.20+**
-- **Flutter SDK 3.x+** with Windows Desktop support enabled (`flutter config --enable-windows-desktop`)
+- **Flutter SDK 3.x+** with Windows Desktop enabled (`flutter config --enable-windows-desktop`)
+- **Python 3.10+** (for catalog build & verification tools)
 
 ### 1. Compile C++ Core Engine
 
 ```powershell
-# From workspace root
+# From workspace root using MSBuild
 & "C:\Development\Programas\Visual Studio\MSBuild\Current\Bin\MSBuild.exe" "core\build\astro_core.sln" /p:Configuration=Release /p:Platform=x64
+
+# Or using CMake directly:
+cmake -B core/build -S core -DCMAKE_BUILD_TYPE=Release
+cmake --build core/build --config Release
 ```
 
-This compiles `core/build/Release/astro_core.dll` and test binaries (`test_astro.exe`, `test_storage.exe`, `test_capi.exe`).
+### 2. Run Test Suites
 
-### 2. Run C++ Tests
-
+#### C++ Native Tests & CTest
 ```powershell
+# Run individual test executables:
 .\core\build\Release\test_astro.exe
 .\core\build\Release\test_storage.exe
 .\core\build\Release\test_capi.exe
+
+# Or execute CTest:
+ctest --test-dir core/build --output-on-failure -C Release
+```
+
+#### Python Data Tools Tests
+```powershell
+python -m unittest scripts/data_tools/test_arp_parse.py
+python -m unittest scripts/data_tools/test_catalogs_query.py
+```
+
+#### Flutter Static Analysis & Widget Tests
+```powershell
+cd app
+flutter analyze
+flutter test
+cd ..
 ```
 
 ### 3. Build Flutter Windows Release
 
 ```powershell
 cd app
-flutter test
 flutter build windows --release --no-tree-shake-icons
 cd ..
 ```
 
-### 4. Package Portable Distribution
+### 4. Package Standalone Portable Bundle
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File package_portable_release.ps1
 ```
 
-The resulting standalone distribution is output to `dist/menelway_astro_planner_win64_portable/`.
+The resulting distribution is packaged to `dist/menelway_astro_planner_win64_portable/` and zipped as `dist/menelway_astro_planner_win64_portable.zip`.
 
 ---
 
 ## License
 
-MIT License. See LICENSE for details.
+MIT License. See [LICENSE](LICENSE) for details.

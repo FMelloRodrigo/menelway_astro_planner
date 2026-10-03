@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  cpp-core:
+    name: C++ Core Build & CTest
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B core/build -S core -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build C++ Core and Test Suites
+        run: cmake --build core/build --config Release
+
+      - name: Run CTest
+        run: ctest --test-dir core/build --output-on-failure -C Release
+
+  python-tools:
+    name: Python Data Tools Unit Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Python unit tests
+        run: |
+          python -m unittest scripts/data_tools/test_arp_parse.py
+          python -m unittest scripts/data_tools/test_catalogs_query.py
+
+  flutter-app:
+    name: Flutter Analyze, Test & Windows Build
+    runs-on: windows-latest
+    needs: [cpp-core]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Run Flutter Analyzer
+        working-directory: app
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Flutter Tests
+        working-directory: app
+        run: flutter test
+
+      - name: Build Flutter Windows Release
+        working-directory: app
+        run: flutter build windows --release --no-tree-shake-icons

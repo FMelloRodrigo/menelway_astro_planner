@@ -11,6 +11,7 @@ import '../models/terrain_profile_model.dart';
 import '../services/terrain_elevation_service.dart';
 import '../services/terrain_cache_service.dart';
 import '../theme/astro_theme.dart';
+import '../utils/astro_formatters.dart';
 
 /// Modal dialog providing an interactive Az-Alt chart (0°-360° azimuth x 0°-90° altitude)
 /// to create, drag, and delete custom horizon obstacle points, with an optional
@@ -162,8 +163,9 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDlgState) {
-          final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-          final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+          final palette = AstroPalette.of(context);
+          final textColor = palette.textPrimary;
+          final accentColor = palette.accent;
 
           Future<void> doSearch() async {
             final q = searchCtrl.text.trim();
@@ -192,11 +194,11 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           final isNarrow = MediaQuery.of(context).size.width < 600;
 
           return AlertDialog(
-            backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+            backgroundColor: palette.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                color: palette.border,
               ),
             ),
             insetPadding: EdgeInsets.symmetric(
@@ -262,10 +264,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                       Container(
                         constraints: const BoxConstraints(maxHeight: 160),
                         decoration: BoxDecoration(
-                          color: widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                          color: palette.surfaceVariant,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                            color: palette.border,
                           ),
                         ),
                         child: SingleChildScrollView(
@@ -408,31 +410,33 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: Row(
-          children: [
-            Icon(Icons.terrain_rounded, color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan),
-            const SizedBox(width: 8),
-            const Text("Mountain Skyline Detected", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          "Successfully generated 360° mountain topography for ${_state.observerLocationName}!\n\n"
-          "Would you like to apply these $count landmark peaks as your active horizon obstacle points? You can still adjust individual points afterwards.",
-          style: const TextStyle(fontSize: 13, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("Keep Silhouette Only"),
+      builder: (ctx) {
+        final palette = AstroPalette.of(ctx);
+        return AlertDialog(
+          backgroundColor: palette.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Row(
+            children: [
+              Icon(Icons.terrain_rounded, color: palette.accent),
+              const SizedBox(width: 8),
+              const Text("Mountain Skyline Detected", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
           ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
-              foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+          content: Text(
+            "Successfully generated 360° mountain topography for ${_state.observerLocationName}!\n\n"
+            "Would you like to apply these $count landmark peaks as your active horizon obstacle points? You can still adjust individual points afterwards.",
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("Keep Silhouette Only"),
             ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: palette.accent,
+                foregroundColor: palette.isRedNightMode ? Colors.white : Colors.black,
+              ),
             icon: const Icon(Icons.check_rounded, size: 16),
             label: const Text("Apply as Horizon Points", style: TextStyle(fontWeight: FontWeight.bold)),
             onPressed: () {
@@ -445,9 +449,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
             },
           ),
         ],
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 
   void _applySimplifiedMountainPoints() {
     if (_terrainProfile == null) return;
@@ -700,11 +705,12 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AstroPalette.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isNarrow = screenWidth < 700;
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     final dialogContent = Container(
       width: isNarrow ? null : math.min(screenWidth * 0.94, 1180.0),
@@ -767,7 +773,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: widget.isRedNightMode ? const Color(0xFF200606) : const Color(0xFF0F1B2B),
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: accentColor.withValues(alpha: 0.3)),
               ),
@@ -815,10 +821,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: widget.isRedNightMode ? const Color(0xFF150404) : const Color(0xFF0D141F),
+                color: palette.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+                  color: palette.border,
                 ),
               ),
               child: ClipRRect(
@@ -982,16 +988,16 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
     if (isNarrow) {
       return Dialog.fullscreen(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        backgroundColor: palette.surface,
         child: SafeArea(child: dialogContent),
       );
     } else {
       return Dialog(
-        backgroundColor: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        backgroundColor: palette.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+            color: palette.border,
           ),
         ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1001,6 +1007,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   }
 
   Widget _buildViewportScrubber(Color textColor, Color accentColor, bool isNarrow) {
+    final palette = AstroPalette.of(context);
     final span = 360.0 / _zoomLevel;
     final minAz = _viewStartAzimuth.round();
     final maxAz = (_viewStartAzimuth + span).round();
@@ -1009,12 +1016,10 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       margin: const EdgeInsets.only(top: 2, bottom: 2),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: widget.isRedNightMode
-            ? AstroColors.nightVisionSurfaceVariant
-            : AstroColors.spaceDarkSurfaceVariant,
+        color: palette.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+          color: palette.border,
         ),
       ),
       child: isNarrow
@@ -1648,17 +1653,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
     );
   }
 
-  String _cardinal(double az) {
-    final a = (az % 360 + 360) % 360;
-    if (a >= 337.5 || a < 22.5) return "N";
-    if (a < 67.5) return "NE";
-    if (a < 112.5) return "E";
-    if (a < 157.5) return "SE";
-    if (a < 202.5) return "S";
-    if (a < 247.5) return "SW";
-    if (a < 292.5) return "W";
-    return "NW";
-  }
+  String _cardinal(double az) => AstroFormatters.cardinalFromAzimuth(az);
 }
 
 /// Canvas widget handling coordinates, rendering background panorama,
@@ -2555,6 +2550,24 @@ class _HorizonChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _HorizonChartPainter old) {
-    return true;
+    return old.points != points ||
+        old.selectedIndex != selectedIndex ||
+        old.draggedIndex != draggedIndex ||
+        old.hoverPos != hoverPos ||
+        old.isRedNightMode != isRedNightMode ||
+        old.minAzimuth != minAzimuth ||
+        old.maxAzimuth != maxAzimuth ||
+        old.minAltitude != minAltitude ||
+        old.maxAltitude != maxAltitude ||
+        old.decodedImage != decodedImage ||
+        old.azimuthOffset != azimuthOffset ||
+        old.altitudeOffset != altitudeOffset ||
+        old.altitudeScale != altitudeScale ||
+        old.imageOpacity != imageOpacity ||
+        old.terrainProfile != terrainProfile ||
+        old.showTerrainSilhouette != showTerrainSilhouette ||
+        old.showPoints != showPoints ||
+        old.zoomLevel != zoomLevel ||
+        old.viewStartAzimuth != viewStartAzimuth;
   }
 }

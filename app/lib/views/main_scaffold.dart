@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../controllers/app_controller.dart';
 import '../core/astro_engine.dart';
-import '../core/catalog_manager.dart';
-import '../core/equipment_manager.dart';
 import '../core/settings_service.dart';
-import '../core/favorites_manager.dart';
 import '../core/observing_site_manager.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
@@ -24,7 +22,6 @@ import 'planner_view.dart';
 import 'settings_dialog.dart';
 import 'target_search_view.dart';
 import '../widgets/spotlight_tour.dart';
-import '../services/terrain_cache_service.dart';
 
 class MainScaffold extends StatefulWidget {
   final bool isRedNightMode;
@@ -34,6 +31,7 @@ class MainScaffold extends StatefulWidget {
   final String? currentLanguageCode;
   final ValueChanged<String?>? onChangeLanguage;
   final AstroEngine? engine;
+  final AppController? controller;
 
   const MainScaffold({
     super.key,
@@ -44,6 +42,7 @@ class MainScaffold extends StatefulWidget {
     this.currentLanguageCode,
     this.onChangeLanguage,
     this.engine,
+    this.controller,
   });
 
   @override
@@ -51,7 +50,8 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  AstroEngine get _engine => widget.engine ?? AstroEngine.instance;
+  late final AppController _controller;
+  bool _ownsController = false;
 
   final GlobalKey _desktopLocationKey = GlobalKey();
   final GlobalKey _mobileLocationKey = GlobalKey();
@@ -59,110 +59,60 @@ class _MainScaffoldState extends State<MainScaffold> {
   final GlobalKey _equipmentMobileKey = GlobalKey();
   final GlobalKey _filtersKey = GlobalKey();
 
-  int _selectedTabIndex = 0;
-  bool _isInitializing = true;
-  bool _isLoadingTargets = false;
-  bool _isLoadingPlanets = false;
-  bool _isLoadingBrightStars = false;
-  String? _initError;
-  double _dbSizeMb = 0.0;
-
-  late FilterState _filters;
-  NightSummary? _nightSummary;
-  List<TargetItem> _targets = [];
-  List<TargetItem> _planets = [];
-  List<TargetItem> _brightStars = [];
-  List<ObservingListModel> _observingLists = [];
+  AstroEngine get _engine => _controller.engine;
+  FilterState get _filters => _controller.filters;
+  set _filters(FilterState val) => _controller.updateFilters(val);
+  NightSummary? get _nightSummary => _controller.nightSummary;
+  List<TargetItem> get _targets => _controller.targets;
+  List<TargetItem> get _planets => _controller.planets;
+  List<TargetItem> get _brightStars => _controller.brightStars;
+  List<ObservingListModel> get _observingLists => _controller.observingLists;
+  int get _selectedTabIndex => _controller.selectedTabIndex;
+  set _selectedTabIndex(int val) => _controller.setTabIndex(val);
+  bool get _isInitializing => _controller.isInitializing;
+  bool get _isLoadingTargets => _controller.isLoadingTargets;
+  bool get _isLoadingPlanets => _controller.isLoadingPlanets;
+  bool get _isLoadingBrightStars => _controller.isLoadingBrightStars;
+  String? get _initError => _controller.initError;
+  double get _dbSizeMb => _controller.dbSizeMb;
 
   @override
   void initState() {
     super.initState();
-    _filters = widget.initialSettings?.filters ?? FilterState();
-    _bootstrap();
+    if (widget.controller != null) {
+      _controller = widget.controller!;
+    } else {
+      _ownsController = true;
+      _controller = AppController(
+        engine: widget.engine,
+        initialFilters: widget.initialSettings?.filters,
+      );
+      _controller.bootstrap(initialSettings: widget.initialSettings).then((_) {
+        if (mounted && widget.initialSettings?.hasCompletedTutorial != true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Future.delayed(const Duration(milliseconds: 650), () {
+              if (mounted) {
+                _startSpotlightTour();
+              }
+            });
+          });
+        }
+      });
+    }
+    _controller.addListener(_onControllerUpdated);
   }
 
   @override
   void dispose() {
-    FavoritesManager.instance.removeListener(_onFavoritesChanged);
-    ObservingSiteManager.instance.removeListener(_onObservingSiteChanged);
+    _controller.removeListener(_onControllerUpdated);
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
-    try {
-      final dbPath = await CatalogManager.getDatabasePath();
-      final sizeMb = await CatalogManager.getDatabaseSizeMb();
-      _dbSizeMb = sizeMb;
-
-      _engine.initEngine(dbPath);
-
-      _nightSummary = _engine.getNightSummary(
-        latitude: _filters.observerLat,
-        longitude: _filters.observerLon,
-        elevation: _filters.observerElevation,
-        date: _filters.date,
-      );
-
-      _observingLists = _engine.getObservingLists();
-
-      // Auto-restore observing lists from settings backup if SQLite user lists are empty
-      if (_observingLists.isEmpty &&
-          widget.initialSettings?.observingListsBackup != null &&
-          widget.initialSettings!.observingListsBackup!.isNotEmpty) {
-        for (final list in widget.initialSettings!.observingListsBackup!) {
-          final newId = _engine.createObservingList(
-            list.name,
-            list.description,
-            list.sessionDate,
-          );
-          if (newId > 0) {
-            for (final item in list.items) {
-              _engine.addTargetToList(newId, item.dsoId, item.notes);
-            }
-          }
-        }
-        _observingLists = _engine.getObservingLists();
-      }
-
-      FavoritesManager.instance.init(widget.initialSettings?.favorites);
-      FavoritesManager.instance.addListener(_onFavoritesChanged);
-      ObservingSiteManager.instance.addListener(_onObservingSiteChanged);
-
-      // Auto-load cached terrain profile if missing from active filters
-      if (_filters.terrainProfile == null) {
-        final cached = await TerrainCacheService.loadProfile(
-          _filters.observerLat,
-          _filters.observerLon,
-        );
-        if (cached != null) {
-          _filters = _filters.copyWith(
-            terrainProfile: cached,
-            showTerrainSilhouette: true,
-          );
-        }
-      }
-
-      setState(() {
-        _isInitializing = false;
-      });
-
-      _runFiltering();
-
-      if (widget.initialSettings?.hasCompletedTutorial != true) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Future.delayed(const Duration(milliseconds: 650), () {
-            if (mounted) {
-              _startSpotlightTour();
-            }
-          });
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isInitializing = false;
-        _initError = e.toString();
-      });
-    }
+  void _onControllerUpdated() {
+    if (mounted) setState(() {});
   }
 
   void _startSpotlightTour() {
@@ -185,25 +135,22 @@ class _MainScaffoldState extends State<MainScaffold> {
         steps: [
           SpotlightTourStep(
             targetKey: locKey,
-            title: l10n?.tourLocationTitle ?? "1. Set Your Observing Site",
-            description: l10n?.tourLocationDesc ??
-                "Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.",
+            title: l10n.tourLocationTitle,
+            description: l10n.tourLocationDesc,
             icon: Icons.location_on_rounded,
             borderRadius: 8,
           ),
           SpotlightTourStep(
             targetKey: eqKey,
-            title: l10n?.tourEquipmentTitle ?? "2. Configure Equipment & Optics",
-            description: l10n?.tourEquipmentDesc ??
-                "Add your telescopes, camera sensors, and focal reducers. Menelway calculates true sensor Field of View (FoV) framing and target suitability.",
+            title: l10n.tourEquipmentTitle,
+            description: l10n.tourEquipmentDesc,
             icon: Icons.camera_alt_rounded,
             borderRadius: 8,
           ),
           SpotlightTourStep(
             targetKey: _filtersKey,
-            title: l10n?.tourFiltersTitle ?? "3. Target Filters & Criteria",
-            description: l10n?.tourFiltersDesc ??
-                "Filter thousands of deep-sky objects by minimum altitude, moon separation, DSO category, and transit window to plan the best imaging targets.",
+            title: l10n.tourFiltersTitle,
+            description: l10n.tourFiltersDesc,
             icon: Icons.tune_rounded,
             borderRadius: 8,
           ),
@@ -218,102 +165,14 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
-  void _runFiltering() {
-    if (_nightSummary == null) return;
-    setState(() {
-      _isLoadingTargets = true;
-      _isLoadingPlanets = true;
-      _isLoadingBrightStars = true;
-    });
-
-    Future.microtask(() {
-      try {
-        final results = _engine.filterTargets(
-          filters: _filters,
-          night: _nightSummary!,
-          stepMinutes: 10,
-        );
-        final planets = _engine.getPlanets(
-          filters: _filters,
-          night: _nightSummary!,
-          stepMinutes: 10,
-        );
-        final stars = _engine.getBrightStars(
-          filters: _filters,
-          night: _nightSummary!,
-          stepMinutes: 10,
-        );
-        if (mounted) {
-          setState(() {
-            _targets = results;
-            _planets = planets;
-            _brightStars = stars;
-            _isLoadingTargets = false;
-            _isLoadingPlanets = false;
-            _isLoadingBrightStars = false;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoadingTargets = false;
-            _isLoadingPlanets = false;
-            _isLoadingBrightStars = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error calculating targets: $e")),
-          );
-        }
-      }
-    });
-  }
-
-  void _refreshObservingLists() {
-    setState(() {
-      _observingLists = _engine.getObservingLists();
-    });
-  }
-
-  void _onObservingSiteChanged() {
-    final site = ObservingSiteManager.instance.activeSite;
-    if (_filters.observerLat != site.latitude ||
-        _filters.observerLon != site.longitude ||
-        _filters.observerElevation != site.elevation ||
-        _filters.observerLocationName != site.name) {
-      setState(() {
-        _filters.observerLat = site.latitude;
-        _filters.observerLon = site.longitude;
-        _filters.observerElevation = site.elevation;
-        _filters.observerLocationName = site.name;
-        _nightSummary = _engine.getNightSummary(
-          latitude: site.latitude,
-          longitude: site.longitude,
-          elevation: site.elevation,
-          date: _filters.date,
-        );
-      });
-      _saveSettings();
-      _runFiltering();
-    } else {
-      if (mounted) setState(() {});
-    }
-  }
-
-  void _onFavoritesChanged() {
-    _saveSettings();
-    if (mounted) setState(() {});
-  }
+  void _runFiltering() => _controller.runFiltering();
+  void _refreshObservingLists() => _controller.refreshObservingLists();
+  void _onObservingSiteChanged() => _controller.runFiltering();
+  void _bootstrap() => _controller.bootstrap(initialSettings: widget.initialSettings);
 
   void _saveSettings() {
-    SettingsService.saveSettings(
-      filters: _filters,
+    _controller.saveSettings(
       isRedNightMode: widget.isRedNightMode,
-      observingLists: _observingLists,
-      equipmentProfiles: EquipmentManager.instance.profiles,
-      activeEquipmentProfileId: EquipmentManager.instance.activeProfileId,
-      observingSites: ObservingSiteManager.instance.sites,
-      activeObservingSiteId: ObservingSiteManager.instance.activeSiteId,
-      favorites: FavoritesManager.instance.favorites,
       languageCode: widget.currentLanguageCode,
     );
   }
@@ -325,21 +184,16 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _resetFiltersOnly() {
     final l10n = AppLocalizations.of(context);
-    setState(() {
-      _filters = FilterState(
-        observerLat: _filters.observerLat,
-        observerLon: _filters.observerLon,
-        observerElevation: _filters.observerElevation,
-        observerLocationName: _filters.observerLocationName,
-      );
-    });
+    _controller.resetFiltersOnly(
+      isRedNightMode: widget.isRedNightMode,
+      languageCode: widget.currentLanguageCode,
+    );
     _saveSettings();
-    _runFiltering();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n?.filtersResetSuccess ?? "Target filters reset to default (location preserved)."),
+          content: Text(l10n.filtersResetSuccess),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -358,13 +212,13 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _showCleanDataDialog() {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final isRed = widget.isRedNightMode;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isRed ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        backgroundColor: palette.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
@@ -382,7 +236,7 @@ class _MainScaffoldState extends State<MainScaffold> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                l10n?.cleanDataConfirmTitle ?? "Clear All Saved Data?",
+                l10n.cleanDataConfirmTitle,
                 style: TextStyle(
                   color: textColor,
                   fontSize: 18,
@@ -397,30 +251,30 @@ class _MainScaffoldState extends State<MainScaffold> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n?.cleanDataWarning ?? "This will permanently erase your local configuration and reset everything back to factory defaults:",
+              l10n.cleanDataWarning,
               style: TextStyle(fontSize: 13, color: textColor.withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isRed ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant,
+                color: palette.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCleanItem(l10n?.cleanDataPoint1 ?? "• Custom observer geographic location & coordinates", textColor),
-                  _buildCleanItem(l10n?.cleanDataPoint2 ?? "• All custom Target Filters & Horizon masks", textColor),
-                  _buildCleanItem(l10n?.cleanDataPoint3 ?? "• Equipment optics & camera sensor profiles", textColor),
-                  _buildCleanItem(l10n?.cleanDataPoint4 ?? "• Favorite targets and custom observing lists", textColor),
+                  _buildCleanItem(l10n.cleanDataPoint1, textColor),
+                  _buildCleanItem(l10n.cleanDataPoint2, textColor),
+                  _buildCleanItem(l10n.cleanDataPoint3, textColor),
+                  _buildCleanItem(l10n.cleanDataPoint4, textColor),
                 ],
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              l10n?.actionCannotBeUndone ?? "This action cannot be undone.",
+              l10n.actionCannotBeUndone,
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -432,7 +286,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n?.cleanDataCancel ?? "Cancel", style: TextStyle(color: textColor.withValues(alpha: 0.7))),
+            child: Text(l10n.cleanDataCancel, style: TextStyle(color: textColor.withValues(alpha: 0.7))),
           ),
           FilledButton.icon(
             style: FilledButton.styleFrom(
@@ -440,7 +294,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.delete_forever_rounded, size: 16),
-            label: Text(l10n?.cleanDataConfirm ?? "Clear All Data"),
+            label: Text(l10n.cleanDataConfirm),
             onPressed: () async {
               Navigator.of(ctx).pop();
               await _performCleanAllData();
@@ -453,52 +307,23 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   Future<void> _performCleanAllData() async {
     final l10n = AppLocalizations.of(context);
-    // 1. Clear user settings file
-    await SettingsService.clearSettings();
-
-    // 2. Clear SQLite user lists and items
-    _engine.clearAllObservingLists();
-
-    // 3. Clear favorites
-    FavoritesManager.instance.clear();
-
-    // 4. Reset night mode if enabled
-    widget.onResetNightMode?.call();
-
-    // 5. Reset in-memory filters
-    setState(() {
-      _filters = FilterState();
-      _observingLists = [];
-      _planets = [];
-      _brightStars = [];
-      _nightSummary = _engine.getNightSummary(
-        latitude: _filters.observerLat,
-        longitude: _filters.observerLon,
-        elevation: _filters.observerElevation,
-        date: _filters.date,
-      );
-    });
-
-    _runFiltering();
+    _controller.cleanAllData(onResetNightMode: widget.onResetNightMode);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n?.cleanDataSuccessSnackBar ?? "All saved data, settings, and observing lists have been cleared."),
+          content: Text(l10n.cleanDataSuccessSnackBar),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-    // 6. Reset observing sites to default
-    ObservingSiteManager.instance.resetToDefault();
   }
 
   void _editLocationDialog({String? siteId, bool startInAddMode = false}) {
     showDialog(
       context: context,
       builder: (ctx) => ObservingSitesDialog(
-        isRedNightMode: widget.isRedNightMode,
         initialEditSiteId: siteId,
         startInAddMode: startInAddMode,
         onActiveSiteChanged: (site) {
@@ -515,20 +340,19 @@ class _MainScaffoldState extends State<MainScaffold> {
     required Color accentColor,
   }) {
     final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
     final activeSite = ObservingSiteManager.instance.activeSite;
     final bortle = activeSite.bortleInfo;
 
     return PopupMenuButton<String>(
       key: key,
-      tooltip: l10n?.observingSites ?? "Observing Sites",
-      color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
+      tooltip: l10n.observingSites,
+      color: palette.surfaceVariant,
       elevation: 12,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: widget.isRedNightMode
-              ? AstroColors.nightVisionBorder
-              : AstroColors.spaceDarkBorder,
+          color: palette.border,
           width: 1.2,
         ),
       ),
@@ -553,7 +377,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Icon(Icons.location_city_rounded, size: 14, color: accentColor),
                 const SizedBox(width: 6),
                 Text(
-                  l10n?.observingSites ?? "Observing Sites",
+                  l10n.observingSites,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -630,7 +454,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Icon(Icons.add_location_alt_rounded, size: 16, color: accentColor),
                 const SizedBox(width: 8),
                 Text(
-                  l10n?.addNewSite ?? "Add New Site...",
+                  l10n.addNewSite,
                   style: TextStyle(fontSize: 12, color: textColor),
                 ),
               ],
@@ -643,7 +467,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 Icon(Icons.tune_rounded, size: 16, color: textColor.withValues(alpha: 0.8)),
                 const SizedBox(width: 8),
                 Text(
-                  l10n?.manageObservingSites ?? "Manage Observing Sites...",
+                  l10n.manageObservingSites,
                   style: TextStyle(fontSize: 12, color: textColor),
                 ),
               ],
@@ -715,14 +539,15 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   Widget _buildMobileStatusStrip(Color textColor, Color accentColor) {
     final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.isRedNightMode ? AstroColors.nightVisionSurface : AstroColors.spaceDarkSurface,
+        color: palette.surface,
         border: Border(
           bottom: BorderSide(
-            color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
+            color: palette.border,
           ),
         ),
       ),
@@ -764,7 +589,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.dark_mode_outlined, size: 15, color: AstroColors.nebulaIndigo),
                     const SizedBox(width: 5),
                     Text(
-                      "${l10n?.darkTime ?? 'Dark'}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      "${l10n.darkTime}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
                       style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
                     ),
                     const SizedBox(width: 8),
@@ -818,8 +643,9 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-    final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
 
     if (_isInitializing) {
       return Scaffold(
@@ -830,7 +656,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               CircularProgressIndicator(color: accentColor),
               const SizedBox(height: 16),
               Text(
-                l10n?.initializingEngine ?? "Initializing Astro Targets Engine & Database...",
+                l10n.initializingEngine,
                 style: TextStyle(color: textColor.withValues(alpha: 0.7)),
               ),
             ],
@@ -850,7 +676,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
                 const SizedBox(height: 12),
                 Text(
-                  l10n?.failedLoadCore ?? "Failed to load astronomical core",
+                  l10n.failedLoadCore,
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 const SizedBox(height: 8),
@@ -858,7 +684,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _bootstrap,
-                  child: Text(l10n?.retry ?? "Retry"),
+                  child: Text(l10n.retry),
                 ),
               ],
             ),
@@ -914,7 +740,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    l10n?.appSubtitle ?? "Astro Target & Session Planner",
+                    l10n.appSubtitle,
                     style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.5)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -957,7 +783,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.dark_mode_outlined, size: 14, color: AstroColors.nebulaIndigo),
                     const SizedBox(width: 4),
                     Text(
-                      "${l10n?.darkness ?? "Darkness"}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
+                      "${l10n.darkness}: ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDusk)} - ${DateFormat('HH:mm').format(_nightSummary!.astronomicalDawn)}",
                       style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.8)),
                     ),
                     const SizedBox(width: 8),
@@ -1007,18 +833,14 @@ class _MainScaffoldState extends State<MainScaffold> {
             width: isWide ? 32.0 : 40.0,
             height: isWide ? 32.0 : 40.0,
             child: IconButton(
-              tooltip: widget.isRedNightMode ? (l10n?.nightModeStandard ?? "Deep Space Obsidian") : (l10n?.nightModeRed ?? "Telescope Red Mode"),
+              tooltip: widget.isRedNightMode ? (l10n.nightModeStandard) : (l10n.nightModeRed),
               padding: EdgeInsets.zero,
               style: IconButton.styleFrom(
-                backgroundColor: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.08),
+                backgroundColor: accentColor.withValues(alpha: 0.15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(isWide ? 8 : 10),
                   side: BorderSide(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                        : AstroColors.starlightCyan.withValues(alpha: 0.35),
+                    color: accentColor.withValues(alpha: 0.6),
                     width: 1.2,
                   ),
                 ),
@@ -1026,7 +848,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               icon: Icon(
                 widget.isRedNightMode ? Icons.nightlight_round : Icons.remove_red_eye_rounded,
                 size: isWide ? 16 : 20,
-                color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                color: accentColor,
               ),
               onPressed: _handleToggleNightMode,
             ),
@@ -1035,15 +857,13 @@ class _MainScaffoldState extends State<MainScaffold> {
 
           // Language Switcher Pill (Quick toggle / selection)
           PopupMenuButton<String>(
-            tooltip: l10n?.language ?? "Language",
-            color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
+            tooltip: l10n.language,
+            color: palette.surfaceVariant,
             elevation: 10,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
               side: BorderSide(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionRed.withValues(alpha: 0.6)
-                    : AstroColors.starlightCyan.withValues(alpha: 0.45),
+                color: accentColor.withValues(alpha: 0.45),
                 width: 1.2,
               ),
             ),
@@ -1101,7 +921,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(Icons.settings_system_daydream_rounded, size: 16, color: textColor.withValues(alpha: 0.7)),
                     const SizedBox(width: 8),
                     Text(
-                      l10n?.languageSystem ?? "System Default",
+                      l10n.languageSystem,
                       style: TextStyle(
                         color: textColor,
                         fontSize: 13,
@@ -1142,7 +962,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(
                       Icons.translate_rounded,
                       size: isWide ? 15 : 18,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                      color: accentColor,
                     ),
                     SizedBox(width: isWide ? 5 : 4),
                     Text(
@@ -1150,14 +970,14 @@ class _MainScaffoldState extends State<MainScaffold> {
                       style: TextStyle(
                         fontSize: isWide ? 11 : 12,
                         fontWeight: FontWeight.w700,
-                        color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(width: 2),
                     Icon(
                       Icons.arrow_drop_down,
                       size: isWide ? 14 : 18,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                      color: accentColor,
                     ),
                   ],
                 ),
@@ -1169,22 +989,16 @@ class _MainScaffoldState extends State<MainScaffold> {
           // Equipment Rigs Manager Button
           if (isWide)
             Tooltip(
-              message: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
+              message: l10n.equipmentRigsTooltip,
               child: SizedBox(
                 key: _equipmentDesktopKey,
                 height: 32.0,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    backgroundColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed.withValues(alpha: 0.15)
-                        : AstroColors.starGold.withValues(alpha: 0.12),
-                    foregroundColor: widget.isRedNightMode
-                        ? AstroColors.nightVisionRed
-                        : AstroColors.starGold,
+                    backgroundColor: palette.starGold.withValues(alpha: 0.12),
+                    foregroundColor: palette.starGold,
                     side: BorderSide(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                          : AstroColors.starGold.withValues(alpha: 0.6),
+                      color: palette.starGold.withValues(alpha: 0.8),
                       width: 1.2,
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1194,21 +1008,20 @@ class _MainScaffoldState extends State<MainScaffold> {
                   icon: Icon(
                     Icons.camera_alt_rounded,
                     size: 16,
-                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                    color: palette.starGold,
                   ),
                   label: Text(
-                    l10n?.equipmentRigsButton ?? "Equipment Rigs",
+                    l10n.equipmentRigsButton,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                      color: palette.starGold,
                     ),
                   ),
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (_) => EquipmentDialog(
-                        isRedNightMode: widget.isRedNightMode,
                         onSaved: () {
                           _saveSettings();
                           setState(() {});
@@ -1225,18 +1038,14 @@ class _MainScaffoldState extends State<MainScaffold> {
               width: 40.0,
               height: 40.0,
               child: IconButton(
-                tooltip: l10n?.equipmentRigsTooltip ?? "Equipment Rigs & Optics",
+                tooltip: l10n.equipmentRigsTooltip,
                 padding: EdgeInsets.zero,
                 style: IconButton.styleFrom(
-                  backgroundColor: widget.isRedNightMode
-                      ? AstroColors.nightVisionRed.withValues(alpha: 0.2)
-                      : AstroColors.starGold.withValues(alpha: 0.15),
+                  backgroundColor: palette.starGold.withValues(alpha: 0.15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                     side: BorderSide(
-                      color: widget.isRedNightMode
-                          ? AstroColors.nightVisionRed.withValues(alpha: 0.8)
-                          : AstroColors.starGold.withValues(alpha: 0.6),
+                      color: palette.starGold.withValues(alpha: 0.8),
                       width: 1.2,
                     ),
                   ),
@@ -1244,13 +1053,12 @@ class _MainScaffoldState extends State<MainScaffold> {
                 icon: Icon(
                   Icons.camera_alt_rounded,
                   size: 20,
-                  color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starGold,
+                  color: palette.starGold,
                 ),
                 onPressed: () {
                   showDialog(
                     context: context,
                     builder: (_) => EquipmentDialog(
-                      isRedNightMode: widget.isRedNightMode,
                       onSaved: () {
                         _saveSettings();
                         setState(() {});
@@ -1264,13 +1072,12 @@ class _MainScaffoldState extends State<MainScaffold> {
 
           // Settings & Clean Data Window Pill
           Tooltip(
-            message: l10n?.settingsAndDataTooltip ?? "Settings & Data",
+            message: l10n.settingsAndDataTooltip,
             child: InkWell(
               onTap: () {
                 showDialog(
                   context: context,
                   builder: (ctx) => SettingsDialog(
-                    isRedNightMode: widget.isRedNightMode,
                     maxTargets: _filters.maxTargets,
                     onMaxTargetsChanged: (newLimit) {
                       setState(() {
@@ -1323,17 +1130,17 @@ class _MainScaffoldState extends State<MainScaffold> {
                     Icon(
                       Icons.settings_suggest_rounded,
                       size: isWide ? 15 : 20,
-                      color: widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan,
+                      color: accentColor,
                     ),
                     if (isWide) ...[
                       const SizedBox(width: 6),
                       Text(
-                        l10n?.settingsAndData ?? "Settings & Data",
+                        l10n.settingsAndData,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.3,
-                          color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white,
+                          color: textColor,
                         ),
                       ),
                     ],
@@ -1354,9 +1161,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           // Navigation rail for desktop
           if (isWide)
             NavigationRail(
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionSurface
-                  : AstroColors.spaceDarkSurface,
+              backgroundColor: palette.surface,
               selectedIndex: _selectedTabIndex,
               onDestinationSelected: (idx) => setState(() => _selectedTabIndex = idx),
               labelType: NavigationRailLabelType.all,
@@ -1364,9 +1169,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               indicatorColor: accentColor.withValues(alpha: 0.18),
               selectedIconTheme: IconThemeData(color: accentColor, size: 24),
               unselectedIconTheme: IconThemeData(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionRedDim.withValues(alpha: 0.9)
-                    : Colors.white.withValues(alpha: 0.7),
+                color: palette.textSecondary,
                 size: 24,
               ),
               selectedLabelTextStyle: TextStyle(
@@ -1375,74 +1178,62 @@ class _MainScaffoldState extends State<MainScaffold> {
                 fontWeight: FontWeight.bold,
               ),
               unselectedLabelTextStyle: TextStyle(
-                color: widget.isRedNightMode
-                    ? AstroColors.nightVisionRedDim.withValues(alpha: 0.9)
-                    : Colors.white.withValues(alpha: 0.7),
+                color: palette.textSecondary,
                 fontSize: 12,
               ),
               destinations: [
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.radar_rounded,
-                    color: _selectedTabIndex == 0
-                        ? accentColor
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                    color: _selectedTabIndex == 0 ? accentColor : palette.textSecondary,
                   ),
                   selectedIcon: Icon(Icons.radar_rounded, color: accentColor),
-                  label: Text(l10n?.tabTargets ?? "Targets"),
+                  label: Text(l10n.tabTargets),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.public_rounded,
-                    color: _selectedTabIndex == 1
-                        ? accentColor
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                    color: _selectedTabIndex == 1 ? accentColor : palette.textSecondary,
                   ),
                   selectedIcon: Icon(Icons.public_rounded, color: accentColor),
-                  label: Text(l10n?.tabPlanets ?? "Planets"),
+                  label: Text(l10n.tabPlanets),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.star_rounded,
-                    color: _selectedTabIndex == 2
-                        ? accentColor
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                    color: _selectedTabIndex == 2 ? accentColor : palette.textSecondary,
                   ),
                   selectedIcon: Icon(Icons.star_rounded, color: accentColor),
-                  label: Text(l10n?.tabBrightStars ?? "Bright Stars"),
+                  label: Text(l10n.tabBrightStars),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.calendar_month_rounded,
-                    color: _selectedTabIndex == 3
-                        ? accentColor
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                    color: _selectedTabIndex == 3 ? accentColor : palette.textSecondary,
                   ),
                   selectedIcon: Icon(Icons.calendar_month_rounded, color: accentColor),
-                  label: Text(l10n?.tabPlanner ?? "Planner"),
+                  label: Text(l10n.tabPlanner),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.playlist_play_rounded,
-                    color: _selectedTabIndex == 4
-                        ? accentColor
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                    color: _selectedTabIndex == 4 ? accentColor : palette.textSecondary,
                   ),
                   selectedIcon: Icon(Icons.playlist_play_rounded, color: accentColor),
-                  label: Text(l10n?.tabObservingLists ?? "Observing Lists"),
+                  label: Text(l10n.tabObservingLists),
                 ),
                 NavigationRailDestination(
                   icon: Icon(
                     Icons.favorite_rounded,
                     color: _selectedTabIndex == 5
-                        ? (widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent)
-                        : (widget.isRedNightMode ? AstroColors.nightVisionRedDim : Colors.white.withValues(alpha: 0.7)),
+                        ? (palette.isRedNightMode ? palette.accent : Colors.pinkAccent)
+                        : palette.textSecondary,
                   ),
                   selectedIcon: Icon(
                     Icons.favorite_rounded,
-                    color: widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.pinkAccent,
+                    color: palette.isRedNightMode ? palette.accent : Colors.pinkAccent,
                   ),
-                  label: Text(l10n?.tabFavorites ?? "Favorites"),
+                  label: Text(l10n.tabFavorites),
                 ),
               ],
             ),
@@ -1535,7 +1326,6 @@ class _MainScaffoldState extends State<MainScaffold> {
                 ),
                 ObservingListsView(
                   lists: _observingLists,
-                  isRedNightMode: widget.isRedNightMode,
                   onCreateList: (name, desc, date) {
                     _engine.createObservingList(name, desc, date);
                     _refreshObservingLists();
@@ -1577,37 +1367,35 @@ class _MainScaffoldState extends State<MainScaffold> {
       bottomNavigationBar: !isWide
           ? BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
-              backgroundColor: widget.isRedNightMode
-                  ? AstroColors.nightVisionSurface
-                  : AstroColors.spaceDarkSurface,
+              backgroundColor: palette.surface,
               selectedItemColor: accentColor,
-              unselectedItemColor: textColor.withValues(alpha: 0.5),
+              unselectedItemColor: palette.textSecondary,
               currentIndex: _selectedTabIndex,
               onTap: (idx) => setState(() => _selectedTabIndex = idx),
               items: [
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.radar_rounded),
-                  label: l10n?.tabTargets ?? "Targets",
+                  label: l10n.tabTargets,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.public_rounded),
-                  label: l10n?.tabPlanets ?? "Planets",
+                  label: l10n.tabPlanets,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.star_rounded),
-                  label: l10n?.tabBrightStars ?? "Bright Stars",
+                  label: l10n.tabBrightStars,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.calendar_month_rounded),
-                  label: l10n?.tabPlanner ?? "Planner",
+                  label: l10n.tabPlanner,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.playlist_play_rounded),
-                  label: l10n?.tabObservingLists ?? "Observing Lists",
+                  label: l10n.tabObservingLists,
                 ),
                 BottomNavigationBarItem(
                   icon: const Icon(Icons.favorite_rounded),
-                  label: l10n?.tabFavorites ?? "Favorites",
+                  label: l10n.tabFavorites,
                 ),
               ],
             )

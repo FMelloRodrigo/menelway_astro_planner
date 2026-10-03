@@ -4,16 +4,26 @@ import '../models/equipment_profile.dart';
 import 'equipment_database.dart';
 
 class EquipmentManager extends ChangeNotifier {
-  EquipmentManager._();
-  static final EquipmentManager instance = EquipmentManager._();
+  static EquipmentManager instance = EquipmentManager();
 
-  List<EquipmentProfile> _profiles = [];
-  String _activeProfileId = '';
+  List<EquipmentProfile> _profiles;
+  String _activeProfileId;
   double _cameraAngleDeg = 0.0;
   bool _showRuleOfThirds = false;
   bool _isFramingEnabled = false;
   double _panOffsetArcminX = 0.0;
   double _panOffsetArcminY = 0.0;
+
+  EquipmentManager({
+    List<EquipmentProfile>? profiles,
+    String? activeProfileId,
+  })  : _profiles = profiles != null && profiles.isNotEmpty
+            ? List.from(profiles)
+            : List.from(EquipmentDatabase.defaultProfiles),
+        _activeProfileId = activeProfileId ??
+            (profiles != null && profiles.isNotEmpty
+                ? profiles.first.id
+                : EquipmentDatabase.defaultProfiles.first.id);
 
   List<EquipmentProfile> get profiles => List.unmodifiable(_profiles);
   String get activeProfileId => _activeProfileId;
@@ -27,8 +37,7 @@ class EquipmentManager extends ChangeNotifier {
 
   EquipmentProfile get activeProfile {
     if (_profiles.isEmpty) {
-      _profiles = List.from(EquipmentDatabase.defaultProfiles);
-      _activeProfileId = _profiles.first.id;
+      return EquipmentDatabase.defaultProfiles.first;
     }
     return _profiles.firstWhere(
       (p) => p.id == _activeProfileId,

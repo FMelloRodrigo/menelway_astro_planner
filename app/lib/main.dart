@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/astro_bridge.dart';
 import 'core/equipment_manager.dart';
 import 'core/observing_site_manager.dart';
 import 'core/settings_service.dart';
@@ -9,6 +10,7 @@ import 'views/main_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AstroBridge.registerAsDefault();
   final initialSettings = await SettingsService.loadSettings();
   EquipmentManager.instance.init(
     savedProfiles: initialSettings.equipmentProfiles,
