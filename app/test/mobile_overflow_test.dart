@@ -201,8 +201,48 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
     });
 
-    testWidgets('HorizonMakerDialog does not overflow on 360px', (tester) async {
+    testWidgets('HorizonMakerDialog does not overflow on 360px when zooming in and selecting points', (tester) async {
       tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        createTestApp(
+          HorizonMakerDialog(
+            initialFilters: FilterState(
+              horizonPoints: [
+                const HorizonPointModel(azimuth: 45.0, altitude: 20.0),
+                const HorizonPointModel(azimuth: 180.0, altitude: 15.0),
+              ],
+            ),
+            onApply: (_) {},
+          ),
+          locale: const Locale('pt', 'BR'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+
+      // Tap zoom in button to test viewport scrubber on mobile
+      final zoomInBtn = find.byTooltip("Zoom In (Wheel Up)");
+      expect(zoomInBtn, findsOneWidget);
+      await tester.tap(zoomInBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+
+      // Tap on the chart to select/add a point to test point inspector on mobile
+      final canvasFinder = find.byType(CustomPaint).first;
+      await tester.tap(canvasFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('HorizonMakerDialog on desktop renders full toolbar without cutting off Import Panorama or presets', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -213,11 +253,27 @@ void main() {
             initialFilters: FilterState(),
             onApply: (_) {},
           ),
-          locale: const Locale('pt', 'BR'),
+          locale: const Locale('en', 'US'),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
+
+      final importBtn = find.text("Import Panorama Image...");
+      expect(importBtn, findsOneWidget);
+
+      final clearPreset = find.text("Clear (0°)");
+      expect(clearPreset, findsOneWidget);
+
+      final backyardPreset = find.text("Backyard Sample");
+      expect(backyardPreset, findsOneWidget);
+
+      // Ensure buttons are within the screen bounds and rendered cleanly
+      final importRect = tester.getRect(importBtn);
+      final backyardRect = tester.getRect(backyardPreset);
+      expect(importRect.right, lessThanOrEqualTo(1280.0));
+      expect(backyardRect.right, lessThanOrEqualTo(1280.0));
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('EquipmentDialog does not overflow on 360px', (tester) async {

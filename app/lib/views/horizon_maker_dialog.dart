@@ -700,13 +700,16 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isNarrow = MediaQuery.of(context).size.width < 700;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isNarrow = screenWidth < 700;
     final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
     final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
 
     final dialogContent = Container(
-      width: isNarrow ? null : 880,
-      padding: EdgeInsets.all(isNarrow ? 12 : 20),
+      width: isNarrow ? null : math.min(screenWidth * 0.94, 1180.0),
+      height: isNarrow ? null : math.min(screenHeight * 0.90, 860.0),
+      padding: EdgeInsets.all(isNarrow ? 12 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -874,17 +877,22 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
               ),
             ),
           ),
-          if (_zoomLevel > 1.0)
-            _buildViewportScrubber(textColor, accentColor),
-          const SizedBox(height: 10),
+          if (_zoomLevel > 1.0) ...[
+            const SizedBox(height: 6),
+            _buildViewportScrubber(textColor, accentColor, isNarrow),
+          ],
 
           // Panorama Calibration Controls (visible if image is loaded)
-          if (_decodedImage != null)
+          if (_decodedImage != null) ...[
+            const SizedBox(height: 6),
             _buildPanoramaControls(textColor, accentColor, isNarrow),
+          ],
 
           // Point Selection & Micro-Adjustment Bar
-          if (_selectedPointIndex != null && _selectedPointIndex! < _points.length)
+          if (_selectedPointIndex != null && _selectedPointIndex! < _points.length) ...[
+            const SizedBox(height: 6),
             _buildPointInspector(textColor, accentColor, isNarrow),
+          ],
 
           const SizedBox(height: 8),
 
@@ -986,19 +994,19 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
             color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
           ),
         ),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: dialogContent,
       );
     }
   }
 
-  Widget _buildViewportScrubber(Color textColor, Color accentColor) {
+  Widget _buildViewportScrubber(Color textColor, Color accentColor, bool isNarrow) {
     final span = 360.0 / _zoomLevel;
     final minAz = _viewStartAzimuth.round();
     final maxAz = (_viewStartAzimuth + span).round();
 
     return Container(
-      margin: const EdgeInsets.only(top: 4, bottom: 4),
+      margin: const EdgeInsets.only(top: 2, bottom: 2),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: widget.isRedNightMode
@@ -1009,41 +1017,95 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
         ),
       ),
-      child: Row(
-        children: [
-          Icon(Icons.pan_tool_alt_rounded, size: 14, color: accentColor),
-          const SizedBox(width: 6),
-          Text(
-            "Viewing: $minAz° – $maxAz° (${_zoomLevel.toStringAsFixed(1)}x)",
-            style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: textColor),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              ),
-              child: Slider(
-                value: _viewStartAzimuth.clamp(0.0, 360.0 - span),
-                min: 0.0,
-                max: (360.0 - span).clamp(0.0, 360.0),
-                activeColor: accentColor,
-                onChanged: (val) => setState(() => _viewStartAzimuth = val),
-              ),
+      child: isNarrow
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.pan_tool_alt_rounded, size: 14, color: accentColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      "$minAz°–$maxAz° (${_zoomLevel.toStringAsFixed(1)}x)",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 3,
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                        ),
+                        child: Slider(
+                          value: _viewStartAzimuth.clamp(0.0, 360.0 - span),
+                          min: 0.0,
+                          max: (360.0 - span).clamp(0.0, 360.0),
+                          activeColor: accentColor,
+                          onChanged: (val) => setState(() => _viewStartAzimuth = val),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _cardinalJumpBtn("N", 0.0, accentColor),
+                      _cardinalJumpBtn("NE", 45.0, accentColor),
+                      _cardinalJumpBtn("E", 90.0, accentColor),
+                      _cardinalJumpBtn("SE", 135.0, accentColor),
+                      _cardinalJumpBtn("S", 180.0, accentColor),
+                      _cardinalJumpBtn("SW", 225.0, accentColor),
+                      _cardinalJumpBtn("W", 270.0, accentColor),
+                      _cardinalJumpBtn("NW", 315.0, accentColor),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Icon(Icons.pan_tool_alt_rounded, size: 14, color: accentColor),
+                const SizedBox(width: 6),
+                Text(
+                  "Viewing: $minAz° – $maxAz° (${_zoomLevel.toStringAsFixed(1)}x)",
+                  style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: textColor),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    ),
+                    child: Slider(
+                      value: _viewStartAzimuth.clamp(0.0, 360.0 - span),
+                      min: 0.0,
+                      max: (360.0 - span).clamp(0.0, 360.0),
+                      activeColor: accentColor,
+                      onChanged: (val) => setState(() => _viewStartAzimuth = val),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _cardinalJumpBtn("N", 0.0, accentColor),
+                _cardinalJumpBtn("NE", 45.0, accentColor),
+                _cardinalJumpBtn("E", 90.0, accentColor),
+                _cardinalJumpBtn("SE", 135.0, accentColor),
+                _cardinalJumpBtn("S", 180.0, accentColor),
+                _cardinalJumpBtn("SW", 225.0, accentColor),
+                _cardinalJumpBtn("W", 270.0, accentColor),
+                _cardinalJumpBtn("NW", 315.0, accentColor),
+              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          _cardinalJumpBtn("N", 0.0, accentColor),
-          _cardinalJumpBtn("NE", 45.0, accentColor),
-          _cardinalJumpBtn("E", 90.0, accentColor),
-          _cardinalJumpBtn("SE", 135.0, accentColor),
-          _cardinalJumpBtn("S", 180.0, accentColor),
-          _cardinalJumpBtn("SW", 225.0, accentColor),
-          _cardinalJumpBtn("W", 270.0, accentColor),
-          _cardinalJumpBtn("NW", 315.0, accentColor),
-        ],
-      ),
     );
   }
 
@@ -1072,183 +1134,215 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   }
 
   Widget _buildToolbar(Color textColor, Color accentColor, bool isNarrow) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          // Point Handles Visibility Toggle
+    final viewAndLocationCluster = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilterChip(
+          selected: _showPoints,
+          label: Text(
+            _showPoints ? "Points: ON" : "Points: OFF",
+            style: TextStyle(fontSize: 11, color: textColor),
+          ),
+          avatar: Icon(
+            _showPoints ? Icons.scatter_plot_rounded : Icons.visibility_off_outlined,
+            size: 14,
+            color: accentColor,
+          ),
+          selectedColor: accentColor.withValues(alpha: 0.25),
+          onSelected: (val) => setState(() => _showPoints = val),
+        ),
+        const SizedBox(width: 8),
+        ActionChip(
+          avatar: Icon(Icons.pin_drop_rounded, size: 14, color: accentColor),
+          label: Text(
+            _state.observerLocationName.split(',').first.trim(),
+            style: TextStyle(fontSize: 11, color: textColor),
+            overflow: TextOverflow.ellipsis,
+          ),
+          tooltip: "Observer site: ${_state.observerLocationName}\n(${_state.observerLat.toStringAsFixed(4)}°, ${_state.observerLon.toStringAsFixed(4)}°, ${_state.observerElevation.round()}m)\nClick to refine street or neighborhood",
+          onPressed: _openRefineLocationDialog,
+        ),
+      ],
+    );
+
+    final mountainCluster = _isFetchingTerrain
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
+                ),
+                const SizedBox(width: 8),
+                Text("Scanning Horizon...", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+              ],
+            ),
+          )
+        : (_terrainProfile == null
+            ? FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: accentColor.withValues(alpha: 0.18),
+                  foregroundColor: accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
+                ),
+                icon: Icon(Icons.terrain_rounded, size: 16, color: accentColor),
+                label: Text(
+                  "Detect Mountains (Online DEM)",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                ),
+                onPressed: _detectMountainHorizon,
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FilterChip(
+                    selected: _showTerrainSilhouette,
+                    label: Text(
+                      _showTerrainSilhouette ? "Mountain Silhouette: ON" : "Mountain Silhouette: OFF",
+                      style: TextStyle(fontSize: 11, color: textColor),
+                    ),
+                    avatar: Icon(Icons.landscape_rounded, size: 14, color: accentColor),
+                    selectedColor: accentColor.withValues(alpha: 0.25),
+                    onSelected: (val) => setState(() => _showTerrainSilhouette = val),
+                  ),
+                  const SizedBox(width: 6),
+                  ActionChip(
+                    avatar: Icon(Icons.auto_fix_high_rounded, size: 14, color: accentColor),
+                    label: const Text("Apply Peaks to Points", style: TextStyle(fontSize: 11)),
+                    onPressed: _applySimplifiedMountainPoints,
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: "Clear Mountain Data",
+                    icon: const Icon(Icons.layers_clear_rounded, size: 17, color: Colors.white54),
+                    onPressed: () => setState(() => _terrainProfile = null),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: "Re-scan Mountain Profile",
+                    icon: Icon(Icons.refresh_rounded, size: 17, color: accentColor),
+                    onPressed: _detectMountainHorizon,
+                  ),
+                ],
+              ));
+
+    final panoramaCluster = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            side: BorderSide(color: accentColor.withValues(alpha: 0.4)),
+          ),
+          icon: Icon(
+            _decodedImage != null ? Icons.image_rounded : Icons.add_photo_alternate_rounded,
+            size: 16,
+            color: accentColor,
+          ),
+          label: Text(
+            _decodedImage != null ? "Change Panorama..." : "Import Panorama Image...",
+            style: TextStyle(fontSize: 12, color: textColor),
+          ),
+          onPressed: _isLoadingImage ? null : _pickImage,
+        ),
+        if (_decodedImage != null) ...[
+          const SizedBox(width: 6),
+          IconButton(
+            tooltip: "Remove Panorama",
+            icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
+            onPressed: _clearImage,
+          ),
+          const SizedBox(width: 6),
           FilterChip(
-            selected: _showPoints,
+            selected: _calibrateMode,
             label: Text(
-              _showPoints ? "Points: ON" : "Points: OFF",
+              _calibrateMode ? "Pan Mode: Image Position" : "Edit Mode: Horizon Points",
               style: TextStyle(fontSize: 11, color: textColor),
             ),
             avatar: Icon(
-              _showPoints ? Icons.scatter_plot_rounded : Icons.visibility_off_outlined,
+              _calibrateMode ? Icons.open_with_rounded : Icons.gesture_rounded,
               size: 14,
               color: accentColor,
             ),
             selectedColor: accentColor.withValues(alpha: 0.25),
-            onSelected: (val) => setState(() => _showPoints = val),
-          ),
-          const SizedBox(width: 8),
-
-          // Observer Location Display & Refine Button
-          ActionChip(
-            avatar: Icon(Icons.pin_drop_rounded, size: 14, color: accentColor),
-            label: Text(
-              _state.observerLocationName.split(',').first.trim(),
-              style: TextStyle(fontSize: 11, color: textColor),
-              overflow: TextOverflow.ellipsis,
-            ),
-            tooltip: "Observer site: ${_state.observerLocationName}\n(${_state.observerLat.toStringAsFixed(4)}°, ${_state.observerLon.toStringAsFixed(4)}°, ${_state.observerElevation.round()}m)\nClick to refine street or neighborhood",
-            onPressed: _openRefineLocationDialog,
-          ),
-          const SizedBox(width: 8),
-
-          // Mountain Profile Button & Controls (Online DEM)
-          if (_isFetchingTerrain) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: accentColor.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Text("Scanning Horizon...", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
-                ],
-              ),
-            ),
-          ] else if (_terrainProfile == null) ...[
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: accentColor.withValues(alpha: 0.18),
-                foregroundColor: accentColor,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
-              ),
-              icon: Icon(Icons.terrain_rounded, size: 16, color: accentColor),
-              label: Text(
-                "Detect Mountains (Online DEM)",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
-              ),
-              onPressed: _detectMountainHorizon,
-            ),
-          ] else ...[
-            FilterChip(
-              selected: _showTerrainSilhouette,
-              label: Text(
-                _showTerrainSilhouette ? "Mountain Silhouette: ON" : "Mountain Silhouette: OFF",
-                style: TextStyle(fontSize: 11, color: textColor),
-              ),
-              avatar: Icon(Icons.landscape_rounded, size: 14, color: accentColor),
-              selectedColor: accentColor.withValues(alpha: 0.25),
-              onSelected: (val) => setState(() => _showTerrainSilhouette = val),
-            ),
-            const SizedBox(width: 6),
-            ActionChip(
-              avatar: Icon(Icons.auto_fix_high_rounded, size: 14, color: accentColor),
-              label: const Text("Apply Peaks to Points", style: TextStyle(fontSize: 11)),
-              onPressed: _applySimplifiedMountainPoints,
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: "Clear Mountain Data",
-              icon: const Icon(Icons.layers_clear_rounded, size: 17, color: Colors.white54),
-              onPressed: () => setState(() => _terrainProfile = null),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: "Re-scan Mountain Profile",
-              icon: Icon(Icons.refresh_rounded, size: 17, color: accentColor),
-              onPressed: _detectMountainHorizon,
-            ),
-          ],
-          const SizedBox(width: 12),
-          Container(width: 1, height: 24, color: textColor.withValues(alpha: 0.2)),
-          const SizedBox(width: 12),
-
-          // Background Image Button
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              side: BorderSide(color: accentColor.withValues(alpha: 0.4)),
-            ),
-            icon: Icon(
-              _decodedImage != null ? Icons.image_rounded : Icons.add_photo_alternate_rounded,
-              size: 16,
-              color: accentColor,
-            ),
-            label: Text(
-              _decodedImage != null ? "Change Panorama..." : "Import Panorama Image...",
-              style: TextStyle(fontSize: 12, color: textColor),
-            ),
-            onPressed: _isLoadingImage ? null : _pickImage,
-          ),
-          if (_decodedImage != null) ...[
-            const SizedBox(width: 6),
-            IconButton(
-              tooltip: "Remove Panorama",
-              icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
-              onPressed: _clearImage,
-            ),
-            const SizedBox(width: 6),
-            // Mode toggle: Calibrate Image vs Edit Points
-            FilterChip(
-              selected: _calibrateMode,
-              label: Text(
-                _calibrateMode ? "Pan Mode: Image Position" : "Edit Mode: Horizon Points",
-                style: TextStyle(fontSize: 11, color: textColor),
-              ),
-              avatar: Icon(
-                _calibrateMode ? Icons.open_with_rounded : Icons.gesture_rounded,
-                size: 14,
-                color: accentColor,
-              ),
-              selectedColor: accentColor.withValues(alpha: 0.25),
-              onSelected: (val) => setState(() => _calibrateMode = val),
-            ),
-          ],
-          const SizedBox(width: 12),
-          Container(width: 1, height: 24, color: textColor.withValues(alpha: 0.2)),
-          const SizedBox(width: 12),
-
-          // Presets
-          Text(
-            "Presets:",
-            style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.5)),
-          ),
-          const SizedBox(width: 6),
-          ActionChip(
-            label: const Text("Clear (0°)", style: TextStyle(fontSize: 11)),
-            onPressed: () => _applyPreset("flat0"),
-          ),
-          const SizedBox(width: 4),
-          ActionChip(
-            label: const Text("Flat 15°", style: TextStyle(fontSize: 11)),
-            onPressed: () => _applyPreset("flat15"),
-          ),
-          const SizedBox(width: 4),
-          ActionChip(
-            label: const Text("Flat 30°", style: TextStyle(fontSize: 11)),
-            onPressed: () => _applyPreset("flat30"),
-          ),
-          const SizedBox(width: 4),
-          ActionChip(
-            label: const Text("Backyard Sample", style: TextStyle(fontSize: 11)),
-            onPressed: () => _applyPreset("sample"),
+            onSelected: (val) => setState(() => _calibrateMode = val),
           ),
         ],
-      ),
+      ],
     );
+
+    final presetsCluster = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "Presets:",
+          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.5)),
+        ),
+        const SizedBox(width: 6),
+        ActionChip(
+          label: const Text("Clear (0°)", style: TextStyle(fontSize: 11)),
+          onPressed: () => _applyPreset("flat0"),
+        ),
+        const SizedBox(width: 4),
+        ActionChip(
+          label: const Text("Flat 15°", style: TextStyle(fontSize: 11)),
+          onPressed: () => _applyPreset("flat15"),
+        ),
+        const SizedBox(width: 4),
+        ActionChip(
+          label: const Text("Flat 30°", style: TextStyle(fontSize: 11)),
+          onPressed: () => _applyPreset("flat30"),
+        ),
+        const SizedBox(width: 4),
+        ActionChip(
+          label: const Text("Backyard Sample", style: TextStyle(fontSize: 11)),
+          onPressed: () => _applyPreset("sample"),
+        ),
+      ],
+    );
+
+    if (isNarrow) {
+      return ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              viewAndLocationCluster,
+              const SizedBox(width: 8),
+              mountainCluster,
+              const SizedBox(width: 8),
+              panoramaCluster,
+              const SizedBox(width: 8),
+              presetsCluster,
+            ],
+          ),
+        ),
+      );
+    } else {
+      return Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          viewAndLocationCluster,
+          mountainCluster,
+          panoramaCluster,
+          presetsCluster,
+        ],
+      );
+    }
   }
 
   Widget _buildPanoramaControls(Color textColor, Color accentColor, bool isNarrow) {
@@ -1408,57 +1502,89 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       children: [
         IconButton(
           tooltip: "Previous Point (<)",
-          icon: const Icon(Icons.navigate_before_rounded, size: 22),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.navigate_before_rounded, size: 20),
           onPressed: _points.length > 1 ? _selectPreviousPoint : null,
         ),
         IconButton(
           tooltip: "Next Point (>)",
-          icon: const Icon(Icons.navigate_next_rounded, size: 22),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
+          icon: const Icon(Icons.navigate_next_rounded, size: 20),
           onPressed: _points.length > 1 ? _selectNextPoint : null,
         ),
         Container(
           width: 1,
           height: 18,
           color: textColor.withValues(alpha: 0.2),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
         ),
         IconButton(
           tooltip: "-1° Azimuth",
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_left_rounded, size: 20),
           onPressed: () => _adjustSelectedPoint(-1.0, 0.0),
         ),
         IconButton(
           tooltip: "+1° Azimuth",
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_right_rounded, size: 20),
           onPressed: () => _adjustSelectedPoint(1.0, 0.0),
         ),
         IconButton(
           tooltip: "-1° Altitude",
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_drop_down_rounded, size: 20),
           onPressed: () => _adjustSelectedPoint(0.0, -1.0),
         ),
         IconButton(
           tooltip: "+1° Altitude",
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          padding: EdgeInsets.zero,
           icon: const Icon(Icons.arrow_drop_up_rounded, size: 20),
           onPressed: () => _adjustSelectedPoint(0.0, 1.0),
         ),
         const SizedBox(width: 4),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.redAccent.withValues(alpha: 0.25),
-            foregroundColor: Colors.redAccent,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        if (isNarrow)
+          IconButton(
+            tooltip: "Delete Point",
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
+              foregroundColor: Colors.redAccent,
+            ),
+            icon: const Icon(Icons.delete_rounded, size: 16),
+            onPressed: _deleteSelectedPoint,
+          )
+        else
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.25),
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            icon: const Icon(Icons.delete_rounded, size: 14),
+            label: const Text("Delete", style: TextStyle(fontSize: 11)),
+            onPressed: _deleteSelectedPoint,
           ),
-          icon: const Icon(Icons.delete_rounded, size: 14),
-          label: const Text("Delete", style: TextStyle(fontSize: 11)),
-          onPressed: _deleteSelectedPoint,
-        ),
       ],
     );
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: accentColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
@@ -1467,28 +1593,33 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       child: isNarrow
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.adjust_rounded, size: 15, color: accentColor),
-                    const SizedBox(width: 6),
+                    Icon(Icons.adjust_rounded, size: 14, color: accentColor),
+                    const SizedBox(width: 4),
                     Text(
-                      "Point #${_selectedPointIndex! + 1} of ${_points.length}: ",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                      "#${_selectedPointIndex! + 1}/${_points.length}: ",
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
                     ),
                     Expanded(
                       child: Text(
-                        "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)}) | Alt: ${p.altitude.toStringAsFixed(1)}°",
+                        "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)}) • Alt: ${p.altitude.toStringAsFixed(1)}°",
                         style: TextStyle(
-                            fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: accentColor),
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
+                const SizedBox(height: 3),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: steppers,
                 ),
               ],
@@ -1504,7 +1635,11 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
                 Text(
                   "Az: ${p.azimuth.toStringAsFixed(1)}° (${_cardinal(p.azimuth)})  |  Alt: ${p.altitude.toStringAsFixed(1)}°",
                   style: TextStyle(
-                      fontSize: 12, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: accentColor),
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                    color: accentColor,
+                  ),
                 ),
                 const Spacer(),
                 steppers,
