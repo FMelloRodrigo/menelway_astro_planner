@@ -50,10 +50,13 @@ if (Test-Path "$releaseDir\terrain_cache") {
 # Copy release files to Menelway dist folder
 Copy-Item "$releaseDir\*" -Destination $distDirMenelway -Recurse -Force
 
-# Create descriptive executable aliases
+# Ensure menelway_astro_planner.exe is the sole executable in the portable distribution
 if (Test-Path "$distDirMenelway\app.exe") {
     Copy-Item "$distDirMenelway\app.exe" "$distDirMenelway\menelway_astro_planner.exe" -Force
-    Copy-Item "$distDirMenelway\app.exe" "$distDirMenelway\astro_targets_planner.exe" -Force
+    Remove-Item "$distDirMenelway\app.exe" -Force
+}
+if (Test-Path "$distDirMenelway\astro_targets_planner.exe") {
+    Remove-Item "$distDirMenelway\astro_targets_planner.exe" -Force
 }
 
 # Ensure catalogs.db is also at root for easy standalone inspection
@@ -73,9 +76,6 @@ if (Test-Path "$tempBackupDir\user_settings.json") {
     Copy-Item "$tempBackupDir\user_settings.json" -Destination "$releaseDir\user_settings.json" -Force
 }
 Remove-Item $tempBackupDir -Recurse -Force -ErrorAction SilentlyContinue
-
-# Mirror to legacy folder for backwards-compatibility
-Copy-Item "$distDirMenelway" -Destination $distDirLegacy -Recurse -Force
 
 # Write README
 $readmeContent = @"
@@ -99,7 +99,7 @@ Features:
 - Telescope Red Night-Vision mode to preserve dark adaptation.
 
 HOW TO RUN:
-1. Double-click 'menelway_astro_planner.exe' (or 'astro_targets_planner.exe').
+1. Double-click 'menelway_astro_planner.exe'.
 2. Zero installation or admin rights required! 
    You can run this directly from any folder or USB drive.
 
@@ -108,12 +108,10 @@ SYSTEM REQUIREMENTS:
 "@
 
 Set-Content -Path "$distDirMenelway\README.txt" -Value $readmeContent
-Set-Content -Path "$distDirLegacy\README.txt" -Value $readmeContent
 
-# Compress into zip packages
+# Compress into zip package
 Write-Host "Compressing into $zipFileMenelway..." -ForegroundColor Cyan
 Compress-Archive -Path "$distDirMenelway\*" -DestinationPath $zipFileMenelway -Force
-Copy-Item $zipFileMenelway $zipFileLegacy -Force
 
 $zipSizeMb = (Get-Item $zipFileMenelway).Length / 1MB
 Write-Host "Portable package created successfully!" -ForegroundColor Green

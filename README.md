@@ -84,7 +84,7 @@ cd ..
 powershell -ExecutionPolicy Bypass -File package_portable_release.ps1
 ```
 
-The resulting standalone distribution is output to `dist/astro_targets_planner_win64_portable/`.
+The resulting standalone distribution is output to `dist/menelway_astro_planner_win64_portable/`.
 
 ---
 

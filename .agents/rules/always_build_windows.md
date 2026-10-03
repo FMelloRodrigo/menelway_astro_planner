@@ -19,4 +19,4 @@ Whenever changes are made to the codebase (C++ engine, Dart models, or Flutter U
    ```powershell
    powershell -ExecutionPolicy Bypass -File package_portable_release.ps1
    ```
-4. Confirm to the user that the Windows binary at `app\build\windows\x64\runner\Release\app.exe` and portable release at `dist\astro_targets_planner_win64_portable\astro_targets_planner.exe` are ready for testing.
+4. Confirm to the user that the Windows binary at `app\build\windows\x64\runner\Release\menelway_astro_planner.exe` and portable release at `dist\menelway_astro_planner_win64_portable\menelway_astro_planner.exe` are ready for testing.
