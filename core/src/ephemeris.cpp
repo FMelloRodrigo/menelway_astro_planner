@@ -28,7 +28,7 @@ double obliquity_of_ecliptic(double T) {
 
 } // namespace
 
-SunInfo get_sun_info(time::JulianDate jd, const coordinates::ObserverLocation& obs) {
+SunInfo get_sun_info(time::JulianDate jd, const coordinates::ObserverLocation& obs, bool apply_refraction) {
     double T = time::julian_centuries_j2000(jd);
 
     // Geometric mean longitude of the Sun (degrees)
@@ -66,7 +66,7 @@ SunInfo get_sun_info(time::JulianDate jd, const coordinates::ObserverLocation& o
 
     coordinates::EquatorialCoordinates eq{ra_hours, units::Degrees{dec_deg}};
     coordinates::HorizontalCoordinates horiz = coordinates::equatorial_to_horizontal(
-        eq, obs, jd, /*apply_refraction=*/true
+        eq, obs, jd, apply_refraction
     );
 
     return SunInfo{eq, horiz};
@@ -186,7 +186,7 @@ time::JulianDate find_altitude_crossing(
 
     for (int iter = 0; iter < 24; ++iter) {
         double mid = (t0 + t1) * 0.5;
-        SunInfo sun = get_sun_info(time::JulianDate{mid}, obs);
+        SunInfo sun = get_sun_info(time::JulianDate{mid}, obs, /*apply_refraction=*/false);
         double diff = sun.horizontal.altitude.value - target_alt;
 
         if (std::abs(diff) < 1e-5) {
@@ -235,7 +235,7 @@ NightWindow calculate_night_window(
     double step = 5.0 / 1440.0; // 5-minute steps
 
     double prev_t = scan_start;
-    double prev_alt = get_sun_info(time::JulianDate{prev_t}, obs).horizontal.altitude.value;
+    double prev_alt = get_sun_info(time::JulianDate{prev_t}, obs, /*apply_refraction=*/false).horizontal.altitude.value;
 
     double min_alt = prev_alt;
     double max_alt = prev_alt;
@@ -251,7 +251,7 @@ NightWindow calculate_night_window(
     const double targets[] = {-0.833, -6.0, -12.0, -18.0};
 
     for (double t = scan_start + step; t <= scan_end + 1e-6; t += step) {
-        double cur_alt = get_sun_info(time::JulianDate{t}, obs).horizontal.altitude.value;
+        double cur_alt = get_sun_info(time::JulianDate{t}, obs, /*apply_refraction=*/false).horizontal.altitude.value;
 
         if (cur_alt < min_alt) {
             min_alt = cur_alt;

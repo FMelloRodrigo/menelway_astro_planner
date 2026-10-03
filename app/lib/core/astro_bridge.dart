@@ -298,6 +298,7 @@ class AstroBridge implements AstroEngine {
         .asFunction<_AstroFreeStringDart>();
   }
 
+  @override
   void initEngine(String dbPath) {
     if (_engine != null) {
       _engineDestroy(_engine!);
@@ -315,6 +316,7 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   void dispose() {
     if (_engine != null) {
       _engineDestroy(_engine!);
@@ -322,12 +324,14 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   String getLastError() {
     if (_engine == null) return "Engine not initialized";
     final ptr = _engineGetLastError(_engine!);
     return ptr.toDartString();
   }
 
+  @override
   NightSummary getNightSummary({
     required double latitude,
     required double longitude,
@@ -414,6 +418,7 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   List<TargetItem> filterTargets({
     required FilterState filters,
     required NightSummary night,
@@ -572,6 +577,7 @@ class AstroBridge implements AstroEngine {
   }
 
   @override
+  @override
   List<TargetItem> getPlanets({
     required FilterState filters,
     required NightSummary night,
@@ -615,6 +621,7 @@ class AstroBridge implements AstroEngine {
     );
   }
 
+  @override
   List<PeriodTargetItem> filterTargetsPeriod({
 
     required FilterState filters,
@@ -756,6 +763,7 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   List<AltitudePoint> generateAltitudeCurve({
     required int targetId,
     required double latitude,
@@ -810,6 +818,7 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   int createObservingList(String name, String description, String sessionDate) {
     if (_engine == null) return -1;
     final nameUtf8 = name.toNativeUtf8();
@@ -824,11 +833,13 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   bool deleteObservingList(int listId) {
     if (_engine == null) return false;
     return _deleteList(_engine!, listId) == 1;
   }
 
+  @override
   bool addTargetToList(int listId, int dsoId, String notes) {
     if (_engine == null) return false;
     final notesUtf8 = notes.toNativeUtf8();
@@ -839,11 +850,13 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   bool removeTargetFromList(int listId, int dsoId) {
     if (_engine == null) return false;
     return _removeFromList(_engine!, listId, dsoId) == 1;
   }
 
+  @override
   List<ObservingListModel> getObservingLists() {
     if (_engine == null) return [];
     final jsonPtr = _getListsJson(_engine!);
@@ -859,11 +872,13 @@ class AstroBridge implements AstroEngine {
     }
   }
 
+  @override
   bool clearAllObservingLists() {
     if (_engine == null) return false;
     return _clearAllLists(_engine!) == 1;
   }
 
+  @override
   YearlyVisibilityModel? getTargetYearlyVisibility({
     required int targetId,
     required double latitude,
@@ -872,9 +887,10 @@ class AstroBridge implements AstroEngine {
     FilterState? filters,
     double minAltitude = 30.0,
     double minDurationHours = 2.0,
-    int year = 2026,
+    int? year,
   }) {
     if (_engine == null) return null;
+    final simYear = year ?? DateTime.now().year;
 
     final obsPtr = calloc<AstroObserver>();
     obsPtr.ref.latitudeDeg = latitude;
@@ -904,7 +920,7 @@ class AstroBridge implements AstroEngine {
         targetId,
         obsPtr,
         critPtr,
-        year,
+        simYear,
       );
 
       if (jsonPtr == nullptr) return null;

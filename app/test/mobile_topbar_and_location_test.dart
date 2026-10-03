@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/theme/astro_theme.dart';
-import 'package:app/views/main_scaffold.dart';
 import 'package:app/l10n/app_localizations.dart';
 
 void main() {
@@ -53,9 +52,6 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    bool isRedNightMode = false;
-    final isWide = false;
-
     await tester.pumpWidget(
       MaterialApp(
         theme: AstroTheme.darkTheme(),
@@ -63,14 +59,14 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           appBar: AppBar(
-            titleSpacing: isWide ? 16.0 : 10.0,
+            titleSpacing: 10.0,
             title: const Text("MENELWAY"),
             actions: [
               // Red Night-Vision Mode Toggle
               SizedBox(
                 key: const ValueKey('night_mode_btn'),
-                width: isWide ? 32.0 : 40.0,
-                height: isWide ? 32.0 : 40.0,
+                width: 40.0,
+                height: 40.0,
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.remove_red_eye_rounded, size: 20),
@@ -82,7 +78,7 @@ void main() {
               // Language Switcher
               Container(
                 key: const ValueKey('lang_switcher_btn'),
-                height: isWide ? 32.0 : 40.0,
+                height: 40.0,
                 padding: const EdgeInsets.symmetric(horizontal: 7),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -98,8 +94,8 @@ void main() {
               // Equipment Rigs Manager Button
               SizedBox(
                 key: const ValueKey('equipment_btn'),
-                width: isWide ? 32.0 : 40.0,
-                height: isWide ? 32.0 : 40.0,
+                width: 40.0,
+                height: 40.0,
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.camera_alt_rounded, size: 20),
@@ -111,8 +107,8 @@ void main() {
               // Settings & Clean Data Window Pill
               Container(
                 key: const ValueKey('settings_btn'),
-                height: isWide ? 32.0 : 40.0,
-                width: isWide ? null : 40.0,
+                height: 40.0,
+                width: 40.0,
                 alignment: Alignment.center,
                 child: const Icon(Icons.settings_suggest_rounded, size: 20),
               ),

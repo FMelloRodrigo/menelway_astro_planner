@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:app/core/fake_astro_engine.dart';
 import 'package:app/models/filter_state.dart';
 import 'package:app/models/night_summary.dart';
 import 'package:app/models/target_item.dart';
 import 'package:app/views/planets_view.dart';
 import 'package:app/views/bright_stars_view.dart';
-import 'package:app/views/main_scaffold.dart';
 import 'package:app/l10n/app_localizations.dart';
-
-import 'package:app/core/settings_service.dart';
 
 void main() {
   final testNight = NightSummary(
@@ -26,8 +22,6 @@ void main() {
     moonPhaseName: 'Waxing Crescent',
     hasAstronomicalNight: true,
   );
-
-  final fakeEngine = FakeAstroEngine();
 
   final testPlanets = [
     TargetItem(
@@ -129,7 +123,7 @@ void main() {
             isLoading: false,
             availableLists: const [],
             onFilterChanged: (_) {},
-            onAddToList: (_, __, ___) {},
+            onAddToList: (listId, targetId, notes) {},
           ),
         ),
       ),
@@ -161,7 +155,7 @@ void main() {
             isLoading: false,
             availableLists: const [],
             onFilterChanged: (_) {},
-            onAddToList: (_, __, ___) {},
+            onAddToList: (listId, targetId, notes) {},
           ),
         ),
       ),
@@ -211,7 +205,7 @@ void main() {
                                 isLoading: false,
                                 availableLists: const [],
                                 onFilterChanged: (_) {},
-                                onAddToList: (_, __, ___) {},
+                                onAddToList: (listId, targetId, notes) {},
                               )
                             : BrightStarsView(
                                 stars: testStars,
@@ -220,7 +214,7 @@ void main() {
                                 isLoading: false,
                                 availableLists: const [],
                                 onFilterChanged: (_) {},
-                                onAddToList: (_, __, ___) {},
+                                onAddToList: (listId, targetId, notes) {},
                               ),
                   ),
                 ],

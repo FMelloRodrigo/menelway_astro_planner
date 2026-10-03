@@ -89,7 +89,7 @@ AstroEngine* astro_engine_create(const char* db_path) {
             return nullptr;
         }
         return reinterpret_cast<AstroEngine*>(ctx.release());
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         return nullptr;
     }
 }
@@ -103,7 +103,27 @@ void astro_engine_destroy(AstroEngine* engine) {
 const char* astro_engine_get_last_error(AstroEngine* engine) {
     if (!engine) return "Engine is null";
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->last_error.c_str();
+    if (!ctx->last_error.empty()) {
+        return ctx->last_error.c_str();
+    }
+    if (ctx->storage && !ctx->storage->last_error().empty()) {
+        return ctx->storage->last_error().c_str();
+    }
+    return "";
+}
+
+static const char* get_static_moon_phase_name(astro::ephemeris::MoonPhaseType phase) {
+    switch (phase) {
+        case astro::ephemeris::MoonPhaseType::NewMoon: return "New Moon";
+        case astro::ephemeris::MoonPhaseType::WaxingCrescent: return "Waxing Crescent";
+        case astro::ephemeris::MoonPhaseType::FirstQuarter: return "First Quarter";
+        case astro::ephemeris::MoonPhaseType::WaxingGibbous: return "Waxing Gibbous";
+        case astro::ephemeris::MoonPhaseType::FullMoon: return "Full Moon";
+        case astro::ephemeris::MoonPhaseType::WaningGibbous: return "Waning Gibbous";
+        case astro::ephemeris::MoonPhaseType::ThirdQuarter: return "Third Quarter";
+        case astro::ephemeris::MoonPhaseType::WaningCrescent: return "Waning Crescent";
+        default: return "Unknown";
+    }
 }
 
 int32_t astro_get_night_summary(
@@ -137,8 +157,7 @@ int32_t astro_get_night_summary(
         out_summary->sunrise_utc = astro::time::julian_date_to_unix(night.sunrise);
 
         out_summary->moon_illumination = moon.illuminated_fraction;
-        ctx->cached_moon_phase = moon.phase_name;
-        out_summary->moon_phase_name = ctx->cached_moon_phase.c_str();
+        out_summary->moon_phase_name = get_static_moon_phase_name(moon.phase_type);
         out_summary->has_astronomical_night = night.has_astronomical_night ? 1 : 0;
 
         return 1;
@@ -406,10 +425,13 @@ AstroCurveData* astro_generate_curve(
         int step = step_minutes > 0 ? step_minutes : 5;
         std::vector<astro::visibility::AltitudePoint> points;
         if (dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
-            auto pid = static_cast<astro::ephemeris::PlanetId>(target_id - 90000);
-            points = astro::visibility::generate_planet_altitude_curve(
-                pid, obs, start_jd, end_jd, step
-            );
+            int pid_num = static_cast<int>(target_id - 90000);
+            if (pid_num >= 1 && pid_num <= 10) {
+                auto pid = static_cast<astro::ephemeris::PlanetId>(pid_num);
+                points = astro::visibility::generate_planet_altitude_curve(
+                    pid, obs, start_jd, end_jd, step
+                );
+            }
         } else {
             points = astro::visibility::generate_altitude_curve(
                 dso->coordinates, obs, start_jd, end_jd, step
@@ -453,17 +475,41 @@ int64_t astro_create_observing_list(
 ) {
     if (!engine || !name) return -1;
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->storage->create_list(
-        name,
-        description ? description : "",
-        session_date ? session_date : ""
-    );
+    try {
+        int64_t id = ctx->storage->create_list(
+            name,
+            description ? description : "",
+            session_date ? session_date : ""
+        );
+        if (id <= 0) {
+            ctx->last_error = ctx->storage->last_error();
+        }
+        return id;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return -1;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_create_observing_list";
+        return -1;
+    }
 }
 
 int32_t astro_delete_observing_list(AstroEngine* engine, int64_t list_id) {
     if (!engine) return 0;
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->storage->delete_list(list_id) ? 1 : 0;
+    try {
+        bool ok = ctx->storage->delete_list(list_id);
+        if (!ok) {
+            ctx->last_error = ctx->storage->last_error();
+        }
+        return ok ? 1 : 0;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_delete_observing_list";
+        return 0;
+    }
 }
 
 int32_t astro_add_to_observing_list(
@@ -474,7 +520,19 @@ int32_t astro_add_to_observing_list(
 ) {
     if (!engine) return 0;
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->storage->add_target_to_list(list_id, dso_id, notes ? notes : "") ? 1 : 0;
+    try {
+        bool ok = ctx->storage->add_target_to_list(list_id, dso_id, notes ? notes : "");
+        if (!ok) {
+            ctx->last_error = ctx->storage->last_error();
+        }
+        return ok ? 1 : 0;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_add_to_observing_list";
+        return 0;
+    }
 }
 
 int32_t astro_remove_from_observing_list(
@@ -484,7 +542,19 @@ int32_t astro_remove_from_observing_list(
 ) {
     if (!engine) return 0;
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->storage->remove_target_from_list(list_id, dso_id) ? 1 : 0;
+    try {
+        bool ok = ctx->storage->remove_target_from_list(list_id, dso_id);
+        if (!ok) {
+            ctx->last_error = ctx->storage->last_error();
+        }
+        return ok ? 1 : 0;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_remove_from_observing_list";
+        return 0;
+    }
 }
 
 static std::string escape_json(const std::string& s) {
@@ -506,50 +576,70 @@ const char* astro_get_observing_lists_json(AstroEngine* engine) {
     if (!engine) return duplicate_string("[]");
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
 
-    auto lists = ctx->storage->get_all_lists();
+    try {
+        auto lists = ctx->storage->get_all_lists();
 
-    std::ostringstream ss;
-    ss << "[";
-    for (size_t i = 0; i < lists.size(); ++i) {
-        if (i > 0) ss << ",";
-        const auto& l = lists[i];
-        ss << "{"
-           << "\"id\":" << l.id << ","
-           << "\"name\":\"" << escape_json(l.name) << "\","
-           << "\"description\":\"" << escape_json(l.description) << "\","
-           << "\"session_date\":\"" << escape_json(l.session_date) << "\","
-           << "\"created_at\":" << l.created_at << ","
-           << "\"items\":[";
-
-        for (size_t j = 0; j < l.items.size(); ++j) {
-            if (j > 0) ss << ",";
-            const auto& item = l.items[j];
+        std::ostringstream ss;
+        ss << "[";
+        for (size_t i = 0; i < lists.size(); ++i) {
+            if (i > 0) ss << ",";
+            const auto& l = lists[i];
             ss << "{"
-               << "\"list_id\":" << item.list_id << ","
-               << "\"dso_id\":" << item.dso_id << ","
-               << "\"name\":\"" << escape_json(item.dso.name) << "\","
-               << "\"display_name\":\"" << escape_json(item.dso.display_name()) << "\","
-               << "\"catalog\":\"" << escape_json(item.dso.catalog) << "\","
-               << "\"object_type\":\"" << escape_json(item.dso.object_type) << "\","
-               << "\"constellation\":\"" << escape_json(item.dso.constellation) << "\","
-               << "\"magnitude\":" << (item.dso.magnitude.has_value() ? std::to_string(*item.dso.magnitude) : "null") << ","
-               << "\"notes\":\"" << escape_json(item.notes) << "\","
-               << "\"status\":\"" << escape_json(item.status) << "\","
-               << "\"added_at\":" << item.added_at
-               << "}";
+               << "\"id\":" << l.id << ","
+               << "\"name\":\"" << escape_json(l.name) << "\","
+               << "\"description\":\"" << escape_json(l.description) << "\","
+               << "\"session_date\":\"" << escape_json(l.session_date) << "\","
+               << "\"created_at\":" << l.created_at << ","
+               << "\"items\":[";
+
+            for (size_t j = 0; j < l.items.size(); ++j) {
+                if (j > 0) ss << ",";
+                const auto& item = l.items[j];
+                ss << "{"
+                   << "\"list_id\":" << item.list_id << ","
+                   << "\"dso_id\":" << item.dso_id << ","
+                   << "\"name\":\"" << escape_json(item.dso.name) << "\","
+                   << "\"display_name\":\"" << escape_json(item.dso.display_name()) << "\","
+                   << "\"catalog\":\"" << escape_json(item.dso.catalog) << "\","
+                   << "\"object_type\":\"" << escape_json(item.dso.object_type) << "\","
+                   << "\"constellation\":\"" << escape_json(item.dso.constellation) << "\","
+                   << "\"magnitude\":" << (item.dso.magnitude.has_value() ? std::to_string(*item.dso.magnitude) : "null") << ","
+                   << "\"notes\":\"" << escape_json(item.notes) << "\","
+                   << "\"status\":\"" << escape_json(item.status) << "\","
+                   << "\"added_at\":" << item.added_at
+                   << "}";
+            }
+
+            ss << "]}";
         }
+        ss << "]";
 
-        ss << "]}";
+        return duplicate_string(ss.str());
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return duplicate_string("[]");
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_get_observing_lists_json";
+        return duplicate_string("[]");
     }
-    ss << "]";
-
-    return duplicate_string(ss.str());
 }
 
 int32_t astro_clear_all_observing_lists(AstroEngine* engine) {
     if (!engine) return 0;
     auto* ctx = reinterpret_cast<AstroEngineContext*>(engine);
-    return ctx->storage->clear_all_lists() ? 1 : 0;
+    try {
+        bool ok = ctx->storage->clear_all_lists();
+        if (!ok) {
+            ctx->last_error = ctx->storage->last_error();
+        }
+        return ok ? 1 : 0;
+    } catch (const std::exception& e) {
+        ctx->last_error = e.what();
+        return 0;
+    } catch (...) {
+        ctx->last_error = "Unknown error in astro_clear_all_observing_lists";
+        return 0;
+    }
 }
 
 const char* astro_get_target_yearly_visibility_json(
@@ -598,8 +688,11 @@ const char* astro_get_target_yearly_visibility_json(
         int sim_year = year > 1900 ? year : 2026;
         astro::visibility::YearlyVisibilityResult res;
         if (opt_dso->catalog == "Solar System" || (target_id >= 90001 && target_id <= 90010)) {
-            auto pid = static_cast<astro::ephemeris::PlanetId>(target_id - 90000);
-            res = astro::visibility::calculate_planet_yearly_visibility(pid, obs, crit, sim_year);
+            int pid_num = static_cast<int>(target_id - 90000);
+            if (pid_num >= 1 && pid_num <= 10) {
+                auto pid = static_cast<astro::ephemeris::PlanetId>(pid_num);
+                res = astro::visibility::calculate_planet_yearly_visibility(pid, obs, crit, sim_year);
+            }
         } else {
             res = astro::visibility::calculate_yearly_visibility(opt_dso->coordinates, obs, crit, sim_year);
         }

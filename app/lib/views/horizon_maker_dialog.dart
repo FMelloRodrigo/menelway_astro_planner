@@ -84,6 +84,12 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
     }
   }
 
+  @override
+  void dispose() {
+    _decodedImage?.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadCachedTerrainProfile() async {
     final cached = await TerrainCacheService.loadProfile(
       _state.observerLat,
@@ -388,7 +394,12 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
           );
         },
       ),
-    );
+    ).then((_) {
+      searchCtrl.dispose();
+      latCtrl.dispose();
+      lonCtrl.dispose();
+      eleCtrl.dispose();
+    });
   }
 
   void _promptApplyTerrainPoints(TerrainProfileModel profile) {
@@ -479,10 +490,13 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
       final frame = await codec.getNextFrame();
       if (mounted) {
         setState(() {
+          _decodedImage?.dispose();
           _decodedImage = frame.image;
           _panoramaPath = path;
           _isLoadingImage = false;
         });
+      } else {
+        frame.image.dispose();
       }
     } catch (e) {
       if (mounted) {
@@ -516,6 +530,7 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   }
 
   void _clearImage() {
+    _decodedImage?.dispose();
     setState(() {
       _decodedImage = null;
       _panoramaPath = null;

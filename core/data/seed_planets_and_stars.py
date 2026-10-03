@@ -109,7 +109,6 @@ def seed():
 
     # Clear previous seed if exists
     cur.execute("DELETE FROM dso_objects WHERE id >= 90000 AND id <= 92000;")
-    cur.execute("DELETE FROM dso_fts WHERE rowid >= 90000 AND rowid <= 92000;")
 
     # Insert planets
     for p in PLANETS_DATA:
@@ -125,10 +124,6 @@ def seed():
             p[0], p[1], p[1], p[2], p[3], p[4],
             p[5], p[6], p[7], p[8], p[9], p[10]
         ))
-        cur.execute("""
-            INSERT INTO dso_fts (rowid, name, messier, caldwell, arp, herschel, ngc_ic, common_names, identifiers)
-            VALUES (?, ?, NULL, NULL, NULL, NULL, ?, ?, ?)
-        """, (p[0], p[1], p[1], p[9], p[10]))
 
     # Insert bright stars
     for s in BRIGHT_STARS_DATA:
@@ -144,10 +139,9 @@ def seed():
             s[0], s[1], s[1], s[2], s[3], s[4],
             s[5], s[6], s[7], s[8], s[9], s[10]
         ))
-        cur.execute("""
-            INSERT INTO dso_fts (rowid, name, messier, caldwell, arp, herschel, ngc_ic, common_names, identifiers)
-            VALUES (?, ?, NULL, NULL, NULL, NULL, ?, ?, ?)
-        """, (s[0], s[1], s[1], s[9], s[10]))
+
+    # Rebuild FTS5 index safely from external content table
+    cur.execute("INSERT INTO dso_fts(dso_fts) VALUES('rebuild');")
 
     conn.commit()
     print(f"Successfully seeded {len(PLANETS_DATA)} planets and {len(BRIGHT_STARS_DATA)} bright stars into {DB_PATH}")

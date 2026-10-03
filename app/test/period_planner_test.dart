@@ -24,7 +24,7 @@ class CustomYearlyMockEngine extends FakeAstroEngine {
     FilterState? filters,
     double minAltitude = 30.0,
     double minDurationHours = 2.0,
-    int year = 2026,
+    int? year,
   }) {
     if (onGetYearly != null) {
       return onGetYearly!(targetId, filters);
@@ -304,7 +304,7 @@ void main() {
               longitude: -110.0,
               elevation: 1500.0,
               availableLists: const [],
-              onAddToList: (_, __, ___) {},
+              onAddToList: (listId, targetId, notes) {},
               filters: FilterState(),
               engine: mockEngine,
               periodTarget: periodTarget,
@@ -365,7 +365,7 @@ void main() {
               night: testNight,
               isRedNightMode: false,
               availableLists: const [],
-              onAddToList: (_, __, ___) {},
+              onAddToList: (listId, targetId, notes) {},
               onFilterChanged: (_) {},
               engine: mockEngine,
             ),

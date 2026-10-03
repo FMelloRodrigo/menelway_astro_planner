@@ -97,6 +97,7 @@ class AstroTheme {
         unselectedLabelTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
         indicatorColor: AstroColors.starlightCyan.withValues(alpha: 0.18),
       ),
+      extensions: const [AstroPalette.defaultDark],
     );
   }
 
@@ -179,6 +180,95 @@ class AstroTheme {
         unselectedLabelTextStyle: TextStyle(color: AstroColors.nightVisionRedDim.withValues(alpha: 0.8), fontSize: 12),
         indicatorColor: AstroColors.nightVisionRed.withValues(alpha: 0.2),
       ),
+      extensions: const [AstroPalette.defaultRed],
+    );
+  }
+}
+
+/// ThemeExtension to encapsulate the active theme palette and eliminate parameter drilling.
+@immutable
+class AstroPalette extends ThemeExtension<AstroPalette> {
+  final Color background;
+  final Color surface;
+  final Color surfaceVariant;
+  final Color border;
+  final Color accent;
+  final Color text;
+  final Color textDim;
+  final bool isRedNightMode;
+
+  const AstroPalette({
+    required this.background,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.border,
+    required this.accent,
+    required this.text,
+    required this.textDim,
+    required this.isRedNightMode,
+  });
+
+  static AstroPalette of(BuildContext context) {
+    return Theme.of(context).extension<AstroPalette>() ?? defaultDark;
+  }
+
+  static const defaultDark = AstroPalette(
+    background: AstroColors.spaceDarkBackground,
+    surface: AstroColors.spaceDarkSurface,
+    surfaceVariant: AstroColors.spaceDarkSurfaceVariant,
+    border: AstroColors.spaceDarkBorder,
+    accent: AstroColors.starlightCyan,
+    text: Colors.white,
+    textDim: Color(0xB3FFFFFF),
+    isRedNightMode: false,
+  );
+
+  static const defaultRed = AstroPalette(
+    background: AstroColors.nightVisionBackground,
+    surface: AstroColors.nightVisionSurface,
+    surfaceVariant: AstroColors.nightVisionSurfaceVariant,
+    border: AstroColors.nightVisionBorder,
+    accent: AstroColors.nightVisionRed,
+    text: AstroColors.nightVisionRed,
+    textDim: AstroColors.nightVisionRedDim,
+    isRedNightMode: true,
+  );
+
+  @override
+  AstroPalette copyWith({
+    Color? background,
+    Color? surface,
+    Color? surfaceVariant,
+    Color? border,
+    Color? accent,
+    Color? text,
+    Color? textDim,
+    bool? isRedNightMode,
+  }) {
+    return AstroPalette(
+      background: background ?? this.background,
+      surface: surface ?? this.surface,
+      surfaceVariant: surfaceVariant ?? this.surfaceVariant,
+      border: border ?? this.border,
+      accent: accent ?? this.accent,
+      text: text ?? this.text,
+      textDim: textDim ?? this.textDim,
+      isRedNightMode: isRedNightMode ?? this.isRedNightMode,
+    );
+  }
+
+  @override
+  AstroPalette lerp(ThemeExtension<AstroPalette>? other, double t) {
+    if (other is! AstroPalette) return this;
+    return AstroPalette(
+      background: Color.lerp(background, other.background, t) ?? background,
+      surface: Color.lerp(surface, other.surface, t) ?? surface,
+      surfaceVariant: Color.lerp(surfaceVariant, other.surfaceVariant, t) ?? surfaceVariant,
+      border: Color.lerp(border, other.border, t) ?? border,
+      accent: Color.lerp(accent, other.accent, t) ?? accent,
+      text: Color.lerp(text, other.text, t) ?? text,
+      textDim: Color.lerp(textDim, other.textDim, t) ?? textDim,
+      isRedNightMode: t < 0.5 ? isRedNightMode : other.isRedNightMode,
     );
   }
 }

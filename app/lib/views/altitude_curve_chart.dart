@@ -239,7 +239,7 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
         _activeSkylineAzimuth = ((rawHoveredAz % 360.0) + 360.0) % 360.0;
       }
 
-      final az = _activeSkylineAzimuth ?? peakPoint?.azimuth ?? 180.0;
+      final az = _activeSkylineAzimuth ?? peakPoint.azimuth;
       hoveredAzimuth = az;
 
       if (hasHorizon) {
@@ -285,15 +285,13 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
       }
 
       hoveredPoint = _activeTimelinePoint ?? peakPoint;
-      if (hoveredPoint != null) {
-        hoveredAzimuth = hoveredPoint.azimuth;
-        isTargetTrajectoryNear = true;
+      hoveredAzimuth = hoveredPoint.azimuth;
+      isTargetTrajectoryNear = true;
 
-        if (hasHorizon) {
-          hoveredRidgeAlt = widget.filterState!.getHorizonAltitudeAt(hoveredPoint.azimuth);
-          hoveredClearance = hoveredPoint.altitude - hoveredRidgeAlt;
-          isHoveredOccluded = hoveredPoint.altitude < hoveredRidgeAlt;
-        }
+      if (hasHorizon) {
+        hoveredRidgeAlt = widget.filterState!.getHorizonAltitudeAt(hoveredPoint.azimuth);
+        hoveredClearance = hoveredPoint.altitude - hoveredRidgeAlt;
+        isHoveredOccluded = hoveredPoint.altitude < hoveredRidgeAlt;
       }
     }
 

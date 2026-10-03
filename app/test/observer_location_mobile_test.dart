@@ -25,7 +25,6 @@ void main() {
                   final latController = TextEditingController(text: '-22.2811');
                   final lonController = TextEditingController(text: '-42.5311');
                   final eleController = TextEditingController(text: '846');
-                  String currentLocationName = 'Nova Friburgo';
                   List<GeoLocationResult> searchResults = [];
 
                   final addressController = TextEditingController();
@@ -90,7 +89,6 @@ void main() {
                                                     latController.text = searchResults[idx].latitude.toStringAsFixed(4);
                                                     lonController.text = searchResults[idx].longitude.toStringAsFixed(4);
                                                     eleController.text = searchResults[idx].elevation.round().toString();
-                                                    currentLocationName = searchResults[idx].displayName;
                                                     searchResults = [];
                                                   });
                                                 },
@@ -122,7 +120,6 @@ void main() {
                                                     setDialogState(() {
                                                       latController.text = addressResults[idx].latitude.toStringAsFixed(4);
                                                       lonController.text = addressResults[idx].longitude.toStringAsFixed(4);
-                                                      currentLocationName = addressResults[idx].displayName;
                                                       addressResults = [];
                                                     });
                                                   },

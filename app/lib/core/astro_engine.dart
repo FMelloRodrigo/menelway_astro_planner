@@ -115,7 +115,7 @@ abstract class AstroEngine {
     FilterState? filters,
     double minAltitude = 30.0,
     double minDurationHours = 2.0,
-    int year = 2026,
+    int? year,
   });
 
   /// Retrieves the pre-baked or cached descriptive prose for a celestial target.

@@ -84,7 +84,8 @@ struct PlanetInfo {
  */
 SunInfo get_sun_info(
     time::JulianDate jd,
-    const coordinates::ObserverLocation& obs
+    const coordinates::ObserverLocation& obs,
+    bool apply_refraction = true
 );
 
 /**

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../core/astro_engine.dart';
 import '../core/catalog_manager.dart';
 import '../core/equipment_manager.dart';
-import '../core/geocoding_service.dart';
 import '../core/settings_service.dart';
 import '../core/favorites_manager.dart';
 import '../l10n/app_localizations.dart';
@@ -17,6 +16,7 @@ import '../theme/astro_theme.dart';
 import 'bright_stars_view.dart';
 import 'equipment_dialog.dart';
 import 'favorites_view.dart';
+import 'observer_location_dialog.dart';
 import 'observing_lists_view.dart';
 import 'planets_view.dart';
 import 'planner_view.dart';
@@ -463,455 +463,34 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   void _editLocationDialog() {
-    final searchController = TextEditingController();
-    final latController = TextEditingController(text: _filters.observerLat.toStringAsFixed(4));
-    final lonController = TextEditingController(text: _filters.observerLon.toStringAsFixed(4));
-    final eleController = TextEditingController(text: _filters.observerElevation.round().toString());
-
-    String currentLocationName = _filters.observerLocationName;
-    List<GeoLocationResult> searchResults = [];
-    bool isSearching = false;
-    String? searchError;
-
-    // Optional Precise Street / Neighborhood search state
-    final addressController = TextEditingController();
-    bool isAddressSearchExpanded = false;
-    List<GeoLocationResult> addressResults = [];
-    bool isSearchingAddress = false;
-    String? addressError;
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final l10n = AppLocalizations.of(context);
-          final textColor = widget.isRedNightMode ? AstroColors.nightVisionRed : Colors.white;
-          final accentColor = widget.isRedNightMode ? AstroColors.nightVisionRed : AstroColors.starlightCyan;
-
-          Future<void> doSearch() async {
-            final q = searchController.text.trim();
-            if (q.length < 2) return;
-
-            setDialogState(() {
-              isSearching = true;
-              searchError = null;
-            });
-
-            try {
-              final results = await GeocodingService.searchCities(q);
-              setDialogState(() {
-                searchResults = results;
-                isSearching = false;
-                if (results.isEmpty) {
-                  searchError = l10n?.locationNotFound(q) ?? "No matching cities found for '$q'.";
-                }
-              });
-            } catch (e) {
-              setDialogState(() {
-                isSearching = false;
-                searchError = l10n?.connectionError ?? "Connection error. Check internet connection.";
-              });
-            }
-          }
-
-          Future<void> doAddressSearch() async {
-            final q = addressController.text.trim();
-            if (q.length < 2) return;
-
-            setDialogState(() {
-              isSearchingAddress = true;
-              addressError = null;
-            });
-
-            try {
-              final results = await GeocodingService.searchPreciseAddress(q);
-              setDialogState(() {
-                addressResults = results;
-                isSearchingAddress = false;
-                if (results.isEmpty) {
-                  addressError = "No matching street or neighborhood found for '$q'.";
-                }
-              });
-            } catch (e) {
-              setDialogState(() {
-                isSearchingAddress = false;
-                addressError = "Connection error. Check internet connection.";
-              });
-            }
-          }
-
-          final isNarrow = MediaQuery.of(context).size.width < 600;
-
-          return AlertDialog(
-            backgroundColor: widget.isRedNightMode
-                ? AstroColors.nightVisionSurface
-                : AstroColors.spaceDarkSurface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: widget.isRedNightMode ? AstroColors.nightVisionBorder : AstroColors.spaceDarkBorder,
-              ),
-            ),
-            insetPadding: EdgeInsets.symmetric(
-              horizontal: isNarrow ? 12 : 40,
-              vertical: isNarrow ? 16 : 24,
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.location_city_rounded, color: accentColor, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n?.locationEditTitle ?? "Observer Location",
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Tooltip(
-                  message: l10n?.closeBtn ?? "Close",
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => Navigator.of(ctx).pop(),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: widget.isRedNightMode
-                            ? AstroColors.nightVisionSurfaceVariant
-                            : const Color(0xFF222F42),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionBorder
-                              : Colors.white.withValues(alpha: 0.3),
-                          width: 1.4,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 18,
-                        color: widget.isRedNightMode
-                            ? AstroColors.nightVisionRed
-                            : Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search by City & Country (Open-Meteo)
-                    Text(
-                      l10n?.searchCityOnline ?? "Search City & Country (Online)",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: accentColor,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        hintText: l10n?.searchCityHint ?? "Type city",
-                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                          tooltip: l10n?.searchOnlineTooltip ?? "Search online",
-                          onPressed: doSearch,
-                        ),
-                      ),
-                      onSubmitted: (_) => doSearch(),
-                    ),
-
-                    if (isSearching) ...[
-                      const SizedBox(height: 10),
-                      const LinearProgressIndicator(),
-                    ],
-
-                    if (searchError != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        searchError!,
-                        style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.6)),
-                      ),
-                    ],
-
-                    // Search Results
-                    if (searchResults.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 180),
-                        decoration: BoxDecoration(
-                          color: widget.isRedNightMode
-                              ? AstroColors.nightVisionSurfaceVariant
-                              : AstroColors.spaceDarkSurfaceVariant,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: widget.isRedNightMode
-                                ? AstroColors.nightVisionBorder
-                                : AstroColors.spaceDarkBorder,
-                          ),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (int idx = 0; idx < searchResults.length; idx++) ...[
-                                if (idx > 0) const Divider(height: 1),
-                                ListTile(
-                                  dense: true,
-                                  title: Text(
-                                    searchResults[idx].displayName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    l10n?.searchResultSubtitle(
-                                      searchResults[idx].latitude.toStringAsFixed(2),
-                                      searchResults[idx].longitude.toStringAsFixed(2),
-                                      searchResults[idx].elevation.round().toString(),
-                                    ) ?? "Lat: ${searchResults[idx].latitude.toStringAsFixed(2)}° | Lon: ${searchResults[idx].longitude.toStringAsFixed(2)}° | Elevation: ${searchResults[idx].elevation.round()}m",
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: textColor.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                  trailing: Icon(Icons.check_circle_outline_rounded, size: 18, color: accentColor),
-                                  onTap: () {
-                                    setDialogState(() {
-                                      latController.text = searchResults[idx].latitude.toStringAsFixed(4);
-                                      lonController.text = searchResults[idx].longitude.toStringAsFixed(4);
-                                      eleController.text = searchResults[idx].elevation.round().toString();
-                                      currentLocationName = searchResults[idx].displayName;
-                                      searchResults = [];
-                                    });
-                                  },
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 12),
-
-                    // Optional Precise Street / Neighborhood / Landmark lookup (OSM Nominatim)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => setDialogState(() => isAddressSearchExpanded = !isAddressSearchExpanded),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isAddressSearchExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                              size: 18,
-                              color: accentColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.signpost_rounded, size: 14, color: accentColor),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Precise Street / Neighborhood (Optional for Horizon)",
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: accentColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    if (isAddressSearchExpanded) ...[
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: addressController,
-                        decoration: InputDecoration(
-                          hintText: l10n?.searchAddressHint ?? "Type the detailed location, like street name, and city",
-                          prefixIcon: const Icon(Icons.add_location_alt_rounded, size: 18),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                            tooltip: l10n?.searchAddressTooltip ?? "Search precise street/neighborhood (worldwide)",
-                            onPressed: doAddressSearch,
-                          ),
-                        ),
-                        onSubmitted: (_) => doAddressSearch(),
-                      ),
-                      if (isSearchingAddress) ...[
-                        const SizedBox(height: 6),
-                        const LinearProgressIndicator(),
-                      ],
-                      if (addressError != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          addressError!,
-                          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
-                        ),
-                      ],
-                      if (addressResults.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 180),
-                          decoration: BoxDecoration(
-                            color: widget.isRedNightMode
-                                ? AstroColors.nightVisionSurfaceVariant
-                                : AstroColors.spaceDarkSurfaceVariant,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: widget.isRedNightMode
-                                  ? AstroColors.nightVisionBorder
-                                  : AstroColors.spaceDarkBorder,
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (int idx = 0; idx < addressResults.length; idx++) ...[
-                                  if (idx > 0) const Divider(height: 1),
-                                  ListTile(
-                                    dense: true,
-                                    leading: Icon(Icons.pin_drop_rounded, size: 18, color: accentColor),
-                                    title: Text(
-                                      addressResults[idx].displayName,
-                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: textColor),
-                                    ),
-                                    subtitle: Text(
-                                      "Lat: ${addressResults[idx].latitude.toStringAsFixed(4)}° | Lon: ${addressResults[idx].longitude.toStringAsFixed(4)}°",
-                                      style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
-                                    ),
-                                    trailing: Icon(Icons.check_circle_outline_rounded, size: 16, color: accentColor),
-                                    onTap: () async {
-                                      final r = addressResults[idx];
-                                      setDialogState(() {
-                                        latController.text = r.latitude.toStringAsFixed(4);
-                                        lonController.text = r.longitude.toStringAsFixed(4);
-                                        currentLocationName = r.displayName;
-                                        addressResults = [];
-                                      });
-                                      // Auto-fetch precise elevation
-                                      final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
-                                      if (elev != null && ctx.mounted) {
-                                        setDialogState(() {
-                                          eleController.text = elev.round().toString();
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 8),
-
-                    // Manual Coordinates Section
-                    Row(
-                      children: [
-                        Icon(Icons.tune_rounded, size: 14, color: textColor.withValues(alpha: 0.6)),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n?.selectedCoordsElevation ?? "Selected Coordinates & Elevation",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: textColor.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: latController,
-                            decoration: InputDecoration(labelText: l10n?.latitude ?? "Latitude (°)"),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: lonController,
-                            decoration: InputDecoration(labelText: l10n?.longitude ?? "Longitude (°)"),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: eleController,
-                            decoration: InputDecoration(labelText: l10n?.elevation ?? "Elevation (m)"),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                          ),
-                        ),
-                      ],
-                    ),
-
-
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: Text(l10n?.cancel ?? "Cancel"),
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-              FilledButton(
-                child: Text(l10n?.applyLocation ?? "Apply Location"),
-                onPressed: () {
-                  final newLat = double.tryParse(latController.text) ?? _filters.observerLat;
-                  final newLon = double.tryParse(lonController.text) ?? _filters.observerLon;
-                  final newEle = double.tryParse(eleController.text) ?? _filters.observerElevation;
-
-                  setState(() {
-                    _filters.observerLat = newLat;
-                    _filters.observerLon = newLon;
-                    _filters.observerElevation = newEle;
-                    _filters.observerLocationName = currentLocationName;
-                    _nightSummary = _engine.getNightSummary(
-                      latitude: newLat,
-                      longitude: newLon,
-                      elevation: newEle,
-                      date: _filters.date,
-                    );
-                  });
-                  Navigator.of(ctx).pop();
-                  _saveSettings();
-                  _runFiltering();
-                },
-              ),
-            ],
-          );
+      builder: (ctx) => ObserverLocationDialog(
+        initialLat: _filters.observerLat,
+        initialLon: _filters.observerLon,
+        initialElevation: _filters.observerElevation,
+        initialLocationName: _filters.observerLocationName,
+        isRedNightMode: widget.isRedNightMode,
+        onLocationApplied: (newLat, newLon, newEle, locationName) {
+          setState(() {
+            _filters.observerLat = newLat;
+            _filters.observerLon = newLon;
+            _filters.observerElevation = newEle;
+            _filters.observerLocationName = locationName;
+            _nightSummary = _engine.getNightSummary(
+              latitude: newLat,
+              longitude: newLon,
+              elevation: newEle,
+              date: _filters.date,
+            );
+          });
+          _saveSettings();
+          _runFiltering();
         },
       ),
     );
   }
+
 
   Widget _buildMobileStatusStrip(Color textColor, Color accentColor) {
     final l10n = AppLocalizations.of(context);
@@ -1702,125 +1281,126 @@ class _MainScaffoldState extends State<MainScaffold> {
             ),
 
           // Tab Content
+          // Tab Content
           Expanded(
-            child: _selectedTabIndex == 0
-                ? TargetSearchView(
-                    filterButtonKey: _filtersKey,
-                    targets: _targets,
-                    night: _nightSummary!,
-                    filters: _filters,
-                    isLoading: _isLoadingTargets,
-                    isRedNightMode: widget.isRedNightMode,
-                    availableLists: _observingLists,
-                    onFilterChanged: (updated) {
-                      setState(() {
-                        _filters = updated;
-                      });
-                      _saveSettings();
-                      _runFiltering();
-                    },
-                    onAddToList: (listId, dsoId, notes) {
-                      _engine.addTargetToList(listId, dsoId, notes);
-                      _refreshObservingLists();
-                      _saveSettings();
-                    },
-                  )
-                : _selectedTabIndex == 1
-                    ? PlanetsView(
-                        planets: _planets,
-                        night: _nightSummary!,
-                        filters: _filters,
-                        isLoading: _isLoadingPlanets,
-                        isRedNightMode: widget.isRedNightMode,
-                        availableLists: _observingLists,
-                        onFilterChanged: (updated) {
-                          setState(() {
-                            _filters = updated;
-                          });
-                          _saveSettings();
-                          _runFiltering();
-                        },
-                        onAddToList: (listId, dsoId, notes) {
-                          _engine.addTargetToList(listId, dsoId, notes);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                      )
-                : _selectedTabIndex == 2
-                    ? BrightStarsView(
-                        stars: _brightStars,
-                        night: _nightSummary!,
-                        filters: _filters,
-                        isLoading: _isLoadingBrightStars,
-                        isRedNightMode: widget.isRedNightMode,
-                        availableLists: _observingLists,
-                        onFilterChanged: (updated) {
-                          setState(() {
-                            _filters = updated;
-                          });
-                          _saveSettings();
-                          _runFiltering();
-                        },
-                        onAddToList: (listId, dsoId, notes) {
-                          _engine.addTargetToList(listId, dsoId, notes);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                      )
-                : _selectedTabIndex == 3
-                    ? PlannerView(
-                        filters: _filters,
-                        night: _nightSummary!,
-                        isRedNightMode: widget.isRedNightMode,
-                        availableLists: _observingLists,
-                        engine: _engine,
-                        onAddToList: (listId, dsoId, notes) {
-                          _engine.addTargetToList(listId, dsoId, notes ?? '');
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                        onFilterChanged: (updated) {
-                          setState(() {
-                            _filters = updated;
-                          });
-                          _saveSettings();
-                          _runFiltering();
-                        },
-                      )
-                    : _selectedTabIndex == 4
-                        ? ObservingListsView(
-                        lists: _observingLists,
-                        isRedNightMode: widget.isRedNightMode,
-                        onCreateList: (name, desc, date) {
-                          _engine.createObservingList(name, desc, date);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                        onDeleteList: (listId) {
-                          _engine.deleteObservingList(listId);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                        onRemoveItem: (listId, dsoId) {
-                          _engine.removeTargetFromList(listId, dsoId);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                      )
-                    : FavoritesView(
-                        night: _nightSummary,
-                        filters: _filters,
-                        isRedNightMode: widget.isRedNightMode,
-                        availableLists: _observingLists,
-                        onAddToList: (listId, dsoId, notes) {
-                          _engine.addTargetToList(listId, dsoId, notes);
-                          _refreshObservingLists();
-                          _saveSettings();
-                        },
-                        onExploreTargets: () {
-                          setState(() => _selectedTabIndex = 0);
-                        },
-                      ),
+            child: IndexedStack(
+              index: _selectedTabIndex,
+              children: [
+                TargetSearchView(
+                  filterButtonKey: _filtersKey,
+                  targets: _targets,
+                  night: _nightSummary!,
+                  filters: _filters,
+                  isLoading: _isLoadingTargets,
+                  isRedNightMode: widget.isRedNightMode,
+                  availableLists: _observingLists,
+                  onFilterChanged: (updated) {
+                    setState(() {
+                      _filters = updated;
+                    });
+                    _saveSettings();
+                    _runFiltering();
+                  },
+                  onAddToList: (listId, dsoId, notes) {
+                    _engine.addTargetToList(listId, dsoId, notes);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                ),
+                PlanetsView(
+                  planets: _planets,
+                  night: _nightSummary!,
+                  filters: _filters,
+                  isLoading: _isLoadingPlanets,
+                  isRedNightMode: widget.isRedNightMode,
+                  availableLists: _observingLists,
+                  onFilterChanged: (updated) {
+                    setState(() {
+                      _filters = updated;
+                    });
+                    _saveSettings();
+                    _runFiltering();
+                  },
+                  onAddToList: (listId, dsoId, notes) {
+                    _engine.addTargetToList(listId, dsoId, notes);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                ),
+                BrightStarsView(
+                  stars: _brightStars,
+                  night: _nightSummary!,
+                  filters: _filters,
+                  isLoading: _isLoadingBrightStars,
+                  isRedNightMode: widget.isRedNightMode,
+                  availableLists: _observingLists,
+                  onFilterChanged: (updated) {
+                    setState(() {
+                      _filters = updated;
+                    });
+                    _saveSettings();
+                    _runFiltering();
+                  },
+                  onAddToList: (listId, dsoId, notes) {
+                    _engine.addTargetToList(listId, dsoId, notes);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                ),
+                PlannerView(
+                  filters: _filters,
+                  night: _nightSummary!,
+                  isRedNightMode: widget.isRedNightMode,
+                  availableLists: _observingLists,
+                  engine: _engine,
+                  onAddToList: (listId, dsoId, notes) {
+                    _engine.addTargetToList(listId, dsoId, notes ?? '');
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                  onFilterChanged: (updated) {
+                    setState(() {
+                      _filters = updated;
+                    });
+                    _saveSettings();
+                    _runFiltering();
+                  },
+                ),
+                ObservingListsView(
+                  lists: _observingLists,
+                  isRedNightMode: widget.isRedNightMode,
+                  onCreateList: (name, desc, date) {
+                    _engine.createObservingList(name, desc, date);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                  onDeleteList: (listId) {
+                    _engine.deleteObservingList(listId);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                  onRemoveItem: (listId, dsoId) {
+                    _engine.removeTargetFromList(listId, dsoId);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                ),
+                FavoritesView(
+                  night: _nightSummary,
+                  filters: _filters,
+                  isRedNightMode: widget.isRedNightMode,
+                  availableLists: _observingLists,
+                  onAddToList: (listId, dsoId, notes) {
+                    _engine.addTargetToList(listId, dsoId, notes);
+                    _refreshObservingLists();
+                    _saveSettings();
+                  },
+                  onExploreTargets: () {
+                    setState(() => _selectedTabIndex = 0);
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),

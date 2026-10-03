@@ -66,13 +66,18 @@ endif()
 
 # Test executables (desktop only)
 if(NOT ANDROID)
+    enable_testing()
+
     add_executable(test_astro tests/test_astro.cpp)
     target_link_libraries(test_astro PRIVATE astro_core_static)
+    add_test(NAME test_astro COMMAND test_astro)
 
     add_executable(test_storage tests/test_storage.cpp)
     target_link_libraries(test_storage PRIVATE astro_core_static)
+    add_test(NAME test_storage COMMAND test_storage)
 
     add_executable(test_capi tests/test_capi.cpp)
     target_include_directories(test_capi PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/capi)
     target_link_libraries(test_capi PRIVATE astro_core)
+    add_test(NAME test_capi COMMAND test_capi)
 endif()

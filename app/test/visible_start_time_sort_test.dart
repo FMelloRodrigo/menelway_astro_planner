@@ -85,7 +85,7 @@ void main() {
           isLoading: false,
           availableLists: const [],
           onFilterChanged: (_) {},
-          onAddToList: (_, __, ___) {},
+          onAddToList: (listId, targetId, notes) {},
         ),
       ),
     );

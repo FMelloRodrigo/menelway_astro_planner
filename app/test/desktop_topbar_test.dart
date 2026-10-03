@@ -68,7 +68,6 @@ void main() {
     final searchBox = tester.renderObject(find.byType(TextField)) as RenderBox;
     final filterBox = tester.renderObject(find.widgetWithText(FilledButton, "Filters")) as RenderBox;
     final sortDropdownFinder = find.byType(DropdownButton<SortMode>);
-    final sortBox = tester.renderObject(sortDropdownFinder) as RenderBox;
     final containerFinder = find.ancestor(of: sortDropdownFinder, matching: find.byType(Container)).first;
     final containerBox = tester.renderObject(containerFinder) as RenderBox;
 

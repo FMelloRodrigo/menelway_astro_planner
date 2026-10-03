@@ -288,7 +288,7 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           },
         );
       },
-    );
+    ).then((_) => notesController.dispose());
   }
 
   void _queryOnlineSimbad() async {

@@ -22,9 +22,9 @@ void main() {
           home: Scaffold(
             body: Stack(
               children: [
-                Positioned(top: 10, left: 10, child: Container(key: key1, width: 100, height: 40)),
-                Positioned(top: 10, right: 10, child: Container(key: key2, width: 80, height: 40)),
-                Positioned(top: 100, left: 10, child: Container(key: key3, width: 60, height: 40)),
+                Positioned(top: 10, left: 10, child: SizedBox(key: key1, width: 100, height: 40)),
+                Positioned(top: 10, right: 10, child: SizedBox(key: key2, width: 80, height: 40)),
+                Positioned(top: 100, left: 10, child: SizedBox(key: key3, width: 60, height: 40)),
                 Builder(
                   builder: (ctx) => ElevatedButton(
                     onPressed: () {
@@ -122,7 +122,7 @@ void main() {
           home: Scaffold(
             body: Column(
               children: [
-                Container(key: key1, width: 100, height: 40),
+                SizedBox(key: key1, width: 100, height: 40),
                 Builder(
                   builder: (ctx) => ElevatedButton(
                     onPressed: () {

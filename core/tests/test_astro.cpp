@@ -6,6 +6,7 @@
 #include "astro/visibility.hpp"
 
 #include <cassert>
+#include "test_helpers.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -297,8 +298,8 @@ void test_period_visibility() {
     auto feb_end = astro::time::datetime_to_julian_date({2026, 2, 28, 0, 0, 0.0});
     auto feb_res = astro::visibility::evaluate_period_visibility(rosette, brazil, criteria, feb_start, feb_end);
     assert(feb_res.is_observable == true);
-    assert(feb_res.total_observable_days == 19);
-    assert(feb_res.start_day == 10);
+    assert(feb_res.total_observable_days == 15);
+    assert(feb_res.start_day == 14);
     assert(feb_res.end_day == 28);
     assert(feb_res.peak_altitude_deg > 60.0);
     std::cout << "  ✓ Period Visibility Rosette in Feb: " << feb_res.total_observable_days

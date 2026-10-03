@@ -4,8 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/astro_engine.dart';
 import 'package:app/core/fake_astro_engine.dart';
 import 'package:app/models/filter_state.dart';
-import 'package:app/models/target_item.dart';
-import 'package:app/models/observing_list.dart';
 import 'package:app/views/target_details_sheet.dart';
 import 'package:app/views/target_search_view.dart';
 import 'package:app/views/observing_lists_view.dart';

@@ -206,6 +206,9 @@ SqliteStorage::SqliteStorage(const std::string& db_path) {
             db_ = nullptr;
         }
     } else {
+        // Enable foreign key support
+        sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+
         // Verify that the database contains the required dso_objects table
         sqlite3_stmt* check_stmt = nullptr;
         const char* check_sql = "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='dso_objects';";
@@ -366,6 +369,15 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         << "FROM dso_objects d "
         << "WHERE 1=1 ";
 
+    struct ParamBind {
+        enum class Type { Text, Double, Int64 };
+        Type type;
+        std::string str_val;
+        double dbl_val{0.0};
+        int64_t int_val{0};
+    };
+    std::vector<ParamBind> binds;
+
     // Catalogs filter
     if (!options.catalogs.empty()) {
         sql << "AND (";
@@ -381,7 +393,8 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
             } else if (cat == "Herschel") {
                 sql << "d.herschel IS NOT NULL";
             } else {
-                sql << "d.catalog = '" << cat << "'";
+                sql << "d.catalog = ?";
+                binds.push_back({ParamBind::Type::Text, cat, 0.0, 0});
             }
         }
         sql << ") ";
@@ -392,35 +405,43 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         sql << "AND d.object_type IN (";
         for (size_t i = 0; i < options.object_types.size(); ++i) {
             if (i > 0) sql << ",";
-            sql << "'" << options.object_types[i] << "'";
+            sql << "?";
+            binds.push_back({ParamBind::Type::Text, options.object_types[i], 0.0, 0});
         }
         sql << ") ";
     }
 
     // Magnitude
     if (options.max_magnitude.has_value()) {
-        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude <= " << *options.max_magnitude << ") ";
+        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude <= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.max_magnitude, 0});
     }
     if (options.min_magnitude.has_value()) {
-        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude >= " << *options.min_magnitude << ") ";
+        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude >= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.min_magnitude, 0});
     }
 
     // Size
     if (options.min_size_arcmin.has_value()) {
-        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin >= " << *options.min_size_arcmin << ") ";
+        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin >= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.min_size_arcmin, 0});
     }
     if (options.max_size_arcmin.has_value()) {
-        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin <= " << *options.max_size_arcmin << ") ";
+        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin <= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.max_size_arcmin, 0});
     }
 
     // Constellation
     if (options.constellation.has_value() && !options.constellation->empty()) {
-        sql << "AND d.constellation = '" << *options.constellation << "' ";
+        sql << "AND d.constellation = ? ";
+        binds.push_back({ParamBind::Type::Text, *options.constellation, 0.0, 0});
     }
 
     // Order and Limit
     sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
-    sql << "LIMIT " << options.limit << " OFFSET " << options.offset << ";";
+    sql << "LIMIT ? OFFSET ?;";
+    binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.limit)});
+    binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.offset)});
 
     sqlite3_stmt* raw_stmt = nullptr;
     std::string sql_str = sql.str();
@@ -430,6 +451,18 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         return results;
     }
     UniqueStmt stmt(raw_stmt);
+
+    for (size_t i = 0; i < binds.size(); ++i) {
+        int idx = static_cast<int>(i + 1);
+        const auto& b = binds[i];
+        if (b.type == ParamBind::Type::Text) {
+            sqlite3_bind_text(stmt.get(), idx, b.str_val.c_str(), -1, SQLITE_TRANSIENT);
+        } else if (b.type == ParamBind::Type::Double) {
+            sqlite3_bind_double(stmt.get(), idx, b.dbl_val);
+        } else if (b.type == ParamBind::Type::Int64) {
+            sqlite3_bind_int64(stmt.get(), idx, b.int_val);
+        }
+    }
 
     while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
         results.push_back(row_to_dso(stmt.get()));
@@ -457,15 +490,18 @@ std::optional<catalog::DsoObject> SqliteStorage::get_object_by_id(std::int64_t i
     if (sqlite3_step(stmt.get()) == SQLITE_ROW) {
         auto obj = row_to_dso(stmt.get());
         if (obj.catalog == "Solar System" || (obj.id >= 90001 && obj.id <= 90010)) {
-            auto pid = static_cast<ephemeris::PlanetId>(obj.id - 90000);
-            coordinates::ObserverLocation def_obs{units::Degrees{0.0}, units::Degrees{0.0}, 0.0};
-            auto now_sec = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::system_clock::now().time_since_epoch()
-            ).count();
-            auto pinfo = ephemeris::get_planet_info(pid, time::unix_to_julian_date(now_sec), def_obs);
-            obj.coordinates = pinfo.coords;
-            obj.magnitude = pinfo.visual_magnitude;
-            obj.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+            int pid_num = static_cast<int>(obj.id - 90000);
+            if (pid_num >= 1 && pid_num <= 10) {
+                auto pid = static_cast<ephemeris::PlanetId>(pid_num);
+                coordinates::ObserverLocation def_obs{units::Degrees{0.0}, units::Degrees{0.0}, 0.0};
+                auto now_sec = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::now().time_since_epoch()
+                ).count();
+                auto pinfo = ephemeris::get_planet_info(pid, time::unix_to_julian_date(now_sec), def_obs);
+                obj.coordinates = pinfo.coords;
+                obj.magnitude = pinfo.visual_magnitude;
+                obj.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+            }
         }
         return obj;
     }
@@ -499,11 +535,14 @@ std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
 
     for (auto dso : candidates) {
         if (dso.catalog == "Solar System" || (dso.id >= 90001 && dso.id <= 90010)) {
-            auto pid = static_cast<ephemeris::PlanetId>(dso.id - 90000);
-            auto pinfo = ephemeris::get_planet_info(pid, eval_jd, obs);
-            dso.coordinates = pinfo.coords;
-            dso.magnitude = pinfo.visual_magnitude;
-            dso.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+            int pid_num = static_cast<int>(dso.id - 90000);
+            if (pid_num >= 1 && pid_num <= 10) {
+                auto pid = static_cast<ephemeris::PlanetId>(pid_num);
+                auto pinfo = ephemeris::get_planet_info(pid, eval_jd, obs);
+                dso.coordinates = pinfo.coords;
+                dso.magnitude = pinfo.visual_magnitude;
+                dso.major_axis_arcmin = pinfo.angular_diameter_arcsec / 60.0;
+            }
         }
 
         auto vis = visibility::evaluate_visibility(
@@ -682,26 +721,41 @@ std::int64_t SqliteStorage::create_list(
 bool SqliteStorage::delete_list(std::int64_t list_id) {
     if (!db_) return false;
 
-    // Delete items first then list
+    // Use a transaction to ensure atomic deletion
+    sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, nullptr);
+
     const char* sql1 = "DELETE FROM user_list_items WHERE list_id = ?;";
     const char* sql2 = "DELETE FROM user_lists WHERE id = ?;";
 
+    bool ok = true;
     sqlite3_stmt* s1 = nullptr;
     if (sqlite3_prepare_v2(db_, sql1, -1, &s1, nullptr) == SQLITE_OK) {
         sqlite3_bind_int64(s1, 1, list_id);
-        sqlite3_step(s1);
+        if (sqlite3_step(s1) != SQLITE_DONE) ok = false;
         sqlite3_finalize(s1);
+    } else {
+        ok = false;
     }
 
-    sqlite3_stmt* s2 = nullptr;
-    if (sqlite3_prepare_v2(db_, sql2, -1, &s2, nullptr) == SQLITE_OK) {
-        sqlite3_bind_int64(s2, 1, list_id);
-        sqlite3_step(s2);
-        sqlite3_finalize(s2);
-        return true;
+    if (ok) {
+        sqlite3_stmt* s2 = nullptr;
+        if (sqlite3_prepare_v2(db_, sql2, -1, &s2, nullptr) == SQLITE_OK) {
+            sqlite3_bind_int64(s2, 1, list_id);
+            if (sqlite3_step(s2) != SQLITE_DONE) ok = false;
+            sqlite3_finalize(s2);
+        } else {
+            ok = false;
+        }
     }
 
-    return false;
+    if (ok) {
+        sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
+    } else {
+        last_error_ = sqlite3_errmsg(db_);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+    }
+
+    return ok;
 }
 
 std::vector<ObservingList> SqliteStorage::get_all_lists() {
@@ -829,12 +883,13 @@ std::vector<ObservingListItem> SqliteStorage::get_items_in_list(std::int64_t lis
 
 bool SqliteStorage::clear_all_lists() {
     if (!db_) return false;
-    const char* sql = "DELETE FROM user_list_items; DELETE FROM user_lists;";
+    const char* sql = "BEGIN IMMEDIATE; DELETE FROM user_list_items; DELETE FROM user_lists; COMMIT;";
     char* err_msg = nullptr;
     int rc = sqlite3_exec(db_, sql, nullptr, nullptr, &err_msg);
     if (err_msg) {
         last_error_ = err_msg;
         sqlite3_free(err_msg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
     return rc == SQLITE_OK;

@@ -412,7 +412,7 @@ class FakeAstroEngine implements AstroEngine {
     FilterState? filters,
     double minAltitude = 30.0,
     double minDurationHours = 2.0,
-    int year = 2026,
+    int? year,
   }) {
     const monthNames = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',

@@ -24,7 +24,7 @@ class CustomYearlyMockEngine extends FakeAstroEngine {
     FilterState? filters,
     double minAltitude = 30.0,
     double minDurationHours = 2.0,
-    int year = 2026,
+    int? year,
   }) {
     if (onGetYearly != null) {
       return onGetYearly!(targetId, filters);
@@ -145,7 +145,7 @@ void main() {
             longitude: -42.53,
             elevation: 850.0,
             availableLists: const [],
-            onAddToList: (_, __, ___) {},
+            onAddToList: (listId, targetId, notes) {},
             filters: FilterState(),
             engine: mockEngine,
           ),
@@ -227,7 +227,7 @@ void main() {
             longitude: -42.53,
             elevation: 850.0,
             availableLists: const [],
-            onAddToList: (_, __, ___) {},
+            onAddToList: (listId, targetId, notes) {},
             filters: FilterState(minAltitude: 85.0),
             engine: mockEngine,
           ),
@@ -318,7 +318,7 @@ void main() {
             longitude: -110.0,
             elevation: 1000.0,
             availableLists: const [],
-            onAddToList: (_, __, ___) {},
+            onAddToList: (listId, targetId, notes) {},
             filters: FilterState(),
             engine: mockEngine,
           ),

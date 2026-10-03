@@ -99,7 +99,11 @@ class _ObservingListsViewState extends State<ObservingListsView> {
           ],
         );
       },
-    );
+    ).then((_) {
+      nameController.dispose();
+      descController.dispose();
+      dateController.dispose();
+    });
   }
 
   void _exportListCsv(ObservingListModel list) {
