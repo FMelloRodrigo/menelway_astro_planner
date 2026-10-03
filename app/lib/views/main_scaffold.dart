@@ -6,6 +6,7 @@ import '../core/catalog_manager.dart';
 import '../core/equipment_manager.dart';
 import '../core/settings_service.dart';
 import '../core/favorites_manager.dart';
+import '../core/observing_site_manager.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
@@ -16,7 +17,7 @@ import '../theme/astro_theme.dart';
 import 'bright_stars_view.dart';
 import 'equipment_dialog.dart';
 import 'favorites_view.dart';
-import 'observer_location_dialog.dart';
+import 'observing_sites_dialog.dart';
 import 'observing_lists_view.dart';
 import 'planets_view.dart';
 import 'planner_view.dart';
@@ -83,6 +84,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   void dispose() {
     FavoritesManager.instance.removeListener(_onFavoritesChanged);
+    ObservingSiteManager.instance.removeListener(_onObservingSiteChanged);
     super.dispose();
   }
 
@@ -124,6 +126,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
       FavoritesManager.instance.init(widget.initialSettings?.favorites);
       FavoritesManager.instance.addListener(_onFavoritesChanged);
+      ObservingSiteManager.instance.addListener(_onObservingSiteChanged);
 
       // Auto-load cached terrain profile if missing from active filters
       if (_filters.terrainProfile == null) {
@@ -271,6 +274,31 @@ class _MainScaffoldState extends State<MainScaffold> {
     });
   }
 
+  void _onObservingSiteChanged() {
+    final site = ObservingSiteManager.instance.activeSite;
+    if (_filters.observerLat != site.latitude ||
+        _filters.observerLon != site.longitude ||
+        _filters.observerElevation != site.elevation ||
+        _filters.observerLocationName != site.name) {
+      setState(() {
+        _filters.observerLat = site.latitude;
+        _filters.observerLon = site.longitude;
+        _filters.observerElevation = site.elevation;
+        _filters.observerLocationName = site.name;
+        _nightSummary = _engine.getNightSummary(
+          latitude: site.latitude,
+          longitude: site.longitude,
+          elevation: site.elevation,
+          date: _filters.date,
+        );
+      });
+      _saveSettings();
+      _runFiltering();
+    } else {
+      if (mounted) setState(() {});
+    }
+  }
+
   void _onFavoritesChanged() {
     _saveSettings();
     if (mounted) setState(() {});
@@ -283,6 +311,8 @@ class _MainScaffoldState extends State<MainScaffold> {
       observingLists: _observingLists,
       equipmentProfiles: EquipmentManager.instance.profiles,
       activeEquipmentProfileId: EquipmentManager.instance.activeProfileId,
+      observingSites: ObservingSiteManager.instance.sites,
+      activeObservingSiteId: ObservingSiteManager.instance.activeSiteId,
       favorites: FavoritesManager.instance.favorites,
       languageCode: widget.currentLanguageCode,
     );
@@ -460,37 +490,228 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
       );
     }
+    // 6. Reset observing sites to default
+    ObservingSiteManager.instance.resetToDefault();
   }
 
-  void _editLocationDialog() {
+  void _editLocationDialog({String? siteId, bool startInAddMode = false}) {
     showDialog(
       context: context,
-      builder: (ctx) => ObserverLocationDialog(
-        initialLat: _filters.observerLat,
-        initialLon: _filters.observerLon,
-        initialElevation: _filters.observerElevation,
-        initialLocationName: _filters.observerLocationName,
+      builder: (ctx) => ObservingSitesDialog(
         isRedNightMode: widget.isRedNightMode,
-        onLocationApplied: (newLat, newLon, newEle, locationName) {
-          setState(() {
-            _filters.observerLat = newLat;
-            _filters.observerLon = newLon;
-            _filters.observerElevation = newEle;
-            _filters.observerLocationName = locationName;
-            _nightSummary = _engine.getNightSummary(
-              latitude: newLat,
-              longitude: newLon,
-              elevation: newEle,
-              date: _filters.date,
-            );
-          });
-          _saveSettings();
-          _runFiltering();
+        initialEditSiteId: siteId,
+        startInAddMode: startInAddMode,
+        onActiveSiteChanged: (site) {
+          _onObservingSiteChanged();
         },
       ),
     );
   }
 
+  Widget _buildLocationPill({
+    required Key key,
+    required bool isWide,
+    required Color textColor,
+    required Color accentColor,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final activeSite = ObservingSiteManager.instance.activeSite;
+    final bortle = activeSite.bortleInfo;
+
+    return PopupMenuButton<String>(
+      key: key,
+      tooltip: l10n?.observingSites ?? "Observing Sites",
+      color: widget.isRedNightMode ? const Color(0xFF200505) : const Color(0xFF16202E),
+      elevation: 12,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: widget.isRedNightMode
+              ? AstroColors.nightVisionBorder
+              : AstroColors.spaceDarkBorder,
+          width: 1.2,
+        ),
+      ),
+      onSelected: (value) {
+        if (value == '__add__') {
+          _editLocationDialog(startInAddMode: true);
+        } else if (value == '__manage__') {
+          _editLocationDialog();
+        } else {
+          ObservingSiteManager.instance.setActiveSite(value);
+        }
+      },
+      itemBuilder: (ctx) {
+        final sites = ObservingSiteManager.instance.sites;
+        final activeId = ObservingSiteManager.instance.activeSiteId;
+
+        return [
+          PopupMenuItem<String>(
+            enabled: false,
+            child: Row(
+              children: [
+                Icon(Icons.location_city_rounded, size: 14, color: accentColor),
+                const SizedBox(width: 6),
+                Text(
+                  l10n?.observingSites ?? "Observing Sites",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(height: 1),
+          for (final s in sites) ...[
+            PopupMenuItem<String>(
+              value: s.id,
+              child: Row(
+                children: [
+                  Icon(
+                    s.id == activeId ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 16,
+                    color: s.id == activeId ? accentColor : textColor.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          s.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: s.id == activeId ? FontWeight.bold : FontWeight.normal,
+                            color: textColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          s.compactCoordinates,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: textColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: s.bortleInfo.color.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: s.bortleInfo.color, width: 1),
+                    ),
+                    child: Text(
+                      "B${s.bortleClass}",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const PopupMenuDivider(height: 1),
+          PopupMenuItem<String>(
+            value: '__add__',
+            child: Row(
+              children: [
+                Icon(Icons.add_location_alt_rounded, size: 16, color: accentColor),
+                const SizedBox(width: 8),
+                Text(
+                  l10n?.addNewSite ?? "Add New Site...",
+                  style: TextStyle(fontSize: 12, color: textColor),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: '__manage__',
+            child: Row(
+              children: [
+                Icon(Icons.tune_rounded, size: 16, color: textColor.withValues(alpha: 0.8)),
+                const SizedBox(width: 8),
+                Text(
+                  l10n?.manageObservingSites ?? "Manage Observing Sites...",
+                  style: TextStyle(fontSize: 12, color: textColor),
+                ),
+              ],
+            ),
+          ),
+        ];
+      },
+      child: Container(
+        height: isWide ? 32.0 : 40.0,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: widget.isRedNightMode
+              ? AstroColors.nightVisionSurfaceVariant
+              : AstroColors.spaceDarkSurfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: widget.isRedNightMode
+                ? AstroColors.nightVisionBorder
+                : AstroColors.spaceDarkBorder,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.location_on_outlined, size: isWide ? 14 : 16, color: accentColor),
+            const SizedBox(width: 5),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isWide ? 220 : 160),
+              child: Text(
+                activeSite.name,
+                style: TextStyle(fontSize: isWide ? 11 : 12, fontWeight: FontWeight.w600, color: textColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: bortle.color.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: bortle.color, width: 1.0),
+              ),
+              child: Text(
+                "B${activeSite.bortleClass}",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ),
+            if (isWide) ...[
+              const SizedBox(width: 6),
+              Text(
+                "• ${activeSite.compactCoordinates} (${activeSite.elevation.round()}m)",
+                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.75)),
+              ),
+            ],
+            const SizedBox(width: 4),
+            Icon(Icons.arrow_drop_down, size: 18, color: textColor.withValues(alpha: 0.7)),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildMobileStatusStrip(Color textColor, Color accentColor) {
     final l10n = AppLocalizations.of(context);
@@ -510,41 +731,12 @@ class _MainScaffoldState extends State<MainScaffold> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Observer Location Pill (tappable)
-            InkWell(
+            // Observer Location Pill (tappable quick switcher & manager)
+            _buildLocationPill(
               key: _mobileLocationKey,
-              onTap: _editLocationDialog,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 40.0,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionBorder
-                        : AstroColors.spaceDarkBorder,
-                    width: 1.2,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.location_on_outlined, size: 16, color: accentColor),
-                    const SizedBox(width: 5),
-                    Text(
-                      _filters.observerLocationName,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_drop_down, size: 18, color: textColor.withValues(alpha: 0.7)),
-                  ],
-                ),
-              ),
+              isWide: false,
+              textColor: textColor,
+              accentColor: accentColor,
             ),
             const SizedBox(width: 6),
 
@@ -734,37 +926,12 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
         actions: [
           if (isWide) ...[
-            // Observer Location Pill (Desktop)
-            InkWell(
+            // Observer Location Pill (Desktop quick switcher & manager)
+            _buildLocationPill(
               key: _desktopLocationKey,
-              onTap: _editLocationDialog,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 32.0,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: widget.isRedNightMode
-                      ? AstroColors.nightVisionSurfaceVariant
-                      : AstroColors.spaceDarkSurfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: widget.isRedNightMode
-                        ? AstroColors.nightVisionBorder
-                        : AstroColors.spaceDarkBorder,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_on_outlined, size: 14, color: accentColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      "${_filters.observerLocationName} • ${_filters.observerLat >= 0 ? '${_filters.observerLat.toStringAsFixed(1)}°N' : '${(-_filters.observerLat).toStringAsFixed(1)}°S'}, ${_filters.observerLon >= 0 ? '${_filters.observerLon.toStringAsFixed(1)}°E' : '${(-_filters.observerLon).toStringAsFixed(1)}°W'} (${_filters.observerElevation.round()}m)",
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
-                    ),
-                  ],
-                ),
-              ),
+              isWide: true,
+              textColor: textColor,
+              accentColor: accentColor,
             ),
             const SizedBox(width: 8),
 

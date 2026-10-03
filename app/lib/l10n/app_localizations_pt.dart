@@ -166,6 +166,53 @@ class AppLocalizationsPt extends AppLocalizations {
       'Erro de conexão. Verifique sua conexão com a internet.';
 
   @override
+  String get observingSites => 'Locais de Observação';
+
+  @override
+  String get manageObservingSites => 'Gerenciar Locais...';
+
+  @override
+  String get addNewSite => 'Adicionar Novo Local';
+
+  @override
+  String get editSite => 'Editar Local';
+
+  @override
+  String get deleteSite => 'Excluir Local';
+
+  @override
+  String get deleteSiteConfirm =>
+      'Tem certeza que deseja excluir este local de observação?';
+
+  @override
+  String get siteName => 'Nome do Local';
+
+  @override
+  String get bortleDarkness => 'Escala Bortle de Escuridão';
+
+  @override
+  String get bortleClassPrefix => 'Bortle';
+
+  @override
+  String get activeSite => 'Local Ativo';
+
+  @override
+  String get setActiveSite => 'Definir como Ativo';
+
+  @override
+  String get cannotDeleteLastSite =>
+      'Você deve manter ao menos um local de observação.';
+
+  @override
+  String get siteSaved => 'Local de observação salvo.';
+
+  @override
+  String get saveSite => 'Salvar Local';
+
+  @override
+  String get siteNotes => 'Observações (Opcional)';
+
+  @override
   String get searchTargetsHint =>
       'Buscar alvo (ex: M31, NGC 7000, Órion, Dumbbell)...';
 

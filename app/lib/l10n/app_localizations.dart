@@ -386,6 +386,96 @@ abstract class AppLocalizations {
   /// **'Connection error. Check internet connection.'**
   String get connectionError;
 
+  /// No description provided for @observingSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Observing Sites'**
+  String get observingSites;
+
+  /// No description provided for @manageObservingSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Observing Sites...'**
+  String get manageObservingSites;
+
+  /// No description provided for @addNewSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add New Site'**
+  String get addNewSite;
+
+  /// No description provided for @editSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Site'**
+  String get editSite;
+
+  /// No description provided for @deleteSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Site'**
+  String get deleteSite;
+
+  /// No description provided for @deleteSiteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this observing site?'**
+  String get deleteSiteConfirm;
+
+  /// No description provided for @siteName.
+  ///
+  /// In en, this message translates to:
+  /// **'Site Name'**
+  String get siteName;
+
+  /// No description provided for @bortleDarkness.
+  ///
+  /// In en, this message translates to:
+  /// **'Bortle Sky Darkness'**
+  String get bortleDarkness;
+
+  /// No description provided for @bortleClassPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Bortle'**
+  String get bortleClassPrefix;
+
+  /// No description provided for @activeSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Site'**
+  String get activeSite;
+
+  /// No description provided for @setActiveSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Set as Active'**
+  String get setActiveSite;
+
+  /// No description provided for @cannotDeleteLastSite.
+  ///
+  /// In en, this message translates to:
+  /// **'You must keep at least one observing site.'**
+  String get cannotDeleteLastSite;
+
+  /// No description provided for @siteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Observing site saved.'**
+  String get siteSaved;
+
+  /// No description provided for @saveSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Site'**
+  String get saveSite;
+
+  /// No description provided for @siteNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (Optional)'**
+  String get siteNotes;
+
   /// No description provided for @searchTargetsHint.
   ///
   /// In en, this message translates to:

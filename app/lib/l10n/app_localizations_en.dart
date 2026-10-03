@@ -162,6 +162,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionError => 'Connection error. Check internet connection.';
 
   @override
+  String get observingSites => 'Observing Sites';
+
+  @override
+  String get manageObservingSites => 'Manage Observing Sites...';
+
+  @override
+  String get addNewSite => 'Add New Site';
+
+  @override
+  String get editSite => 'Edit Site';
+
+  @override
+  String get deleteSite => 'Delete Site';
+
+  @override
+  String get deleteSiteConfirm =>
+      'Are you sure you want to delete this observing site?';
+
+  @override
+  String get siteName => 'Site Name';
+
+  @override
+  String get bortleDarkness => 'Bortle Sky Darkness';
+
+  @override
+  String get bortleClassPrefix => 'Bortle';
+
+  @override
+  String get activeSite => 'Active Site';
+
+  @override
+  String get setActiveSite => 'Set as Active';
+
+  @override
+  String get cannotDeleteLastSite =>
+      'You must keep at least one observing site.';
+
+  @override
+  String get siteSaved => 'Observing site saved.';
+
+  @override
+  String get saveSite => 'Save Site';
+
+  @override
+  String get siteNotes => 'Notes (Optional)';
+
+  @override
   String get searchTargetsHint =>
       'Search target (e.g. M31, NGC 7000, Orion, Dumbbell)...';
 

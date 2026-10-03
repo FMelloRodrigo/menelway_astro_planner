@@ -7,6 +7,7 @@ import 'catalog_manager.dart';
 import '../models/equipment_profile.dart';
 import '../models/filter_state.dart';
 import '../models/observing_list.dart';
+import '../models/observing_site.dart';
 import '../models/target_item.dart';
 
 class AppSettingsData {
@@ -17,6 +18,8 @@ class AppSettingsData {
   final List<ObservingListModel>? observingListsBackup;
   final List<EquipmentProfile>? equipmentProfiles;
   final String? activeEquipmentProfileId;
+  final List<ObservingSite>? observingSites;
+  final String? activeObservingSiteId;
   final List<TargetItem>? favorites;
   final String? languageCode;
   final bool hasCompletedTutorial;
@@ -30,6 +33,8 @@ class AppSettingsData {
     this.observingListsBackup,
     this.equipmentProfiles,
     this.activeEquipmentProfileId,
+    this.observingSites,
+    this.activeObservingSiteId,
     this.favorites,
     this.languageCode,
     this.hasCompletedTutorial = false,
@@ -214,6 +219,16 @@ class SettingsService {
             .toList();
       }
       final activeEquipmentProfileId = data['activeEquipmentProfileId'] as String?;
+
+      List<ObservingSite>? observingSites;
+      if (data.containsKey('observingSites') && data['observingSites'] is List) {
+        observingSites = (data['observingSites'] as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .map((e) => ObservingSite.fromJson(e))
+            .toList();
+      }
+      final activeObservingSiteId = data['activeObservingSiteId'] as String?;
+
       final languageCode = data['languageCode'] as String?;
       final hasCompletedTutorial = data['hasCompletedTutorial'] as bool? ?? false;
 
@@ -235,6 +250,8 @@ class SettingsService {
         observingListsBackup: observingBackup,
         equipmentProfiles: equipmentProfiles,
         activeEquipmentProfileId: activeEquipmentProfileId,
+        observingSites: observingSites,
+        activeObservingSiteId: activeObservingSiteId,
         favorites: favorites,
         languageCode: languageCode,
         hasCompletedTutorial: hasCompletedTutorial,
@@ -246,7 +263,7 @@ class SettingsService {
     }
   }
 
-  /// Saves current filters, location, night mode, observing lists backup, equipment profiles, and favorites.
+  /// Saves current filters, location, night mode, observing lists backup, equipment profiles, observing sites, and favorites.
   static Future<void> saveSettings({
     required FilterState filters,
     required bool isRedNightMode,
@@ -255,6 +272,8 @@ class SettingsService {
     List<ObservingListModel>? observingLists,
     List<EquipmentProfile>? equipmentProfiles,
     String? activeEquipmentProfileId,
+    List<ObservingSite>? observingSites,
+    String? activeObservingSiteId,
     List<TargetItem>? favorites,
     String? languageCode,
     bool? hasCompletedTutorial,
@@ -279,6 +298,12 @@ class SettingsService {
       }
       if (activeEquipmentProfileId != null) {
         data['activeEquipmentProfileId'] = activeEquipmentProfileId;
+      }
+      if (observingSites != null) {
+        data['observingSites'] = observingSites.map((s) => s.toJson()).toList();
+      }
+      if (activeObservingSiteId != null) {
+        data['activeObservingSiteId'] = activeObservingSiteId;
       }
       if (favorites != null) {
         data['favorites'] = favorites.map((t) => t.toJson()).toList();

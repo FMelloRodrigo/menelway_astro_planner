@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/equipment_manager.dart';
+import 'core/observing_site_manager.dart';
 import 'core/settings_service.dart';
 import 'l10n/app_localizations.dart';
 import 'theme/astro_theme.dart';
@@ -13,6 +14,17 @@ void main() async {
     savedProfiles: initialSettings.equipmentProfiles,
     savedActiveId: initialSettings.activeEquipmentProfileId,
   );
+  ObservingSiteManager.instance.init(
+    savedSites: initialSettings.observingSites,
+    savedActiveId: initialSettings.activeObservingSiteId,
+    fallbackFilters: initialSettings.filters,
+  );
+  final activeSite = ObservingSiteManager.instance.activeSite;
+  initialSettings.filters.observerLat = activeSite.latitude;
+  initialSettings.filters.observerLon = activeSite.longitude;
+  initialSettings.filters.observerElevation = activeSite.elevation;
+  initialSettings.filters.observerLocationName = activeSite.name;
+
   runApp(AstroTargetsApp(initialSettings: initialSettings));
 }
 
