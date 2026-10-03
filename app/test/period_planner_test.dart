@@ -386,5 +386,67 @@ void main() {
       expect(find.text('Filtros'), findsOneWidget);
       expect(find.text('Mais Dias Observáveis'), findsOneWidget);
     });
+
+    testWidgets('PlannerView sorts targets by Brightness and Altitude and respects maxTargets', (WidgetTester tester) async {
+      final mockEngine = FakeAstroEngine();
+
+      final testNight = NightSummary(
+        sunset: DateTime(2026, 10, 9, 18, 15),
+        civilDusk: DateTime(2026, 10, 9, 18, 40),
+        nauticalDusk: DateTime(2026, 10, 9, 19, 10),
+        astronomicalDusk: DateTime(2026, 10, 9, 19, 45),
+        solarMidnight: DateTime(2026, 10, 10, 0, 1),
+        astronomicalDawn: DateTime(2026, 10, 10, 4, 30),
+        nauticalDawn: DateTime(2026, 10, 10, 5, 5),
+        civilDawn: DateTime(2026, 10, 10, 5, 35),
+        sunrise: DateTime(2026, 10, 10, 6, 0),
+        moonIllumination: 0.05,
+        moonPhaseName: 'Waxing Crescent',
+        hasAstronomicalNight: true,
+      );
+
+      // Render with maxTargets = 1
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: PlannerView(
+              filters: FilterState(maxTargets: 1),
+              night: testNight,
+              isRedNightMode: false,
+              availableLists: const [],
+              onAddToList: (listId, targetId, notes) {},
+              onFilterChanged: (_) {},
+              engine: mockEngine,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // With maxTargets = 1, exactly 1 target should be rendered in the list
+      expect(find.textContaining('M 31'), findsOneWidget);
+      expect(find.textContaining('M 42'), findsNothing);
+
+      // Now switch sort to Brightest First
+      final dropdownFinder = find.byType(DropdownButton<PeriodSortBy>);
+      expect(dropdownFinder, findsOneWidget);
+      await tester.tap(dropdownFinder);
+      await tester.pumpAndSettle();
+
+      final brightnessOptionFinder = find.byWidgetPredicate(
+        (widget) => widget is DropdownMenuItem<PeriodSortBy> && widget.value == PeriodSortBy.magnitude,
+      );
+      expect(brightnessOptionFinder, findsOneWidget);
+      await tester.tap(brightnessOptionFinder.last);
+      await tester.pumpAndSettle();
+
+      // M 31 has magnitude 3.44 vs M 42 magnitude 4.0, so M 31 is the single brightest target
+      expect(find.textContaining('M 31'), findsOneWidget);
+      expect(find.textContaining('M 42'), findsNothing);
+    });
   });
 }

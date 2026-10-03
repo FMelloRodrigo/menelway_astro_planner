@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:math' as math;
 import 'package:ffi/ffi.dart';
 
 import 'astro_ffi_types.dart';
@@ -489,7 +490,11 @@ class AstroBridge implements AstroEngine {
       searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
       critPtr.ref.searchQuery = searchUtf8;
 
-      critPtr.ref.limit = filters.maxTargets;
+      // Request a comprehensive candidate pool from C++ so UI-layer sorting
+      // (by brightness, altitude, duration, etc.) operates over the full observable
+      // catalog pool, allowing the true top targets for each sort mode to be presented accurately.
+      final candidatePoolLimit = math.max(filters.maxTargets * 10, 500);
+      critPtr.ref.limit = candidatePoolLimit;
       critPtr.ref.offset = 0;
       critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
       critPtr.ref.customStartHour = filters.customStartHour;
@@ -666,7 +671,11 @@ class AstroBridge implements AstroEngine {
       searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
       critPtr.ref.searchQuery = searchUtf8;
 
-      critPtr.ref.limit = filters.maxTargets;
+      // Request a comprehensive candidate pool from C++ so UI-layer sorting
+      // (by brightness, peak altitude, days observable, peak date) operates over
+      // the full observable catalog pool, ensuring true top targets for each sort mode.
+      final candidatePoolLimit = math.max(filters.maxTargets * 10, 500);
+      critPtr.ref.limit = candidatePoolLimit;
       critPtr.ref.offset = 0;
       critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
       critPtr.ref.customStartHour = filters.customStartHour;

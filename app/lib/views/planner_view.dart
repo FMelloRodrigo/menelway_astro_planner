@@ -213,7 +213,7 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   List<PeriodTargetItem> get _filteredAndSortedTargets {
-    var list = _targets;
+    var list = List<PeriodTargetItem>.from(_targets);
 
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
@@ -245,19 +245,32 @@ class _PlannerViewState extends State<PlannerView> {
           if (a.isObservable != b.isObservable) return a.isObservable ? -1 : 1;
           final da = a.peakDate ?? DateTime(2099);
           final db = b.peakDate ?? DateTime(2099);
-          return da.compareTo(db);
+          final cmp = da.compareTo(db);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
       case PeriodSortBy.peakAltitude:
-        list.sort((a, b) => b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg));
+        list.sort((a, b) {
+          if (a.isObservable != b.isObservable) return a.isObservable ? -1 : 1;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
+        });
         break;
       case PeriodSortBy.magnitude:
         list.sort((a, b) {
+          if (a.isObservable != b.isObservable) return a.isObservable ? -1 : 1;
           final ma = a.magnitude ?? 999.0;
           final mb = b.magnitude ?? 999.0;
-          return ma.compareTo(mb);
+          final cmp = ma.compareTo(mb);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
+    }
+
+    final limit = widget.filters.maxTargets;
+    if (limit > 0 && list.length > limit) {
+      return list.sublist(0, limit);
     }
 
     return list;

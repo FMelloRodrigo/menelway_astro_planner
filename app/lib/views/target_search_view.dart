@@ -129,7 +129,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
           if (a.meetsCriteria != b.meetsCriteria) {
             return a.meetsCriteria ? -1 : 1;
           }
-          return (a.magnitude ?? 99).compareTo(b.magnitude ?? 99);
+          final ma = a.magnitude ?? 99.0;
+          final mb = b.magnitude ?? 99.0;
+          final cmp = ma.compareTo(mb);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
       case SortMode.visibleStartTime:
@@ -178,9 +182,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
     final isWideScreen = MediaQuery.of(context).size.width >= 900;
     final allSorted = _sortedTargets;
-    final displayTargets = _hideOutsideFilters && widget.filters.searchQuery.isNotEmpty
+    var displayTargets = _hideOutsideFilters && widget.filters.searchQuery.isNotEmpty
         ? allSorted.where((t) => t.meetsCriteria).toList()
         : allSorted;
+    final limit = widget.filters.maxTargets;
+    if (limit > 0 && displayTargets.length > limit) {
+      displayTargets = displayTargets.sublist(0, limit);
+    }
 
     return Column(
       children: [
