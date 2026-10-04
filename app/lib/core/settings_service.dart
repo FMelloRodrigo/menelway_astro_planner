@@ -347,6 +347,17 @@ class SettingsService {
     }
   }
 
+  /// Quick helper to update just the telescope red night-vision mode setting.
+  static Future<void> saveNightMode(bool isRedNightMode) async {
+    try {
+      final data = await _readSettingsJson();
+      data['isRedNightMode'] = isRedNightMode;
+      await _writeSettingsJson(data);
+    } catch (e, st) {
+      AppLogger.error('Failed saving night mode setting', tag: _tag, error: e, stackTrace: st);
+    }
+  }
+
   /// Clears user configuration, resetting settings file to empty defaults.
   static Future<void> clearSettings() async {
     try {

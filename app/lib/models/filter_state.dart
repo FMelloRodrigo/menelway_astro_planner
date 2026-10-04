@@ -62,7 +62,7 @@ class FilterState {
   bool showTerrainSilhouette;
   TerrainProfileModel? terrainProfile;
 
-  // Observing Time Window (Telescopius rule)
+  // Observing Time Window
   bool useCustomTimeWindow;
   int customStartHour;
   int customStartMinute;

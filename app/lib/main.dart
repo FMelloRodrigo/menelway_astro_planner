@@ -56,12 +56,14 @@ class _AstroTargetsAppState extends State<AstroTargetsApp> {
     setState(() {
       _isRedNightMode = !_isRedNightMode;
     });
+    SettingsService.saveNightMode(_isRedNightMode);
   }
 
   void _resetNightMode() {
     setState(() {
       _isRedNightMode = false;
     });
+    SettingsService.saveNightMode(false);
   }
 
   void _changeLanguage(String? languageCode) {

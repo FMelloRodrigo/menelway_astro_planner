@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../models/target_item.dart';
+import 'target_renderers/target_body_renderer.dart';
+
 class ScaleBarData {
   final double scaleArcmin;
   final double barPixels;
@@ -125,5 +128,20 @@ class FovProjector {
       }
     }
     return "Point Source";
+  }
+
+  /// Checks whether a celestial target's physical screen radius falls below the
+  /// minimum visibility threshold on the current FOV, requiring a visibility clamp.
+  bool isTargetSubpixelClamped(TargetItem target) {
+    final lowerType = target.objectType.toLowerCase();
+    final isPlanet = target.catalog == 'Solar System' ||
+        (lowerType.contains('planet') && !lowerType.contains('planetary'));
+    if (!isPlanet) return false;
+    if (target.name == 'Sun' || target.name == 'Moon') return false;
+
+    final majorArcmin = target.majorAxisArcmin;
+    if (majorArcmin == null || majorArcmin <= 0) return true;
+    final unconstrainedRadius = (majorArcmin / 2.0) * pixelsPerArcmin;
+    return unconstrainedRadius < TargetBodyRenderer.minPlanetRadiusPixels;
   }
 }

@@ -179,7 +179,6 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   void _handleToggleNightMode() {
     widget.onToggleNightMode();
-    Future.microtask(() => _saveSettings());
   }
 
   void _resetFiltersOnly() {

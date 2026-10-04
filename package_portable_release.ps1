@@ -84,13 +84,13 @@ $readmeContent = @"
 ===================================================================
 
 An offline-first, high-performance astrophotography and stargazing 
-target and session planner inspired by Telescopius.
+target and session planner.
 
 Features:
 - Built with modern C++20 astronomy math engine (libastro_core).
 - Offline SQLite DSO catalog (~14,148 objects: Messier, Caldwell, Arp, Herschel, NGC, IC, Sharpless, Barnard).
 - Interactive Altitude vs Time curve chart with twilight bands and ceiling lines.
-- Telescopius visibility filter: reach altitude >= X for >= Y hours.
+- Deep-sky visibility filter: reach altitude >= X for >= Y hours.
 - Sky quadrant and degree range azimuth sector filtering.
 - Moon separation constraints.
 - Custom Horizon Maker & Obstruction Profile with 360° cylindrical panorama calibration.

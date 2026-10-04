@@ -308,6 +308,14 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           final shiftX = -(panX - _imageBasePanX) * pixelsPerArcmin;
           final shiftY = -(panY - _imageBasePanY) * pixelsPerArcmin;
 
+          final projector = FovProjector(
+            viewportSize: Size(effectiveWidth, effectiveHeight),
+            fovDeg: _fovDeg,
+            panOffsetArcminX: panX,
+            panOffsetArcminY: panY,
+          );
+          final isPlanetClamped = projector.isTargetSubpixelClamped(widget.target);
+
           return Stack(
             fit: StackFit.expand,
             children: [
@@ -398,6 +406,45 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+              // 5. Planet Sub-pixel Visibility Clamp Notice
+              if (isPlanetClamped)
+                Positioned(
+                  top: (_hasError && _imageBytes == null) ? 42 : 8,
+                  left: 8,
+                  right: 8,
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.amber.withValues(alpha: 0.7),
+                          width: 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.info_outline_rounded, size: 13, color: Colors.amber),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              l10n.planetSubpixelNotice,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.amber,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

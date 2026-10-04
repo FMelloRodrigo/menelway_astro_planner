@@ -1440,4 +1440,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsReplayTourBtn => 'Replay Quick Tour';
+
+  @override
+  String get planetSubpixelNotice =>
+      'Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment).';
 }

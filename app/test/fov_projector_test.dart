@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:app/models/target_item.dart';
 import 'package:app/widgets/fov_projector.dart';
 
 void main() {
@@ -98,6 +99,81 @@ void main() {
       expect(FovProjector.formatApparentSize(15.5), "Size: 15.5'");
       expect(FovProjector.formatApparentSize(60.0), 'Size: 1.0°');
       expect(FovProjector.formatApparentSize(186.0), 'Size: 3.1°');
+    });
+
+    test('isTargetSubpixelClamped identifies sub-pixel clamped planets correctly', () {
+      const projector = FovProjector(
+        viewportSize: Size(400, 400),
+        fovDeg: 2.0, // 120' -> pixelsPerArcmin = 400 / 120 = 3.33 px/arcmin
+      );
+
+      final jupiter = TargetItem(
+        id: 1,
+        name: 'Jupiter',
+        catalog: 'Solar System',
+        objectType: 'Planet',
+        constellation: 'Tau',
+        raHours: 4.0,
+        decDegrees: 20.0,
+        magnitude: -2.5,
+        majorAxisArcmin: 0.75, // radius = 0.375' -> 1.25 px (< 9.0 px clamp)
+        peakAltitudeDeg: 60.0,
+        visibleDurationHours: 6.0,
+        transitTime: DateTime(2026, 9, 6, 23, 0),
+        minMoonSepDeg: 60.0,
+        meetsCriteria: true,
+      );
+
+      final moon = TargetItem(
+        id: 2,
+        name: 'Moon',
+        catalog: 'Solar System',
+        objectType: 'Planet',
+        constellation: 'Cap',
+        raHours: 20.0,
+        decDegrees: -18.0,
+        magnitude: -12.0,
+        majorAxisArcmin: 31.0, // radius = 15.5' -> ~51 px (> 9.0 px clamp)
+        peakAltitudeDeg: 55.0,
+        visibleDurationHours: 8.0,
+        transitTime: DateTime(2026, 9, 6, 21, 0),
+        minMoonSepDeg: 0.0,
+        meetsCriteria: true,
+      );
+
+      final deepSkyNebula = TargetItem(
+        id: 3,
+        name: 'M42',
+        catalog: 'Messier',
+        objectType: 'Nebula',
+        constellation: 'Ori',
+        raHours: 5.5,
+        decDegrees: -5.0,
+        magnitude: 4.0,
+        majorAxisArcmin: 65.0,
+        peakAltitudeDeg: 60.0,
+        visibleDurationHours: 6.0,
+        transitTime: DateTime(2026, 9, 6, 23, 0),
+        minMoonSepDeg: 60.0,
+        meetsCriteria: true,
+      );
+
+      // Jupiter is clamped on 2.0° FOV
+      expect(projector.isTargetSubpixelClamped(jupiter), isTrue);
+
+      // Moon is not sub-pixel clamped
+      expect(projector.isTargetSubpixelClamped(moon), isFalse);
+
+      // Deep sky objects are not flagged as clamped planets
+      expect(projector.isTargetSubpixelClamped(deepSkyNebula), isFalse);
+
+      // At extreme zoom (0.02° = 1.2' FOV -> px/arcmin = 400 / 1.2 = 333 px/arcmin)
+      // Jupiter radius = 0.375 * 333 = 125 px (> 9.0 px) -> no longer clamped!
+      const extremeZoomProjector = FovProjector(
+        viewportSize: Size(400, 400),
+        fovDeg: 0.02,
+      );
+      expect(extremeZoomProjector.isTargetSubpixelClamped(jupiter), isFalse);
     });
   });
 }

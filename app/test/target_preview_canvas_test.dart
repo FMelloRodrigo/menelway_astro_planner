@@ -350,5 +350,78 @@ void main() {
       await tester.pump();
       expect(canvasState.fovDeg, closeTo(initialFov * 1.10, 0.001));
     });
+
+    testWidgets('Displays sub-pixel clamp notice for planets and not for nebulae/Moon', (tester) async {
+      final jupiter = TargetItem(
+        id: 901,
+        name: 'Jupiter',
+        catalog: 'Solar System',
+        objectType: 'Planet',
+        constellation: 'Tau',
+        raHours: 4.15,
+        decDegrees: 21.3,
+        magnitude: -2.5,
+        majorAxisArcmin: 0.75, // 45 arcseconds
+        peakAltitudeDeg: 65.0,
+        visibleDurationHours: 6.0,
+        transitTime: DateTime(2026, 9, 6, 23, 0),
+        minMoonSepDeg: 60.0,
+        meetsCriteria: true,
+      );
+
+      final moon = TargetItem(
+        id: 902,
+        name: 'Moon',
+        catalog: 'Solar System',
+        objectType: 'Planet',
+        constellation: 'Cap',
+        raHours: 20.5,
+        decDegrees: -18.0,
+        magnitude: -12.0,
+        majorAxisArcmin: 31.0,
+        peakAltitudeDeg: 55.0,
+        visibleDurationHours: 8.0,
+        transitTime: DateTime(2026, 9, 6, 21, 0),
+        minMoonSepDeg: 0.0,
+        meetsCriteria: true,
+      );
+
+      // 1. Render TargetPreviewCanvas with Jupiter -> Notice should appear
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: TargetPreviewCanvas(
+              target: jupiter,
+              isRedNightMode: false,
+              height: 350,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byIcon(Icons.info_outline_rounded), findsOneWidget);
+      expect(find.textContaining('visibility clamp applied'), findsOneWidget);
+
+      // 2. Render with Moon -> Notice should NOT appear
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: TargetPreviewCanvas(
+              target: moon,
+              isRedNightMode: false,
+              height: 350,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.textContaining('visibility clamp applied'), findsNothing);
+    });
   });
 }

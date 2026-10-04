@@ -155,6 +155,24 @@ void main() {
       expect(cleared.filters.observerLat, -22.2819);
     });
 
+    test('SettingsService saveNightMode persists and loads updated night mode state', () async {
+      await SettingsService.clearSettings();
+
+      // Verify default is false
+      var loaded = await SettingsService.loadSettings();
+      expect(loaded.isRedNightMode, isFalse);
+
+      // Toggle to true
+      await SettingsService.saveNightMode(true);
+      loaded = await SettingsService.loadSettings();
+      expect(loaded.isRedNightMode, isTrue);
+
+      // Toggle to false
+      await SettingsService.saveNightMode(false);
+      loaded = await SettingsService.loadSettings();
+      expect(loaded.isRedNightMode, isFalse);
+    });
+
     test('SettingsService backup creation and corruption recovery', () async {
       await SettingsService.clearSettings();
 

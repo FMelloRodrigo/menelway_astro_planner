@@ -2575,6 +2575,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Replay Quick Tour'**
   String get settingsReplayTourBtn;
+
+  /// No description provided for @planetSubpixelNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment).'**
+  String get planetSubpixelNotice;
 }
 
 class _AppLocalizationsDelegate

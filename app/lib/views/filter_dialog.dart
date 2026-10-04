@@ -122,7 +122,7 @@ class _FilterDialogState extends State<FilterDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                    // Section 1: Observing Time Window (Telescopius Rule)
+                    // Section 1: Observing Time Window
                     _buildSectionHeader(l10n.observingTimeWindow, Icons.schedule_rounded),
                     const SizedBox(height: 8),
 
@@ -413,7 +413,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
                     const SizedBox(height: 16),
 
-                    // Section 2: Altitude & Duration (Telescopius core)
+                    // Section 2: Altitude & Duration
                     _buildSectionHeader(l10n.visibilityAltitudeRange, Icons.terrain_rounded),
                     const SizedBox(height: 8),
                     Builder(builder: (context) {

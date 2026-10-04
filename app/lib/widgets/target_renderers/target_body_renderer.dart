@@ -10,6 +10,12 @@ import 'star_body_renderer.dart';
 abstract class TargetBodyRenderer {
   const TargetBodyRenderer();
 
+  /// Minimum clamped planet radius in pixels to ensure visibility on wide FOVs.
+  static const double minPlanetRadiusPixels = 9.0;
+
+  /// Maximum clamped planet radius in pixels.
+  static const double maxPlanetRadiusPixels = 140.0;
+
   /// Renders the celestial body apparent physical dimensions and features on [canvas].
   void render(
     Canvas canvas, {

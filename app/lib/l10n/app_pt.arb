@@ -450,5 +450,6 @@
   "tourFiltersDesc": "Filtre milhares de objetos do céu profundo por altitude mínima, separação da Lua, tipo de DSO e janela de trânsito para planejar sua sessão.",
   "settingsSectionTour": "Guia Rápido e Tour",
   "settingsTourDesc": "Reveja o tour interativo destacando local, equipamentos e filtros.",
-  "settingsReplayTourBtn": "Rever Tour Rápido"
+  "settingsReplayTourBtn": "Rever Tour Rápido",
+  "planetSubpixelNotice": "O tamanho do planeta é subpixel neste campo; ampliação de visibilidade aplicada (não representa a escala real no sensor)."
 }

@@ -1449,4 +1449,8 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsReplayTourBtn => 'Rever Tour Rápido';
+
+  @override
+  String get planetSubpixelNotice =>
+      'O tamanho do planeta é subpixel neste campo; ampliação de visibilidade aplicada (não representa a escala real no sensor).';
 }

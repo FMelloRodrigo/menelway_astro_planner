@@ -23,7 +23,10 @@ class PlanetBodyRenderer extends TargetBodyRenderer {
     required Color goldColor,
   }) {
     final radPixels = radii.width > 0 ? radii.width : 14.0;
-    final planetR = radPixels.clamp(9.0, 140.0);
+    final planetR = radPixels.clamp(
+      TargetBodyRenderer.minPlanetRadiusPixels,
+      TargetBodyRenderer.maxPlanetRadiusPixels,
+    );
     final targetCenter = projector.targetCenter;
 
     canvas.save();

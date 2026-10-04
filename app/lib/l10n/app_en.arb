@@ -830,5 +830,6 @@
   "tourFiltersDesc": "Filter thousands of deep-sky objects by minimum altitude, moon separation, DSO category, and transit window to plan the best imaging targets.",
   "settingsSectionTour": "Quick Tour & Guide",
   "settingsTourDesc": "Revisit the initial walkthrough highlighting location, optics, and filters.",
-  "settingsReplayTourBtn": "Replay Quick Tour"
+  "settingsReplayTourBtn": "Replay Quick Tour",
+  "planetSubpixelNotice": "Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment)."
 }

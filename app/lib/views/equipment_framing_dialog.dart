@@ -295,6 +295,15 @@ Sampling: ${rig.samplingCategory}
     );
   }
 
+  bool get _isPlanetSubpixelClamped {
+    final lowerType = widget.target.objectType.toLowerCase();
+    final isPlanet = widget.target.catalog == 'Solar System' ||
+        (lowerType.contains('planet') && !lowerType.contains('planetary'));
+    if (!isPlanet) return false;
+    if (widget.target.name == 'Sun' || widget.target.name == 'Moon') return false;
+    return true;
+  }
+
   Widget _buildControlsPanel(
     EquipmentProfile rig,
     double angle,
@@ -307,6 +316,35 @@ Sampling: ${rig.samplingCategory}
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Planet Sub-pixel Framing Warning Card
+        if (_isPlanetSubpixelClamped)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.45)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline_rounded, size: 16, color: Colors.amber),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.planetSubpixelNotice,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.35,
+                      color: textColor.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Camera Rotator Angle Slider Card
         Container(
           padding: const EdgeInsets.all(12),
