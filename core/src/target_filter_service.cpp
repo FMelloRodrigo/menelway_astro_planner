@@ -32,9 +32,10 @@ int compute_search_match_score(const catalog::DsoObject& dso, const std::string&
     if (dso.herschel && normalize_ident(*dso.herschel) == norm_query) return 0;
     if (!dso.ngc_ic.empty() && normalize_ident(dso.ngc_ic) == norm_query) return 0;
 
-    // Tier 1: Substring / token match in common names
+    // Tier 1: Substring / token match in common names (or Tier 0 if exact)
     if (dso.common_names) {
         std::string norm_cn = normalize_ident(*dso.common_names);
+        if (norm_cn == norm_query) return 0;
         if (norm_cn.find(norm_query) != std::string::npos) {
             return 1;
         }

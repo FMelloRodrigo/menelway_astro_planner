@@ -512,6 +512,12 @@ abstract class AppLocalizations {
   /// **'Distance from Sun'**
   String get sortOrderFromSun;
 
+  /// No description provided for @sortRelevance.
+  ///
+  /// In en, this message translates to:
+  /// **'Relevance'**
+  String get sortRelevance;
+
   /// No description provided for @sortBrightness.
   ///
   /// In en, this message translates to:

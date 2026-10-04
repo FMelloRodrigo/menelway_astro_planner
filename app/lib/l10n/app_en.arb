@@ -80,6 +80,7 @@
   "sortPeakAltitude": "Peak Altitude",
   "sortMagnitude": "Magnitude (Brightest)",
   "sortOrderFromSun": "Distance from Sun",
+  "sortRelevance": "Relevance",
   "sortBrightness": "Brightness",
   "sortVisibleStartTime": "Visible From",
   "sortTransitTime": "Transit Time",

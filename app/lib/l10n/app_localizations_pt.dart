@@ -232,6 +232,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sortOrderFromSun => 'Distância do Sol';
 
   @override
+  String get sortRelevance => 'Relevância';
+
+  @override
   String get sortBrightness => 'Brilho';
 
   @override

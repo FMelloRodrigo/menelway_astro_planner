@@ -228,6 +228,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortOrderFromSun => 'Distance from Sun';
 
   @override
+  String get sortRelevance => 'Relevance';
+
+  @override
   String get sortBrightness => 'Brightness';
 
   @override

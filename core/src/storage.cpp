@@ -123,17 +123,24 @@ std::string build_fts_query(const std::string& input) {
     while (!clean.empty() && clean.back() == ' ') clean.pop_back();
     if (clean.empty()) return "";
 
-    // Check if the query is a catalog prefix followed immediately by digits (e.g. M31, NGC7000, IC434)
-    // If so, add a space (e.g. "M 31", "NGC 7000") so it matches both formats
-    std::string expanded = clean;
-    static const std::regex cat_regex(R"(^([A-Za-z]+)(\d+)$)");
+    // Check if the query is a catalog prefix followed immediately or with space by digits
+    // (e.g. M31, M 31, NGC7000, NGC 7000, IC434, IC 434, C20, C 20, Arp208, Arp 208)
+    static const std::regex cat_regex(R"(^([A-Za-z]+)\s*(\d+.*)$)");
     std::smatch match;
     if (std::regex_match(clean, match, cat_regex)) {
-        expanded = match[1].str() + " " + match[2].str();
+        std::string cat = match[1].str();
+        std::string num = match[2].str();
+        return "\"" + cat + " " + num + "\"* OR \"" + cat + num + "\"*";
     }
 
-    std::string phrase = "\"" + expanded + "\"*";
-    std::istringstream iss(expanded);
+    // Single token query: prefix match
+    if (clean.find(' ') == std::string::npos) {
+        return clean + "*";
+    }
+
+    // Multi-token: search exact phrase OR AND-combination of prefix tokens
+    std::string phrase = "\"" + clean + "\"*";
+    std::istringstream iss(clean);
     std::string tok;
     std::string prefix_and;
     while (iss >> tok) {

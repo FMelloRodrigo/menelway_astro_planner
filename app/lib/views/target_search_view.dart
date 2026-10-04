@@ -14,6 +14,7 @@ import 'filter_dialog.dart';
 import 'target_details_sheet.dart';
 
 enum SortMode {
+  relevance,
   peakAltitude,
   visibleDuration,
   visibleStartTime,
@@ -51,17 +52,28 @@ class TargetSearchView extends StatefulWidget {
 
 class _TargetSearchViewState extends State<TargetSearchView> {
   SortMode _sortMode = SortMode.brightness;
+  SortMode _browseSortMode = SortMode.brightness;
   final TextEditingController _searchController = TextEditingController();
   TargetItem? _selectedTarget;
   Timer? _debounceTimer;
   bool _hideOutsideFilters = false;
 
+  SortMode get _effectiveSortMode {
+    if (widget.filters.searchQuery.isEmpty && _sortMode == SortMode.relevance) {
+      return _browseSortMode == SortMode.relevance ? SortMode.brightness : _browseSortMode;
+    }
+    return _sortMode;
+  }
+
   @override
   void initState() {
     super.initState();
     _searchController.text = widget.filters.searchQuery;
-    if (widget.filters.searchQuery.isNotEmpty && widget.targets.isNotEmpty) {
-      _selectedTarget = widget.targets.first;
+    if (widget.filters.searchQuery.isNotEmpty) {
+      _sortMode = SortMode.relevance;
+      if (widget.targets.isNotEmpty) {
+        _selectedTarget = widget.targets.first;
+      }
     }
   }
 
@@ -71,6 +83,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
     if (widget.filters.searchQuery != oldWidget.filters.searchQuery) {
       if (_searchController.text != widget.filters.searchQuery) {
         _searchController.text = widget.filters.searchQuery;
+      }
+      if (widget.filters.searchQuery.isNotEmpty && oldWidget.filters.searchQuery.isEmpty) {
+        if (_sortMode != SortMode.relevance) {
+          _browseSortMode = _sortMode;
+        }
+        _sortMode = SortMode.relevance;
+      } else if (widget.filters.searchQuery.isEmpty && oldWidget.filters.searchQuery.isNotEmpty) {
+        _sortMode = _browseSortMode == SortMode.relevance ? SortMode.brightness : _browseSortMode;
       }
     }
     // Keep _selectedTarget synchronized with the newly evaluated TargetItem instance
@@ -107,27 +127,69 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
   List<TargetItem> get _sortedTargets {
     final list = List<TargetItem>.from(widget.targets);
-    switch (_sortMode) {
+    if (_effectiveSortMode == SortMode.relevance) {
+      return list;
+    }
+
+    final hasSearch = widget.filters.searchQuery.trim().isNotEmpty;
+    final normQuery = hasSearch
+        ? widget.filters.searchQuery.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase()
+        : '';
+
+    int getTier(TargetItem t) {
+      if (!hasSearch) return 0;
+      String norm(String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
+      if (norm(t.name) == normQuery) return 0;
+      if (t.messier != null && norm(t.messier!) == normQuery) return 0;
+      if (t.caldwell != null && norm(t.caldwell!) == normQuery) return 0;
+      if (t.arp != null && norm(t.arp!) == normQuery) return 0;
+      if (t.herschel != null && norm(t.herschel!) == normQuery) return 0;
+      if (t.commonName != null && norm(t.commonName!) == normQuery) return 0;
+      if (t.commonName != null && norm(t.commonName!).contains(normQuery)) return 1;
+      return 2;
+    }
+
+    switch (_effectiveSortMode) {
+      case SortMode.relevance:
+        return list;
       case SortMode.peakAltitude:
         list.sort((a, b) {
-          if (a.meetsCriteria != b.meetsCriteria) {
-            return a.meetsCriteria ? -1 : 1;
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
           }
           return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
       case SortMode.visibleDuration:
         list.sort((a, b) {
-          if (a.meetsCriteria != b.meetsCriteria) {
-            return a.meetsCriteria ? -1 : 1;
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
           }
           return b.visibleDurationHours.compareTo(a.visibleDurationHours);
         });
         break;
       case SortMode.brightness:
         list.sort((a, b) {
-          if (a.meetsCriteria != b.meetsCriteria) {
-            return a.meetsCriteria ? -1 : 1;
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
           }
           final ma = a.magnitude ?? 99.0;
           final mb = b.magnitude ?? 99.0;
@@ -138,8 +200,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         break;
       case SortMode.visibleStartTime:
         list.sort((a, b) {
-          if (a.meetsCriteria != b.meetsCriteria) {
-            return a.meetsCriteria ? -1 : 1;
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
           }
           final aStart = a.visibleStartTime ?? DateTime(2099);
           final bStart = b.visibleStartTime ?? DateTime(2099);
@@ -150,8 +218,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         break;
       case SortMode.transitTime:
         list.sort((a, b) {
-          if (a.meetsCriteria != b.meetsCriteria) {
-            return a.meetsCriteria ? -1 : 1;
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
           }
           return a.transitTime.compareTo(b.transitTime);
         });
@@ -300,7 +374,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<SortMode>(
-                    value: _sortMode,
+                    value: _effectiveSortMode,
                     isDense: true,
                     isExpanded: isNarrow,
                     dropdownColor: palette.surfaceVariant,
@@ -311,6 +385,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       fontWeight: FontWeight.w600,
                     ),
                     items: [
+                      if (widget.filters.searchQuery.isNotEmpty)
+                        DropdownMenuItem(
+                          value: SortMode.relevance,
+                          child: Text(l10n.sortRelevance, overflow: TextOverflow.ellipsis),
+                        ),
                       DropdownMenuItem(
                         value: SortMode.peakAltitude,
                         child: Text(l10n.sortPeakAltitude, overflow: TextOverflow.ellipsis),
@@ -333,7 +412,14 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       ),
                     ],
                     onChanged: (v) {
-                      if (v != null) setState(() => _sortMode = v);
+                      if (v != null) {
+                        setState(() {
+                          _sortMode = v;
+                          if (v != SortMode.relevance) {
+                            _browseSortMode = v;
+                          }
+                        });
+                      }
                     },
                   ),
                 ),
