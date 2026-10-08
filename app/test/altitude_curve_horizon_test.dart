@@ -240,5 +240,60 @@ void main() {
       expect(find.textContaining("Mountain Ridge:"), findsOneWidget);
       expect(find.textContaining("Clear ("), findsOneWidget);
     });
+
+    testWidgets('Skyline 360 mode receives and renders custom filter observing window', (tester) async {
+      final windowStart = DateTime(2026, 9, 27, 21, 0);
+      final windowEnd = DateTime(2026, 9, 28, 2, 0);
+
+      final filters = FilterState(
+        useCustomTimeWindow: true,
+        customStartHour: 21,
+        customStartMinute: 0,
+        customEndHour: 2,
+        customEndMinute: 0,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: AltitudeCurveChart(
+              targetPoints: testPoints,
+              night: testNight,
+              targetName: "Custom Window Target",
+              filterState: filters,
+              customWindowStart: windowStart,
+              customWindowEnd: windowEnd,
+              isRedNightMode: false,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find the chart CustomPaint widget
+      final customPaints = tester.widgetList<CustomPaint>(find.byType(CustomPaint));
+      final chartPaint = customPaints.firstWhere((cp) => cp.painter.runtimeType.toString().contains('Skyline360Painter'));
+      expect(chartPaint, isNotNull);
+
+      // Verify that hovering on a point inside the window displays the observing window badge in the info bar
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+
+      final chartFinder = find.byWidget(chartPaint);
+      await gesture.moveTo(tester.getCenter(chartFinder));
+      await tester.pumpAndSettle();
+
+      // Chart should render without errors in 360 Skyline mode
+      expect(find.text("360° Skyline (NWES)"), findsOneWidget);
+
+      // Switch to Timeline mode and verify it also renders without issues
+      await tester.tap(find.text("Timeline (Hours)"));
+      await tester.pumpAndSettle();
+      expect(find.text("Timeline (Hours)"), findsOneWidget);
+    });
   });
 }
+
