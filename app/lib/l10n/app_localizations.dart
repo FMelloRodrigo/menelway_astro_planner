@@ -2581,6 +2581,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment).'**
   String get planetSubpixelNotice;
+
+  /// No description provided for @trajectoryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Trajectory Date'**
+  String get trajectoryDate;
+
+  /// No description provided for @previousDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous day'**
+  String get previousDay;
+
+  /// No description provided for @nextDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next day'**
+  String get nextDay;
+
+  /// No description provided for @temporaryTrajectoryDateNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary preview: {date}. Click to pick date.'**
+  String temporaryTrajectoryDateNotice(String date);
+
+  /// No description provided for @pickTrajectoryDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change trajectory date temporarily. Click to pick date.'**
+  String get pickTrajectoryDate;
+
+  /// No description provided for @resetToToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get resetToToday;
+
+  /// No description provided for @resetToTodayTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset trajectory to session date ({date})'**
+  String resetToTodayTooltip(String date);
 }
 
 class _AppLocalizationsDelegate

@@ -451,5 +451,22 @@
   "settingsSectionTour": "Guia Rápido e Tour",
   "settingsTourDesc": "Reveja o tour interativo destacando local, equipamentos e filtros.",
   "settingsReplayTourBtn": "Rever Tour Rápido",
-  "planetSubpixelNotice": "O tamanho do planeta é subpixel neste campo; ampliação de visibilidade aplicada (não representa a escala real no sensor)."
+  "planetSubpixelNotice": "O tamanho do planeta é subpixel neste campo; ampliação de visibilidade aplicada (não representa a escala real no sensor).",
+  "trajectoryDate": "Data da Trajetória",
+  "previousDay": "Dia anterior",
+  "nextDay": "Próximo dia",
+  "temporaryTrajectoryDateNotice": "Prévia temporária: {date}. Clique para escolher data.",
+  "@temporaryTrajectoryDateNotice": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "pickTrajectoryDate": "Alterar temporariamente a data da trajetória. Clique para escolher data.",
+  "resetToToday": "Hoje",
+  "resetToTodayTooltip": "Redefinir trajetória para a data da sessão ({date})",
+  "@resetToTodayTooltip": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }
 }

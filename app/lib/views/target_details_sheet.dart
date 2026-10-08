@@ -110,6 +110,9 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
 
   List<AltitudePoint> _curvePoints = [];
   bool _isLoadingCurve = true;
+  DateTime? _temporaryDate;
+  NightSummary? _temporaryNight;
+  List<AltitudePoint>? _temporaryCurvePoints;
   YearlyVisibilityModel? _yearlyVisibility;
   bool _isLoadingYearly = true;
   String? _onlineInfo;
@@ -190,10 +193,16 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
   void didUpdateWidget(covariant TargetDetailsSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.target.id != widget.target.id) {
+      _temporaryDate = null;
+      _temporaryNight = null;
+      _temporaryCurvePoints = null;
       _loadDescription();
     }
     if (oldWidget.target.id != widget.target.id ||
         oldWidget.night.sunset != widget.night.sunset) {
+      _temporaryDate = null;
+      _temporaryNight = null;
+      _temporaryCurvePoints = null;
       _loadCurve();
       _loadYearlyVisibility();
     } else if (oldWidget.target.meetsCriteria != widget.target.meetsCriteria ||
@@ -254,6 +263,53 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
     } catch (e) {
       AppLogger.error('Failed generating altitude curve for target ${widget.target.id}', tag: 'TargetDetailsSheet', error: e);
       setState(() => _isLoadingCurve = false);
+    }
+  }
+
+  void _onChartDateChanged(DateTime newDate) {
+    final baseNightDate = widget.night.sunset;
+    if (newDate.year == baseNightDate.year &&
+        newDate.month == baseNightDate.month &&
+        newDate.day == baseNightDate.day) {
+      _onResetChartDate();
+      return;
+    }
+
+    try {
+      final night = _engine.getNightSummary(
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        elevation: widget.elevation,
+        date: newDate,
+      );
+      final points = _engine.generateAltitudeCurve(
+        targetId: widget.target.id,
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        elevation: widget.elevation,
+        start: night.sunset.subtract(const Duration(hours: 1)),
+        end: night.sunrise.add(const Duration(hours: 1)),
+        stepMinutes: 10,
+      );
+      if (mounted) {
+        setState(() {
+          _temporaryDate = newDate;
+          _temporaryNight = night;
+          _temporaryCurvePoints = points;
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Failed generating curve for temporary date $newDate', tag: 'TargetDetailsSheet', error: e);
+    }
+  }
+
+  void _onResetChartDate() {
+    if (mounted) {
+      setState(() {
+        _temporaryDate = null;
+        _temporaryNight = null;
+        _temporaryCurvePoints = null;
+      });
     }
   }
 
@@ -741,19 +797,27 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
                                 )
                               : widget.filters;
 
+                  final effectiveNight = _temporaryNight ?? widget.night;
+                  final effectiveCurvePoints = _temporaryCurvePoints ?? _curvePoints;
+
                   return AltitudeCurveChart(
-                    targetPoints: _curvePoints,
-                    night: widget.night,
+                    targetPoints: effectiveCurvePoints,
+                    night: effectiveNight,
                     targetName: widget.target.displayName,
                     minAltitudeThreshold: widget.filters?.minAltitude ?? 30.0,
                     maxAltitudeThreshold: widget.filters?.maxAltitude ?? 90.0,
                     customWindowStart: (widget.filters?.useCustomTimeWindow == true)
-                        ? widget.filters!.getWindowStart(widget.night.sunset)
+                        ? widget.filters!.getWindowStart(effectiveNight.sunset)
                         : null,
                     customWindowEnd: (widget.filters?.useCustomTimeWindow == true)
-                        ? widget.filters!.getWindowEnd(widget.night.sunset)
+                        ? widget.filters!.getWindowEnd(effectiveNight.sunset)
                         : null,
                     filterState: effectiveFilters,
+                    isRedNightMode: widget.isRedNightMode,
+                    activeDate: _temporaryDate,
+                    isDateOverridden: _temporaryDate != null,
+                    onDateChanged: _onChartDateChanged,
+                    onResetDate: _onResetChartDate,
                   );
                 },
               ),

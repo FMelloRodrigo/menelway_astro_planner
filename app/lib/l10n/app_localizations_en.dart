@@ -1444,4 +1444,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planetSubpixelNotice =>
       'Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment).';
+
+  @override
+  String get trajectoryDate => 'Trajectory Date';
+
+  @override
+  String get previousDay => 'Previous day';
+
+  @override
+  String get nextDay => 'Next day';
+
+  @override
+  String temporaryTrajectoryDateNotice(String date) {
+    return 'Temporary preview: $date. Click to pick date.';
+  }
+
+  @override
+  String get pickTrajectoryDate =>
+      'Change trajectory date temporarily. Click to pick date.';
+
+  @override
+  String get resetToToday => 'Today';
+
+  @override
+  String resetToTodayTooltip(String date) {
+    return 'Reset trajectory to session date ($date)';
+  }
 }

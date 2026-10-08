@@ -24,6 +24,10 @@ class AltitudeCurveChart extends StatefulWidget {
   final DateTime? customWindowStart;
   final DateTime? customWindowEnd;
   final FilterState? filterState;
+  final DateTime? activeDate;
+  final bool isDateOverridden;
+  final ValueChanged<DateTime>? onDateChanged;
+  final VoidCallback? onResetDate;
 
   const AltitudeCurveChart({
     super.key,
@@ -36,6 +40,10 @@ class AltitudeCurveChart extends StatefulWidget {
     this.customWindowStart,
     this.customWindowEnd,
     this.filterState,
+    this.activeDate,
+    this.isDateOverridden = false,
+    this.onDateChanged,
+    this.onResetDate,
   });
 
   @override
@@ -397,23 +405,8 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
                     ),
                   ],
 
-                  // Date Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                    ),
-                    child: Text(
-                      DateFormat('MMM d').format(widget.night.sunset),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: accentColor,
-                      ),
-                    ),
-                  ),
+                  // Date Navigation & Temporary Override Control
+                  _buildDateSelector(context, palette, accentColor, textColor, l10n),
 
                   // Zoom Controls (Buttons only - scroll wheel zoom removed to enable page scrolling)
                   Container(
@@ -978,6 +971,225 @@ class _AltitudeCurveChartState extends State<AltitudeCurveChart> {
         );
       },
     );
+  }
+
+  Widget _buildDateSelector(
+    BuildContext context,
+    AstroPalette palette,
+    Color accentColor,
+    Color textColor,
+    AppLocalizations l10n,
+  ) {
+    final effectiveDate = widget.activeDate ?? widget.night.sunset;
+    final isOverridden = widget.isDateOverridden;
+
+    if (widget.onDateChanged == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        ),
+        child: Text(
+          DateFormat('MMM d').format(widget.night.sunset),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: accentColor,
+          ),
+        ),
+      );
+    }
+
+    final yearSuffix = effectiveDate.year != widget.night.sunset.year ? ', ${effectiveDate.year}' : '';
+    final dateStr = '${DateFormat('MMM d').format(effectiveDate)}$yearSuffix';
+    final sessionDateStr = DateFormat('MMM d').format(widget.night.sunset);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          height: 28,
+          decoration: BoxDecoration(
+            color: isOverridden
+                ? Colors.amber.withValues(alpha: 0.14)
+                : palette.surfaceVariant,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: isOverridden
+                  ? Colors.amber.withValues(alpha: 0.65)
+                  : palette.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Previous Day
+              Tooltip(
+                message: l10n.previousDay,
+                child: InkWell(
+                  onTap: () => _stepDate(-1),
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Icon(
+                      Icons.chevron_left_rounded,
+                      size: 16,
+                      color: isOverridden ? Colors.amberAccent : textColor.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 16,
+                color: isOverridden ? Colors.amber.withValues(alpha: 0.35) : palette.border,
+              ),
+              // Date picker button
+              Tooltip(
+                message: isOverridden
+                    ? l10n.temporaryTrajectoryDateNotice(dateStr)
+                    : l10n.pickTrajectoryDate,
+                child: InkWell(
+                  onTap: () => _pickDate(context),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_month_rounded,
+                          size: 12,
+                          color: isOverridden ? Colors.amberAccent : accentColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: isOverridden ? Colors.amberAccent : textColor,
+                          ),
+                        ),
+                        if (isOverridden) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const Text(
+                              "TEMP",
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: Colors.amberAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 16,
+                color: isOverridden ? Colors.amber.withValues(alpha: 0.35) : palette.border,
+              ),
+              // Next Day
+              Tooltip(
+                message: l10n.nextDay,
+                child: InkWell(
+                  onTap: () => _stepDate(1),
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: isOverridden ? Colors.amberAccent : textColor.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Reset to Today button (only visible when overridden)
+        if (isOverridden && widget.onResetDate != null) ...[
+          const SizedBox(width: 4),
+          Tooltip(
+            message: l10n.resetToTodayTooltip(sessionDateStr),
+            child: InkWell(
+              onTap: widget.onResetDate,
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                height: 28,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: palette.surfaceVariant,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: palette.border,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.restart_alt_rounded,
+                      size: 13,
+                      color: accentColor,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      l10n.resetToToday,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _stepDate(int days) {
+    final effectiveDate = widget.activeDate ?? widget.night.sunset;
+    final newDate = effectiveDate.add(Duration(days: days));
+    widget.onDateChanged?.call(newDate);
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final effectiveDate = widget.activeDate ?? widget.night.sunset;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: effectiveDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: widget.isRedNightMode ? AstroTheme.redNightVisionTheme() : AstroTheme.darkTheme(),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      widget.onDateChanged?.call(picked);
+    }
   }
 
   Widget _modeButton({

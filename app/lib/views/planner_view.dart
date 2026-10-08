@@ -841,25 +841,25 @@ class _PlannerViewState extends State<PlannerView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 2,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  isObservable
-                                      ? (l10n.periodDaysObservableShort(target.observableDaysCount, target.totalPeriodDays))
-                                      : (l10n.outsideFiltersInPeriod),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: isObservable ? palette.visibleGreen : Colors.orange,
-                                  ),
+                              Text(
+                                isObservable
+                                    ? (l10n.periodDaysObservableShort(target.observableDaysCount, target.totalPeriodDays))
+                                    : (l10n.outsideFiltersInPeriod),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isObservable ? palette.visibleGreen : Colors.orange,
                                 ),
                               ),
-                              if (target.peakDate != null && isObservable) ...[
-                                const SizedBox(width: 6),
+                              if (target.peakDate != null && isObservable)
                                 Text(
                                   l10n.periodPeakDate(DateFormat('MMM d', Localizations.localeOf(context).toString()).format(target.peakDate!)),
                                   style: TextStyle(
@@ -868,7 +868,6 @@ class _PlannerViewState extends State<PlannerView> {
                                     color: textColor.withValues(alpha: 0.8),
                                   ),
                                 ),
-                              ],
                             ],
                           ),
                           if (isObservable) ...[

@@ -831,5 +831,22 @@
   "settingsSectionTour": "Quick Tour & Guide",
   "settingsTourDesc": "Revisit the initial walkthrough highlighting location, optics, and filters.",
   "settingsReplayTourBtn": "Replay Quick Tour",
-  "planetSubpixelNotice": "Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment)."
+  "planetSubpixelNotice": "Planet size is sub-pixel on this FOV; visibility clamp applied (does not represent actual scale on equipment).",
+  "trajectoryDate": "Trajectory Date",
+  "previousDay": "Previous day",
+  "nextDay": "Next day",
+  "temporaryTrajectoryDateNotice": "Temporary preview: {date}. Click to pick date.",
+  "@temporaryTrajectoryDateNotice": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "pickTrajectoryDate": "Change trajectory date temporarily. Click to pick date.",
+  "resetToToday": "Today",
+  "resetToTodayTooltip": "Reset trajectory to session date ({date})",
+  "@resetToTodayTooltip": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }
 }

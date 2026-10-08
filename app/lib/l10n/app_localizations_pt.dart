@@ -1453,4 +1453,30 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get planetSubpixelNotice =>
       'O tamanho do planeta é subpixel neste campo; ampliação de visibilidade aplicada (não representa a escala real no sensor).';
+
+  @override
+  String get trajectoryDate => 'Data da Trajetória';
+
+  @override
+  String get previousDay => 'Dia anterior';
+
+  @override
+  String get nextDay => 'Próximo dia';
+
+  @override
+  String temporaryTrajectoryDateNotice(String date) {
+    return 'Prévia temporária: $date. Clique para escolher data.';
+  }
+
+  @override
+  String get pickTrajectoryDate =>
+      'Alterar temporariamente a data da trajetória. Clique para escolher data.';
+
+  @override
+  String get resetToToday => 'Hoje';
+
+  @override
+  String resetToTodayTooltip(String date) {
+    return 'Redefinir trajetória para a data da sessão ($date)';
+  }
 }
