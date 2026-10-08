@@ -1427,6 +1427,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'As curvas de altitude, nascer/pôr e horas de escuridão são calculadas para suas coordenadas exatas. Clique aqui para buscar sua cidade ou inserir coordenadas.';
 
   @override
+  String get tourSetLocationBtn => 'Configurar Local';
+
+  @override
+  String get tourKeepDefaultBtn => 'Manter Padrão →';
+
+  @override
+  String get tourDefaultSiteLabel => 'Local padrão';
+
+  @override
   String get tourEquipmentTitle => '2. Configure Equipamentos e Ópticas';
 
   @override

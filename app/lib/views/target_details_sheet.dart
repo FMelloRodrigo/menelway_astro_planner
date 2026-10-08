@@ -322,72 +322,14 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
       return;
     }
 
-    int selectedListId = widget.availableLists.first.id;
-    final notesController = TextEditingController(text: l10n.defaultListNotes);
-
     showDialog(
       context: context,
-      builder: (ctx) {
-        final palette = AstroPalette.of(ctx);
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: palette.surface,
-              title: Text(
-                l10n.addToListDialogTitle(widget.target.displayName),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                  fontSize: 16,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<int>(
-                    initialValue: selectedListId,
-                    decoration: InputDecoration(labelText: l10n.targetObservingListLabel),
-                    dropdownColor: palette.surface,
-                    items: widget.availableLists.map((l) {
-                      return DropdownMenuItem(
-                        value: l.id,
-                        child: Text(l.name, style: TextStyle(fontSize: 13, color: palette.textPrimary)),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v != null) setDialogState(() => selectedListId = v);
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: notesController,
-                    decoration: InputDecoration(labelText: l10n.sessionNotesLabel),
-                    style: TextStyle(
-                      color: palette.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  child: Text(l10n.cancel),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
-                FilledButton(
-                  child: Text(l10n.addBtn),
-                  onPressed: () {
-                    widget.onAddToList(selectedListId, widget.target.id, notesController.text);
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.addedToObservingListSuccess(widget.target.displayName))),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).then((_) => notesController.dispose());
+      builder: (ctx) => _AddToListDialog(
+        target: widget.target,
+        availableLists: widget.availableLists,
+        onAddToList: widget.onAddToList,
+      ),
+    );
   }
 
   void _queryOnlineSimbad() async {
@@ -1758,6 +1700,115 @@ class _TargetDetailsSheetState extends State<TargetDetailsSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AddToListDialog extends StatefulWidget {
+  final TargetItem target;
+  final List<ObservingListModel> availableLists;
+  final void Function(int listId, int dsoId, String notes) onAddToList;
+
+  const _AddToListDialog({
+    required this.target,
+    required this.availableLists,
+    required this.onAddToList,
+  });
+
+  @override
+  State<_AddToListDialog> createState() => _AddToListDialogState();
+}
+
+class _AddToListDialogState extends State<_AddToListDialog> {
+  late int _selectedListId;
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedListId = widget.availableLists.first.id;
+    _notesController = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_notesController.text.isEmpty) {
+      final l10n = AppLocalizations.of(context);
+      _notesController.text = l10n.defaultListNotes;
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final l10n = AppLocalizations.of(context);
+    widget.onAddToList(_selectedListId, widget.target.id, _notesController.text);
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.addedToObservingListSuccess(widget.target.displayName))),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
+
+    return AlertDialog(
+      backgroundColor: palette.surface,
+      title: Text(
+        l10n.addToListDialogTitle(widget.target.displayName),
+        style: TextStyle(
+          color: palette.textPrimary,
+          fontSize: 16,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<int>(
+              initialValue: _selectedListId,
+              decoration: InputDecoration(labelText: l10n.targetObservingListLabel),
+              dropdownColor: palette.surface,
+              items: widget.availableLists.map((l) {
+                return DropdownMenuItem(
+                  value: l.id,
+                  child: Text(l.name, style: TextStyle(fontSize: 13, color: palette.textPrimary)),
+                );
+              }).toList(),
+              onChanged: (v) {
+                if (v != null) setState(() => _selectedListId = v);
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notesController,
+              decoration: InputDecoration(labelText: l10n.sessionNotesLabel),
+              style: TextStyle(
+                color: palette.textPrimary,
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: Text(l10n.cancel),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.addBtn),
+        ),
+      ],
     );
   }
 }

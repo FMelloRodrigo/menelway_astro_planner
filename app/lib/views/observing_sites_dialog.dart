@@ -12,12 +12,14 @@ import '../theme/astro_theme.dart';
 class ObservingSitesDialog extends StatefulWidget {
   final String? initialEditSiteId;
   final bool startInAddMode;
+  final bool popOnSave;
   final void Function(ObservingSite activeSite)? onActiveSiteChanged;
 
   const ObservingSitesDialog({
     super.key,
     this.initialEditSiteId,
     this.startInAddMode = false,
+    this.popOnSave = false,
     this.onActiveSiteChanged,
   });
 
@@ -217,10 +219,16 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
 
     widget.onActiveSiteChanged?.call(ObservingSiteManager.instance.activeSite);
 
-    setState(() {
-      _mode = _DialogMode.list;
-      _editingSiteId = null;
-    });
+    if (widget.popOnSave) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } else {
+      setState(() {
+        _mode = _DialogMode.list;
+        _editingSiteId = null;
+      });
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -369,10 +377,14 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
             icon: const Icon(Icons.arrow_back_rounded),
             color: textColor.withValues(alpha: 0.7),
             onPressed: () {
-              setState(() {
-                _mode = _DialogMode.list;
-                _editingSiteId = null;
-              });
+              if (widget.popOnSave && widget.startInAddMode) {
+                Navigator.of(context).pop();
+              } else {
+                setState(() {
+                  _mode = _DialogMode.list;
+                  _editingSiteId = null;
+                });
+              }
             },
           ),
       ],
@@ -1000,10 +1012,14 @@ class _ObservingSitesDialogState extends State<ObservingSitesDialog> {
         children: [
           TextButton(
             onPressed: () {
-              setState(() {
-                _mode = _DialogMode.list;
-                _editingSiteId = null;
-              });
+              if (widget.popOnSave && widget.startInAddMode) {
+                Navigator.of(context).pop();
+              } else {
+                setState(() {
+                  _mode = _DialogMode.list;
+                  _editingSiteId = null;
+                });
+              }
             },
             child: Text(l10n.cancel),
           ),

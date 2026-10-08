@@ -28,80 +28,12 @@ class _ObservingListsViewState extends State<ObservingListsView> {
   int? _expandedListId;
 
   void _showCreateDialog() {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
-    final dateController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-    );
-
     showDialog(
       context: context,
-      builder: (ctx) {
-        final palette = AstroPalette.of(ctx);
-        return AlertDialog(
-          backgroundColor: palette.surface,
-          title: Text(
-            l10n.createNewList,
-            style: TextStyle(
-              color: palette.textPrimary,
-              fontSize: 16,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: "${l10n.listName} (e.g. Bortle 4 Trip)"),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descController,
-                decoration: InputDecoration(labelText: "${l10n.listDescription} / Notes"),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: dateController,
-                decoration: const InputDecoration(labelText: "Target Date (YYYY-MM-DD)"),
-                style: TextStyle(
-                  color: palette.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text(l10n.cleanDataCancel),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
-            FilledButton(
-              child: Text(l10n.createNewList),
-              onPressed: () {
-                if (nameController.text.trim().isNotEmpty) {
-                  widget.onCreateList(
-                    nameController.text.trim(),
-                    descController.text.trim(),
-                    dateController.text.trim(),
-                  );
-                  Navigator.of(ctx).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    ).then((_) {
-      nameController.dispose();
-      descController.dispose();
-      dateController.dispose();
-    });
+      builder: (ctx) => CreateObservingListDialog(
+        onCreateList: widget.onCreateList,
+      ),
+    );
   }
 
   void _exportListCsv(ObservingListModel list) {
@@ -262,6 +194,122 @@ class _ObservingListsViewState extends State<ObservingListsView> {
                 );
               },
             ),
+    );
+  }
+}
+
+class CreateObservingListDialog extends StatefulWidget {
+  final void Function(String name, String description, String date) onCreateList;
+
+  const CreateObservingListDialog({
+    super.key,
+    required this.onCreateList,
+  });
+
+  @override
+  State<CreateObservingListDialog> createState() => _CreateObservingListDialogState();
+}
+
+class _CreateObservingListDialogState extends State<CreateObservingListDialog> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _descController;
+  late final TextEditingController _dateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _descController = TextEditingController();
+    _dateController = TextEditingController(
+      text: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _dateController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      widget.onCreateList(
+        name,
+        _descController.text.trim(),
+        _dateController.text.trim(),
+      );
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
+
+    return AlertDialog(
+      backgroundColor: palette.surface,
+      title: Text(
+        l10n.createNewList,
+        style: TextStyle(
+          color: palette.textPrimary,
+          fontSize: 16,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: "${l10n.listName} (e.g. Bortle 4 Trip)",
+              ),
+              style: TextStyle(
+                color: palette.textPrimary,
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descController,
+              decoration: InputDecoration(
+                labelText: "${l10n.listDescription} / Notes",
+              ),
+              style: TextStyle(
+                color: palette.textPrimary,
+              ),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _dateController,
+              decoration: const InputDecoration(
+                labelText: "Target Date (YYYY-MM-DD)",
+              ),
+              style: TextStyle(
+                color: palette.textPrimary,
+              ),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: Text(l10n.cleanDataCancel),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.createNewList),
+        ),
+      ],
     );
   }
 }

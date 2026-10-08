@@ -2534,6 +2534,24 @@ abstract class AppLocalizations {
   /// **'Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.'**
   String get tourLocationDesc;
 
+  /// No description provided for @tourSetLocationBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Location'**
+  String get tourSetLocationBtn;
+
+  /// No description provided for @tourKeepDefaultBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Default →'**
+  String get tourKeepDefaultBtn;
+
+  /// No description provided for @tourDefaultSiteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default site'**
+  String get tourDefaultSiteLabel;
+
   /// No description provided for @tourEquipmentTitle.
   ///
   /// In en, this message translates to:

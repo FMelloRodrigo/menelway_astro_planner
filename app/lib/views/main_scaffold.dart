@@ -139,6 +139,11 @@ class _MainScaffoldState extends State<MainScaffold> {
             description: l10n.tourLocationDesc,
             icon: Icons.location_on_rounded,
             borderRadius: 8,
+            actionLabel: l10n.tourSetLocationBtn,
+            actionIcon: Icons.add_location_alt_rounded,
+            nextLabel: l10n.tourKeepDefaultBtn,
+            customContent: (ctx) => _buildTourLocationBadge(ctx),
+            onAction: (tourCtx) => _promptTourLocation(),
           ),
           SpotlightTourStep(
             targetKey: eqKey,
@@ -163,6 +168,79 @@ class _MainScaffoldState extends State<MainScaffold> {
         },
       );
     });
+  }
+
+  Widget _buildTourLocationBadge(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final palette = AstroPalette.of(context);
+    final site = ObservingSiteManager.instance.activeSite;
+    final bortle = site.bortleInfo;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: palette.surfaceVariant,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: palette.border,
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.place_rounded, size: 14, color: palette.accent),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              "${l10n.tourDefaultSiteLabel}: ${site.name}",
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: palette.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: bortle.color.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: bortle.color, width: 1.0),
+            ),
+            child: Text(
+              "B${site.bortleClass}",
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+                color: palette.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _promptTourLocation() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => ObservingSitesDialog(
+        startInAddMode: true,
+        popOnSave: true,
+        onActiveSiteChanged: (site) {
+          _onObservingSiteChanged();
+          setState(() {});
+        },
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _runFiltering() => _controller.runFiltering();

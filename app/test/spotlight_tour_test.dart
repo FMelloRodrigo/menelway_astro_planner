@@ -207,5 +207,141 @@ void main() {
 
       expect(replayed, isTrue);
     });
+
+    testWidgets('SpotlightTour renders customContent, triggers onAction, and advances', (tester) async {
+      final key1 = GlobalKey();
+      final key2 = GlobalKey();
+      bool actionTriggered = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(top: 10, left: 10, child: SizedBox(key: key1, width: 100, height: 40)),
+                Positioned(top: 10, right: 10, child: SizedBox(key: key2, width: 80, height: 40)),
+                Builder(
+                  builder: (ctx) => ElevatedButton(
+                    onPressed: () {
+                      SpotlightTour.show(
+                        context: ctx,
+                        isRedNightMode: false,
+                        steps: [
+                          SpotlightTourStep(
+                            targetKey: key1,
+                            title: 'Step One Title',
+                            description: 'Step One Description',
+                            icon: Icons.location_on,
+                            actionLabel: 'Set Location',
+                            actionIcon: Icons.add_location_alt_rounded,
+                            nextLabel: 'Keep Default →',
+                            customContent: (c) => const Text('Default site: Nova Friburgo'),
+                            onAction: (c) async {
+                              actionTriggered = true;
+                            },
+                          ),
+                          SpotlightTourStep(
+                            targetKey: key2,
+                            title: 'Step Two Title',
+                            description: 'Step Two Description',
+                            icon: Icons.camera_alt,
+                          ),
+                        ],
+                      );
+                    },
+                    child: const Text('Start Tour'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Start Tour'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verify customContent and buttons are visible
+      expect(find.text('Default site: Nova Friburgo'), findsOneWidget);
+      expect(find.text('Set Location'), findsOneWidget);
+      expect(find.text('Keep Default →'), findsOneWidget);
+
+      // Tap action button
+      await tester.tap(find.text('Set Location'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(actionTriggered, isTrue);
+      // Automatically moved to Step 2
+      expect(find.text('Step 2 of 2'), findsOneWidget);
+      expect(find.text('Step Two Title'), findsOneWidget);
+    });
+
+    testWidgets('SpotlightTour advances directly when clicking Keep Default without running onAction', (tester) async {
+      final key1 = GlobalKey();
+      final key2 = GlobalKey();
+      bool actionTriggered = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(top: 10, left: 10, child: SizedBox(key: key1, width: 100, height: 40)),
+                Positioned(top: 10, right: 10, child: SizedBox(key: key2, width: 80, height: 40)),
+                Builder(
+                  builder: (ctx) => ElevatedButton(
+                    onPressed: () {
+                      SpotlightTour.show(
+                        context: ctx,
+                        isRedNightMode: false,
+                        steps: [
+                          SpotlightTourStep(
+                            targetKey: key1,
+                            title: 'Step One Title',
+                            description: 'Step One Description',
+                            icon: Icons.location_on,
+                            actionLabel: 'Set Location',
+                            actionIcon: Icons.add_location_alt_rounded,
+                            nextLabel: 'Keep Default →',
+                            customContent: (c) => const Text('Default site: Nova Friburgo'),
+                            onAction: (c) async {
+                              actionTriggered = true;
+                            },
+                          ),
+                          SpotlightTourStep(
+                            targetKey: key2,
+                            title: 'Step Two Title',
+                            description: 'Step Two Description',
+                            icon: Icons.camera_alt,
+                          ),
+                        ],
+                      );
+                    },
+                    child: const Text('Start Tour'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Start Tour'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Tap 'Keep Default →'
+      await tester.tap(find.text('Keep Default →'));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(actionTriggered, isFalse);
+      expect(find.text('Step 2 of 2'), findsOneWidget);
+      expect(find.text('Step Two Title'), findsOneWidget);
+    });
   });
 }

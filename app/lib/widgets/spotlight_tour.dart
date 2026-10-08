@@ -12,6 +12,11 @@ class SpotlightTourStep {
   final IconData icon;
   final EdgeInsets padding;
   final double borderRadius;
+  final WidgetBuilder? customContent;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final Future<void> Function(BuildContext context)? onAction;
+  final String? nextLabel;
 
   const SpotlightTourStep({
     required this.targetKey,
@@ -20,6 +25,11 @@ class SpotlightTourStep {
     required this.icon,
     this.padding = const EdgeInsets.all(6),
     this.borderRadius = 10,
+    this.customContent,
+    this.actionLabel,
+    this.actionIcon,
+    this.onAction,
+    this.nextLabel,
   });
 }
 
@@ -89,6 +99,7 @@ class _SpotlightTourWidget extends StatefulWidget {
 class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
+  bool _isActionInProgress = false;
   late AnimationController _pulseController;
   final FocusNode _focusNode = FocusNode();
 
@@ -130,6 +141,29 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
     }
   }
 
+  Future<void> _handleAction(SpotlightTourStep step) async {
+    if (step.onAction == null) return;
+    setState(() {
+      _isActionInProgress = true;
+    });
+
+    try {
+      await step.onAction!(context);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isActionInProgress = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _focusNode.requestFocus();
+          }
+        });
+        _next();
+      }
+    }
+  }
+
   Rect? _getTargetRect(SpotlightTourStep step) {
     final context = step.targetKey.currentContext;
     if (context == null) return null;
@@ -148,6 +182,10 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
 
   @override
   Widget build(BuildContext context) {
+    if (_isActionInProgress) {
+      return const SizedBox.shrink();
+    }
+
     final l10n = AppLocalizations.of(context);
     final currentStep = widget.steps[_currentIndex];
     final targetRect = _getTargetRect(currentStep);
@@ -370,9 +408,16 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                   color: textColor.withValues(alpha: 0.85),
                 ),
               ),
+
+              // Optional Custom Content
+              if (currentStep.customContent != null) ...[
+                const SizedBox(height: 10),
+                currentStep.customContent!(context),
+              ],
+
               const SizedBox(height: 16),
 
-              // Bottom Actions: Back button + Next / Finish button
+              // Bottom Actions: Back button + Action button (if present) + Next / Finish button
               Align(
                 alignment: Alignment.centerRight,
                 child: Wrap(
@@ -395,22 +440,52 @@ class _SpotlightTourWidgetState extends State<_SpotlightTourWidget>
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),
+                    if (currentStep.actionLabel != null && currentStep.onAction != null)
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accentColor.withValues(alpha: 0.2),
+                          foregroundColor: accentColor,
+                          side: BorderSide(color: accentColor.withValues(alpha: 0.6), width: 1.2),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: Icon(
+                          currentStep.actionIcon ?? Icons.edit_location_alt_rounded,
+                          size: 16,
+                          color: accentColor,
+                        ),
+                        label: Text(
+                          currentStep.actionLabel!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: accentColor,
+                          ),
+                        ),
+                        onPressed: () => _handleAction(currentStep),
+                      ),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: widget.isRedNightMode ? Colors.black : const Color(0xFF0A0F1D),
+                        backgroundColor: (currentStep.actionLabel != null && !isLastStep)
+                            ? (widget.isRedNightMode ? AstroColors.nightVisionSurfaceVariant : AstroColors.spaceDarkSurfaceVariant)
+                            : accentColor,
+                        foregroundColor: (currentStep.actionLabel != null && !isLastStep)
+                            ? textColor
+                            : (widget.isRedNightMode ? Colors.black : const Color(0xFF0A0F1D)),
+                        side: (currentStep.actionLabel != null && !isLastStep)
+                            ? BorderSide(color: borderColor, width: 1.0)
+                            : null,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 4,
+                        elevation: (currentStep.actionLabel != null && !isLastStep) ? 0 : 4,
                       ),
                       icon: Icon(
                         isLastStep ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded,
                         size: 16,
                       ),
                       label: Text(
-                        isLastStep
-                            ? (l10n.tourFinish)
-                            : (l10n.tourNext),
+                        currentStep.nextLabel ??
+                            (isLastStep ? l10n.tourFinish : l10n.tourNext),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                       ),
                       onPressed: _next,

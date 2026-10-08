@@ -1418,6 +1418,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Target altitudes, rise/set curves, and darkness hours are calculated for your exact coordinates. Click here anytime to search for your city or enter coordinates.';
 
   @override
+  String get tourSetLocationBtn => 'Set Location';
+
+  @override
+  String get tourKeepDefaultBtn => 'Keep Default →';
+
+  @override
+  String get tourDefaultSiteLabel => 'Default site';
+
+  @override
   String get tourEquipmentTitle => '2. Configure Equipment & Optics';
 
   @override

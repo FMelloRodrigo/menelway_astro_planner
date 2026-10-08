@@ -150,258 +150,31 @@ class _HorizonMakerDialogState extends State<HorizonMakerDialog> {
   }
 
   void _openRefineLocationDialog() {
-    final searchCtrl = TextEditingController();
-    final latCtrl = TextEditingController(text: _state.observerLat.toStringAsFixed(4));
-    final lonCtrl = TextEditingController(text: _state.observerLon.toStringAsFixed(4));
-    final eleCtrl = TextEditingController(text: _state.observerElevation.round().toString());
-    String locName = _state.observerLocationName;
-    List<GeoLocationResult> results = [];
-    bool isSearching = false;
-    String? searchError;
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) {
-          final palette = AstroPalette.of(context);
-          final textColor = palette.textPrimary;
-          final accentColor = palette.accent;
-
-          Future<void> doSearch() async {
-            final q = searchCtrl.text.trim();
-            if (q.length < 2) return;
-            setDlgState(() {
-              isSearching = true;
-              searchError = null;
-            });
-            try {
-              final res = await GeocodingService.searchPreciseAddress(q);
-              setDlgState(() {
-                results = res;
-                isSearching = false;
-                if (res.isEmpty) {
-                  searchError = "No matching street or neighborhood found for '$q'.";
-                }
-              });
-            } catch (e) {
-              setDlgState(() {
-                isSearching = false;
-                searchError = "Connection error. Check internet connection.";
-              });
-            }
+      builder: (ctx) => _RefineLocationDialog(
+        isRedNightMode: widget.isRedNightMode,
+        initialLocationName: _state.observerLocationName,
+        initialLat: _state.observerLat,
+        initialLon: _state.observerLon,
+        initialElevation: _state.observerElevation,
+        onApply: (locName, lat, lon, ele, rescan) {
+          setState(() {
+            _state = _state.copyWith(
+              observerLocationName: locName,
+              observerLat: lat,
+              observerLon: lon,
+              observerElevation: ele,
+            );
+          });
+          if (rescan) {
+            _detectMountainHorizon();
+          } else {
+            _loadCachedTerrainProfile();
           }
-
-          final isNarrow = MediaQuery.of(context).size.width < 600;
-
-          return AlertDialog(
-            backgroundColor: palette.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: palette.border,
-              ),
-            ),
-            insetPadding: EdgeInsets.symmetric(
-              horizontal: isNarrow ? 12 : 40,
-              vertical: isNarrow ? 16 : 24,
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.pin_drop_rounded, color: accentColor, size: 22),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Refine Observer Location",
-                    style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.close_rounded, color: textColor.withValues(alpha: 0.6)),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
-              ],
-            ),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Pinpointing your exact observing site (street, neighborhood, or rural site) ensures mountain viewshed raymarching matches your visual horizon.",
-                      style: TextStyle(fontSize: 12, height: 1.3, color: textColor.withValues(alpha: 0.7)),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Search Street / Neighborhood / Landmark:",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: searchCtrl,
-                      decoration: InputDecoration(
-                        hintText: "e.g. Cônego, Nova Friburgo or Rua...",
-                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                          tooltip: "Search address worldwide",
-                          onPressed: doSearch,
-                        ),
-                      ),
-                      onSubmitted: (_) => doSearch(),
-                    ),
-                    if (isSearching) ...[
-                      const SizedBox(height: 6),
-                      const LinearProgressIndicator(),
-                    ],
-                    if (searchError != null) ...[
-                      const SizedBox(height: 6),
-                      Text(searchError!, style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6))),
-                    ],
-                    if (results.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 160),
-                        decoration: BoxDecoration(
-                          color: palette.surfaceVariant,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: palette.border,
-                          ),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (int idx = 0; idx < results.length; idx++) ...[
-                                if (idx > 0) const Divider(height: 1),
-                                ListTile(
-                                  dense: true,
-                                  leading: Icon(Icons.location_on_outlined, size: 16, color: accentColor),
-                                  title: Text(results[idx].displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
-                                  subtitle: Text(
-                                    "Lat: ${results[idx].latitude.toStringAsFixed(4)}° | Lon: ${results[idx].longitude.toStringAsFixed(4)}°",
-                                    style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
-                                  ),
-                                  onTap: () async {
-                                    final r = results[idx];
-                                    setDlgState(() {
-                                      latCtrl.text = r.latitude.toStringAsFixed(4);
-                                      lonCtrl.text = r.longitude.toStringAsFixed(4);
-                                      locName = r.displayName;
-                                      results = [];
-                                    });
-                                    final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
-                                    if (elev != null && ctx.mounted) {
-                                      setDlgState(() {
-                                        eleCtrl.text = elev.round().toString();
-                                      });
-                                    }
-                                  },
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Exact Coordinates & Elevation (Meters):",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor.withValues(alpha: 0.8)),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: latCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                            decoration: const InputDecoration(labelText: "Latitude (°)"),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: lonCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                            decoration: const InputDecoration(labelText: "Longitude (°)"),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        SizedBox(
-                          width: 90,
-                          child: TextField(
-                            controller: eleCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(labelText: "Elev (m)"),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text("Cancel"),
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  final lat = double.tryParse(latCtrl.text) ?? _state.observerLat;
-                  final lon = double.tryParse(lonCtrl.text) ?? _state.observerLon;
-                  final ele = double.tryParse(eleCtrl.text) ?? _state.observerElevation;
-                  Navigator.of(ctx).pop();
-                  setState(() {
-                    _state = _state.copyWith(
-                      observerLocationName: locName,
-                      observerLat: lat,
-                      observerLon: lon,
-                      observerElevation: ele,
-                    );
-                  });
-                  _loadCachedTerrainProfile();
-                },
-                child: const Text("Apply Location"),
-              ),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
-                ),
-                icon: const Icon(Icons.radar_rounded, size: 16),
-                label: const Text("Apply & Re-scan Mountains", style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () {
-                  final lat = double.tryParse(latCtrl.text) ?? _state.observerLat;
-                  final lon = double.tryParse(lonCtrl.text) ?? _state.observerLon;
-                  final ele = double.tryParse(eleCtrl.text) ?? _state.observerElevation;
-                  Navigator.of(ctx).pop();
-                  setState(() {
-                    _state = _state.copyWith(
-                      observerLocationName: locName,
-                      observerLat: lat,
-                      observerLon: lon,
-                      observerElevation: ele,
-                    );
-                  });
-                  _detectMountainHorizon();
-                },
-              ),
-            ],
-          );
         },
       ),
-    ).then((_) {
-      searchCtrl.dispose();
-      latCtrl.dispose();
-      lonCtrl.dispose();
-      eleCtrl.dispose();
-    });
+    );
   }
 
   void _promptApplyTerrainPoints(TerrainProfileModel profile) {
@@ -2571,3 +2344,271 @@ class _HorizonChartPainter extends CustomPainter {
         old.viewStartAzimuth != viewStartAzimuth;
   }
 }
+
+class _RefineLocationDialog extends StatefulWidget {
+  final bool isRedNightMode;
+  final String initialLocationName;
+  final double initialLat;
+  final double initialLon;
+  final double initialElevation;
+  final void Function(String locName, double lat, double lon, double ele, bool rescan) onApply;
+
+  const _RefineLocationDialog({
+    required this.isRedNightMode,
+    required this.initialLocationName,
+    required this.initialLat,
+    required this.initialLon,
+    required this.initialElevation,
+    required this.onApply,
+  });
+
+  @override
+  State<_RefineLocationDialog> createState() => _RefineLocationDialogState();
+}
+
+class _RefineLocationDialogState extends State<_RefineLocationDialog> {
+  late final TextEditingController _searchCtrl;
+  late final TextEditingController _latCtrl;
+  late final TextEditingController _lonCtrl;
+  late final TextEditingController _eleCtrl;
+  late String _locName;
+  List<GeoLocationResult> _results = [];
+  bool _isSearching = false;
+  String? _searchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+    _latCtrl = TextEditingController(text: widget.initialLat.toStringAsFixed(4));
+    _lonCtrl = TextEditingController(text: widget.initialLon.toStringAsFixed(4));
+    _eleCtrl = TextEditingController(text: widget.initialElevation.round().toString());
+    _locName = widget.initialLocationName;
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _latCtrl.dispose();
+    _lonCtrl.dispose();
+    _eleCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doSearch() async {
+    final q = _searchCtrl.text.trim();
+    if (q.length < 2) return;
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+    });
+    try {
+      final res = await GeocodingService.searchPreciseAddress(q);
+      if (!mounted) return;
+      setState(() {
+        _results = res;
+        _isSearching = false;
+        if (res.isEmpty) {
+          _searchError = "No matching street or neighborhood found for '$q'.";
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSearching = false;
+        _searchError = "Connection error. Check internet connection.";
+      });
+    }
+  }
+
+  void _apply({required bool rescan}) {
+    final lat = double.tryParse(_latCtrl.text) ?? widget.initialLat;
+    final lon = double.tryParse(_lonCtrl.text) ?? widget.initialLon;
+    final ele = double.tryParse(_eleCtrl.text) ?? widget.initialElevation;
+    Navigator.of(context).pop();
+    widget.onApply(_locName, lat, lon, ele, rescan);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AstroPalette.of(context);
+    final textColor = palette.textPrimary;
+    final accentColor = palette.accent;
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+
+    return AlertDialog(
+      backgroundColor: palette.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: palette.border,
+        ),
+      ),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isNarrow ? 12 : 40,
+        vertical: isNarrow ? 16 : 24,
+      ),
+      title: Row(
+        children: [
+          Icon(Icons.pin_drop_rounded, color: accentColor, size: 22),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "Refine Observer Location",
+              style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close_rounded, color: textColor.withValues(alpha: 0.6)),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Pinpointing your exact observing site (street, neighborhood, or rural site) ensures mountain viewshed raymarching matches your visual horizon.",
+                style: TextStyle(fontSize: 12, height: 1.3, color: textColor.withValues(alpha: 0.7)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Search Street / Neighborhood / Landmark:",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _searchCtrl,
+                decoration: InputDecoration(
+                  hintText: "e.g. Cônego, Nova Friburgo or Rua...",
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                    tooltip: "Search address worldwide",
+                    onPressed: _doSearch,
+                  ),
+                ),
+                onSubmitted: (_) => _doSearch(),
+              ),
+              if (_isSearching) ...[
+                const SizedBox(height: 6),
+                const LinearProgressIndicator(),
+              ],
+              if (_searchError != null) ...[
+                const SizedBox(height: 6),
+                Text(_searchError!, style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6))),
+              ],
+              if (_results.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 160),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: palette.border,
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int idx = 0; idx < _results.length; idx++) ...[
+                          if (idx > 0) const Divider(height: 1),
+                          ListTile(
+                            dense: true,
+                            leading: Icon(Icons.location_on_outlined, size: 16, color: accentColor),
+                            title: Text(_results[idx].displayName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor)),
+                            subtitle: Text(
+                              "Lat: ${_results[idx].latitude.toStringAsFixed(4)}° | Lon: ${_results[idx].longitude.toStringAsFixed(4)}°",
+                              style: TextStyle(fontSize: 10, color: textColor.withValues(alpha: 0.6)),
+                            ),
+                            onTap: () async {
+                              final r = _results[idx];
+                              setState(() {
+                                _latCtrl.text = r.latitude.toStringAsFixed(4);
+                                _lonCtrl.text = r.longitude.toStringAsFixed(4);
+                                _locName = r.displayName;
+                                _results = [];
+                              });
+                              final elev = await GeocodingService.fetchElevation(r.latitude, r.longitude);
+                              if (elev != null && mounted) {
+                                setState(() {
+                                  _eleCtrl.text = elev.round().toString();
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                "Exact Coordinates & Elevation (Meters):",
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor.withValues(alpha: 0.8)),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _latCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      decoration: const InputDecoration(labelText: "Latitude (°)"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _lonCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      decoration: const InputDecoration(labelText: "Longitude (°)"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 90,
+                    child: TextField(
+                      controller: _eleCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: "Elev (m)"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("Cancel"),
+        ),
+        OutlinedButton(
+          onPressed: () => _apply(rescan: false),
+          child: const Text("Apply Location"),
+        ),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: accentColor,
+            foregroundColor: widget.isRedNightMode ? Colors.white : Colors.black,
+          ),
+          icon: const Icon(Icons.radar_rounded, size: 16),
+          label: const Text("Apply & Re-scan Mountains", style: TextStyle(fontWeight: FontWeight.bold)),
+          onPressed: () => _apply(rescan: true),
+        ),
+      ],
+    );
+  }
+}
+
