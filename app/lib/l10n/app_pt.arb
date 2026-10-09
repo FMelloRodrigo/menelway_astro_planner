@@ -415,6 +415,7 @@
   "sortPeakDate": "Data do Pico",
   "sortHighestAltitude": "Maior Altitude",
   "sortBrightestFirst": "Mais Brilhantes Primeiro",
+  "sortLargestFirst": "Maiores Primeiro",
   "simulatingSkyPeriod": "Simulando o céu ao longo de {days} noites...",
   "noTargetsMatchPeriod": "Nenhum Alvo Corresponde a Este Período",
   "noTargetsPeriodSubtitle": "Nenhum dos candidatos do catálogo atende aos seus limites ativos (Alt ≥ {minAlt}°, {direction}) neste intervalo.\nTente selecionar um período mais amplo ou relaxar os limites de direção.",

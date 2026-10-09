@@ -712,6 +712,7 @@
   "sortPeakDate": "Peak Date",
   "sortHighestAltitude": "Highest Altitude",
   "sortBrightestFirst": "Brightest First",
+  "sortLargestFirst": "Largest First",
   "simulatingSkyPeriod": "Simulating sky across {days} nights...",
   "@simulatingSkyPeriod": {
     "placeholders": {

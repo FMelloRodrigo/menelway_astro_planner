@@ -1311,6 +1311,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sortBrightestFirst => 'Mais Brilhantes Primeiro';
 
   @override
+  String get sortLargestFirst => 'Maiores Primeiro';
+
+  @override
   String simulatingSkyPeriod(int days) {
     return 'Simulando o céu ao longo de $days noites...';
   }

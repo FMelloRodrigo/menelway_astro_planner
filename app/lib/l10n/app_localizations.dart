@@ -2366,6 +2366,12 @@ abstract class AppLocalizations {
   /// **'Brightest First'**
   String get sortBrightestFirst;
 
+  /// No description provided for @sortLargestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest First'**
+  String get sortLargestFirst;
+
   /// No description provided for @simulatingSkyPeriod.
   ///
   /// In en, this message translates to:

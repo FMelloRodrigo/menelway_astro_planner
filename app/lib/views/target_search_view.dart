@@ -19,6 +19,7 @@ enum SortMode {
   visibleDuration,
   visibleStartTime,
   brightness,
+  size,
   transitTime,
 }
 
@@ -216,6 +217,24 @@ class _TargetSearchViewState extends State<TargetSearchView> {
           return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
         break;
+      case SortMode.size:
+        list.sort((a, b) {
+          if (hasSearch) {
+            final ta = getTier(a);
+            final tb = getTier(b);
+            if (ta != tb) return ta.compareTo(tb);
+          } else {
+            if (a.meetsCriteria != b.meetsCriteria) {
+              return a.meetsCriteria ? -1 : 1;
+            }
+          }
+          final sa = a.majorAxisArcmin ?? -1.0;
+          final sb = b.majorAxisArcmin ?? -1.0;
+          final cmp = sb.compareTo(sa);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
+        });
+        break;
       case SortMode.transitTime:
         list.sort((a, b) {
           if (hasSearch) {
@@ -405,6 +424,10 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                       DropdownMenuItem(
                         value: SortMode.brightness,
                         child: Text(l10n.sortMagnitude, overflow: TextOverflow.ellipsis),
+                      ),
+                      DropdownMenuItem(
+                        value: SortMode.size,
+                        child: Text(l10n.sortSize, overflow: TextOverflow.ellipsis),
                       ),
                       DropdownMenuItem(
                         value: SortMode.transitTime,
@@ -706,6 +729,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     if (target.constellation.isNotEmpty)
                       Text(
                         target.constellation,
+                        style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
+                      ),
+                    if (target.majorAxisArcmin != null && target.majorAxisArcmin! > 0)
+                      Text(
+                        "• ${target.majorAxisArcmin! >= 60.0 ? '${(target.majorAxisArcmin! / 60.0).toStringAsFixed(1)}°' : '${target.majorAxisArcmin!.toStringAsFixed(1)}\''}",
                         style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.6)),
                       ),
                   ],

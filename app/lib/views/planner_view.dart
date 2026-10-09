@@ -18,6 +18,7 @@ enum PeriodSortBy {
   peakDate,
   peakAltitude,
   magnitude,
+  size,
 }
 
 class PlannerView extends StatefulWidget {
@@ -263,6 +264,16 @@ class _PlannerViewState extends State<PlannerView> {
           final ma = a.magnitude ?? 999.0;
           final mb = b.magnitude ?? 999.0;
           final cmp = ma.compareTo(mb);
+          if (cmp != 0) return cmp;
+          return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
+        });
+        break;
+      case PeriodSortBy.size:
+        list.sort((a, b) {
+          if (a.isObservable != b.isObservable) return a.isObservable ? -1 : 1;
+          final sa = a.majorAxisArcmin ?? -1.0;
+          final sb = b.majorAxisArcmin ?? -1.0;
+          final cmp = sb.compareTo(sa);
           if (cmp != 0) return cmp;
           return b.peakAltitudeDeg.compareTo(a.peakAltitudeDeg);
         });
@@ -585,6 +596,10 @@ class _PlannerViewState extends State<PlannerView> {
                         value: PeriodSortBy.magnitude,
                         child: Text(l10n.sortBrightestFirst, style: const TextStyle(fontSize: 12)),
                       ),
+                      DropdownMenuItem(
+                        value: PeriodSortBy.size,
+                        child: Text(l10n.sortLargestFirst, style: const TextStyle(fontSize: 12)),
+                      ),
                     ],
                   ),
                 ),
@@ -794,7 +809,7 @@ class _PlannerViewState extends State<PlannerView> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          "${l10n.targetInConstellation(localizeObjectType(target.objectType, l10n), target.constellation)}${target.magnitude != null ? ' • ${l10n.magnitudeLabel} ${target.magnitude!.toStringAsFixed(1)}' : ''}",
+                          "${l10n.targetInConstellation(localizeObjectType(target.objectType, l10n), target.constellation)}${target.magnitude != null ? ' • ${l10n.magnitudeLabel} ${target.magnitude!.toStringAsFixed(1)}' : ''}${target.majorAxisArcmin != null && target.majorAxisArcmin! > 0 ? ' • ${target.majorAxisArcmin! >= 60.0 ? '${(target.majorAxisArcmin! / 60.0).toStringAsFixed(1)}°' : '${target.majorAxisArcmin!.toStringAsFixed(1)}\''}' : ''}",
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withValues(alpha: 0.6),

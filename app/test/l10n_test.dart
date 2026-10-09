@@ -274,6 +274,7 @@ void main() {
       expect(l10nPt.sortPeakDate, 'Data do Pico');
       expect(l10nPt.sortHighestAltitude, 'Maior Altitude');
       expect(l10nPt.sortBrightestFirst, 'Mais Brilhantes Primeiro');
+      expect(l10nPt.sortLargestFirst, 'Maiores Primeiro');
       expect(l10nPt.noTargetsMatchPeriod, 'Nenhum Alvo Corresponde a Este Período');
       expect(l10nPt.adjustFiltersBtn, 'Ajustar Filtros');
     });
