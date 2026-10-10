@@ -57,7 +57,7 @@ void main() {
           isLoading: false,
           availableLists: const [],
           onFilterChanged: onFilterChanged,
-          onAddToList: (_, __, ___) {},
+          onAddToList: (_, _, _) {},
         ),
       ),
     );

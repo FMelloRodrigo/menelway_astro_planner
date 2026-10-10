@@ -1,8 +1,6 @@
 #pragma once
 
 #include "astro/catalog.hpp"
-#include "astro/coordinates.hpp"
-#include "astro/visibility.hpp"
 #include <memory>
 #include <optional>
 #include <string>
@@ -48,22 +46,6 @@ public:
     ) = 0;
 
     virtual std::optional<catalog::DsoObject> get_object_by_id(std::int64_t id) = 0;
-
-    virtual std::vector<catalog::TargetWithVisibility> filter_targets(
-        const coordinates::ObserverLocation& obs,
-        const catalog::DsoFilterOptions& filter_options,
-        const visibility::VisibilityCriteria& visibility_criteria,
-        int step_minutes = 10
-    ) = 0;
-
-    virtual std::vector<catalog::TargetWithPeriodVisibility> filter_targets_period(
-        const coordinates::ObserverLocation& obs,
-        const catalog::DsoFilterOptions& filter_options,
-        const visibility::VisibilityCriteria& visibility_criteria,
-        time::JulianDate start_jd,
-        time::JulianDate end_jd,
-        int step_minutes = 10
-    ) = 0;
 };
 
 class IObservingListRepository {
@@ -143,22 +125,6 @@ public:
     ) override;
 
     std::optional<catalog::DsoObject> get_object_by_id(std::int64_t id) override;
-
-    std::vector<catalog::TargetWithVisibility> filter_targets(
-        const coordinates::ObserverLocation& obs,
-        const catalog::DsoFilterOptions& filter_options,
-        const visibility::VisibilityCriteria& visibility_criteria,
-        int step_minutes = 10
-    ) override;
-
-    std::vector<catalog::TargetWithPeriodVisibility> filter_targets_period(
-        const coordinates::ObserverLocation& obs,
-        const catalog::DsoFilterOptions& filter_options,
-        const visibility::VisibilityCriteria& visibility_criteria,
-        time::JulianDate start_jd,
-        time::JulianDate end_jd,
-        int step_minutes = 10
-    ) override;
 
     // IObservingListRepository implementation
     std::int64_t create_list(

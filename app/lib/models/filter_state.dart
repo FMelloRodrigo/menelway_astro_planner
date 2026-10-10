@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'observing_site.dart';
 import 'terrain_profile_model.dart';
 
@@ -29,51 +30,64 @@ class HorizonPointModel {
       altitude: altitude ?? this.altitude,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HorizonPointModel &&
+          runtimeType == other.runtimeType &&
+          azimuth == other.azimuth &&
+          altitude == other.altitude;
+
+  @override
+  int get hashCode => Object.hash(azimuth, altitude);
 }
 
 class FilterState {
-  double minAltitude;
-  double maxAltitude;
-  double minDurationHours;
-  DateTime date;
-  double minMoonSeparation;
-  double minAzimuth;
-  double maxAzimuth;
-  int quadrant; // 0=All, 1=N, 2=E, 3=S, 4=W, 5=NE, 6=SE, 7=SW, 8=NW
-  double maxMagnitude;
-  double minMagnitude;
-  double minSizeArcmin;
-  double maxSizeArcmin;
-  Set<String> selectedCatalogs;
-  Set<String> selectedObjectTypes;
-  String searchQuery;
-  int maxTargets;
+  static const Object _sentinel = Object();
+
+  final double minAltitude;
+  final double maxAltitude;
+  final double minDurationHours;
+  final DateTime date;
+  final double minMoonSeparation;
+  final double minAzimuth;
+  final double maxAzimuth;
+  final int quadrant; // 0=All, 1=N, 2=E, 3=S, 4=W, 5=NE, 6=SE, 7=SW, 8=NW
+  final double maxMagnitude;
+  final double minMagnitude;
+  final double minSizeArcmin;
+  final double maxSizeArcmin;
+  final Set<String> selectedCatalogs;
+  final Set<String> selectedObjectTypes;
+  final String searchQuery;
+  final int maxTargets;
 
   // Custom Horizon Profile
-  bool useCustomHorizon;
-  List<HorizonPointModel> horizonPoints;
-  String? panoramaImagePath;
-  double panoramaAzimuthOffset; // 0..360 degrees to align North
-  double panoramaAltitudeOffset; // -20..+20 degrees for ground baseline
-  double panoramaAltitudeScale; // 0.5..2.0 vertical stretch
-  double panoramaOpacity; // 0.1..1.0 transparency
+  final bool useCustomHorizon;
+  final List<HorizonPointModel> horizonPoints;
+  final String? panoramaImagePath;
+  final double panoramaAzimuthOffset; // 0..360 degrees to align North
+  final double panoramaAltitudeOffset; // -20..+20 degrees for ground baseline
+  final double panoramaAltitudeScale; // 0.5..2.0 vertical stretch
+  final double panoramaOpacity; // 0.1..1.0 transparency
 
   // Mountain Silhouette / Terrain Horizon
-  bool showTerrainSilhouette;
-  TerrainProfileModel? terrainProfile;
+  final bool showTerrainSilhouette;
+  final TerrainProfileModel? terrainProfile;
 
   // Observing Time Window
-  bool useCustomTimeWindow;
-  int customStartHour;
-  int customStartMinute;
-  int customEndHour;
-  int customEndMinute;
+  final bool useCustomTimeWindow;
+  final int customStartHour;
+  final int customStartMinute;
+  final int customEndHour;
+  final int customEndMinute;
 
   // Observer
-  double observerLat;
-  double observerLon;
-  double observerElevation;
-  String observerLocationName;
+  final double observerLat;
+  final double observerLon;
+  final double observerElevation;
+  final String observerLocationName;
 
   FilterState({
     this.minAltitude = 30.0,
@@ -113,9 +127,9 @@ class FilterState {
   })  : date = date != null
             ? DateTime(date.year, date.month, date.day)
             : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
-        horizonPoints = horizonPoints ?? [],
-        selectedCatalogs = selectedCatalogs ?? {'Messier', 'Caldwell'},
-        selectedObjectTypes = selectedObjectTypes ?? {
+        horizonPoints = horizonPoints ?? const [],
+        selectedCatalogs = selectedCatalogs ?? const {'Messier', 'Caldwell'},
+        selectedObjectTypes = selectedObjectTypes ?? const {
           'Galaxy',
           'Planetary Nebula',
           'Bright Nebula',
@@ -250,13 +264,13 @@ class FilterState {
     int? maxTargets,
     bool? useCustomHorizon,
     List<HorizonPointModel>? horizonPoints,
-    String? panoramaImagePath,
+    Object? panoramaImagePath = _sentinel,
     double? panoramaAzimuthOffset,
     double? panoramaAltitudeOffset,
     double? panoramaAltitudeScale,
     double? panoramaOpacity,
     bool? showTerrainSilhouette,
-    TerrainProfileModel? terrainProfile,
+    Object? terrainProfile = _sentinel,
     bool? useCustomTimeWindow,
     int? customStartHour,
     int? customStartMinute,
@@ -286,13 +300,17 @@ class FilterState {
       maxTargets: maxTargets ?? this.maxTargets,
       useCustomHorizon: useCustomHorizon ?? this.useCustomHorizon,
       horizonPoints: horizonPoints ?? List.from(this.horizonPoints),
-      panoramaImagePath: panoramaImagePath ?? this.panoramaImagePath,
+      panoramaImagePath: identical(panoramaImagePath, _sentinel)
+          ? this.panoramaImagePath
+          : panoramaImagePath as String?,
       panoramaAzimuthOffset: panoramaAzimuthOffset ?? this.panoramaAzimuthOffset,
       panoramaAltitudeOffset: panoramaAltitudeOffset ?? this.panoramaAltitudeOffset,
       panoramaAltitudeScale: panoramaAltitudeScale ?? this.panoramaAltitudeScale,
       panoramaOpacity: panoramaOpacity ?? this.panoramaOpacity,
       showTerrainSilhouette: showTerrainSilhouette ?? this.showTerrainSilhouette,
-      terrainProfile: terrainProfile ?? this.terrainProfile,
+      terrainProfile: identical(terrainProfile, _sentinel)
+          ? this.terrainProfile
+          : terrainProfile as TerrainProfileModel?,
       useCustomTimeWindow: useCustomTimeWindow ?? this.useCustomTimeWindow,
       customStartHour: customStartHour ?? this.customStartHour,
       customStartMinute: customStartMinute ?? this.customStartMinute,
@@ -309,6 +327,7 @@ class FilterState {
     'minAltitude': minAltitude,
     'maxAltitude': maxAltitude,
     'minDurationHours': minDurationHours,
+    'date': date.toIso8601String(),
     'minMoonSeparation': minMoonSeparation,
     'minAzimuth': minAzimuth,
     'maxAzimuth': maxAzimuth,
@@ -346,6 +365,7 @@ class FilterState {
       minAltitude: (json['minAltitude'] as num?)?.toDouble() ?? 30.0,
       maxAltitude: (json['maxAltitude'] as num?)?.toDouble() ?? 90.0,
       minDurationHours: (json['minDurationHours'] as num?)?.toDouble() ?? 2.0,
+      date: json['date'] != null ? DateTime.tryParse(json['date'] as String) : null,
       minMoonSeparation: (json['minMoonSeparation'] as num?)?.toDouble() ?? 15.0,
       minAzimuth: (json['minAzimuth'] as num?)?.toDouble() ?? 0.0,
       maxAzimuth: (json['maxAzimuth'] as num?)?.toDouble() ?? 360.0,
@@ -357,7 +377,7 @@ class FilterState {
       selectedCatalogs: (json['selectedCatalogs'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toSet() ??
-          {'Messier', 'Caldwell'},
+          const {'Messier', 'Caldwell'},
       selectedObjectTypes: (json['selectedObjectTypes'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toSet(),
@@ -367,7 +387,7 @@ class FilterState {
       horizonPoints: (json['horizonPoints'] as List<dynamic>?)
               ?.map((p) => HorizonPointModel.fromJson(p as Map<String, dynamic>))
               .toList() ??
-          [],
+          const [],
       panoramaImagePath: json['panoramaImagePath'] as String?,
       panoramaAzimuthOffset: (json['panoramaAzimuthOffset'] as num?)?.toDouble() ?? 0.0,
       panoramaAltitudeOffset: (json['panoramaAltitudeOffset'] as num?)?.toDouble() ?? 0.0,
@@ -382,10 +402,83 @@ class FilterState {
       customStartMinute: json['customStartMinute'] as int? ?? 0,
       customEndHour: json['customEndHour'] as int? ?? 23,
       customEndMinute: json['customEndMinute'] as int? ?? 0,
-      observerLat: (json['observerLat'] as num?)?.toDouble() ?? -22.2819,
-      observerLon: (json['observerLon'] as num?)?.toDouble() ?? -42.5311,
-      observerElevation: (json['observerElevation'] as num?)?.toDouble() ?? 858.0,
-      observerLocationName: json['observerLocationName'] as String? ?? 'Nova Friburgo, Rio de Janeiro, Brazil',
+      observerLat: (json['observerLat'] as num?)?.toDouble() ?? ObservingSite.defaultLatitude,
+      observerLon: (json['observerLon'] as num?)?.toDouble() ?? ObservingSite.defaultLongitude,
+      observerElevation: (json['observerElevation'] as num?)?.toDouble() ?? ObservingSite.defaultElevation,
+      observerLocationName: json['observerLocationName'] as String? ?? ObservingSite.defaultSiteName,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is FilterState &&
+        other.minAltitude == minAltitude &&
+        other.maxAltitude == maxAltitude &&
+        other.minDurationHours == minDurationHours &&
+        other.date == date &&
+        other.minMoonSeparation == minMoonSeparation &&
+        other.minAzimuth == minAzimuth &&
+        other.maxAzimuth == maxAzimuth &&
+        other.quadrant == quadrant &&
+        other.maxMagnitude == maxMagnitude &&
+        other.minMagnitude == minMagnitude &&
+        other.minSizeArcmin == minSizeArcmin &&
+        other.maxSizeArcmin == maxSizeArcmin &&
+        setEquals(other.selectedCatalogs, selectedCatalogs) &&
+        setEquals(other.selectedObjectTypes, selectedObjectTypes) &&
+        other.searchQuery == searchQuery &&
+        other.maxTargets == maxTargets &&
+        other.useCustomHorizon == useCustomHorizon &&
+        listEquals(other.horizonPoints, horizonPoints) &&
+        other.panoramaImagePath == panoramaImagePath &&
+        other.panoramaAzimuthOffset == panoramaAzimuthOffset &&
+        other.panoramaAltitudeOffset == panoramaAltitudeOffset &&
+        other.panoramaAltitudeScale == panoramaAltitudeScale &&
+        other.panoramaOpacity == panoramaOpacity &&
+        other.showTerrainSilhouette == showTerrainSilhouette &&
+        other.terrainProfile == terrainProfile &&
+        other.useCustomTimeWindow == useCustomTimeWindow &&
+        other.customStartHour == customStartHour &&
+        other.customStartMinute == customStartMinute &&
+        other.customEndHour == customEndHour &&
+        other.customEndMinute == customEndMinute &&
+        other.observerLat == observerLat &&
+        other.observerLon == observerLon &&
+        other.observerElevation == observerElevation &&
+        other.observerLocationName == observerLocationName;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+        minAltitude,
+        maxAltitude,
+        minDurationHours,
+        date,
+        minMoonSeparation,
+        minAzimuth,
+        maxAzimuth,
+        quadrant,
+        maxMagnitude,
+        minMagnitude,
+        minSizeArcmin,
+        maxSizeArcmin,
+        Object.hashAll(selectedCatalogs),
+        Object.hashAll(selectedObjectTypes),
+        searchQuery,
+        maxTargets,
+        useCustomHorizon,
+        Object.hashAll(horizonPoints),
+        panoramaImagePath,
+        panoramaAzimuthOffset,
+        showTerrainSilhouette,
+        useCustomTimeWindow,
+        customStartHour,
+        customStartMinute,
+        customEndHour,
+        customEndMinute,
+        observerLat,
+        observerLon,
+        observerElevation,
+      ]);
 }

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
-import '../theme/astro_theme.dart';
+import '../widgets/csv_export_dialog.dart';
 
 /// Provides RFC 4180 compliant CSV serialization and export dialog presentation for astronomical targets.
 class CsvExportService {
@@ -68,51 +67,11 @@ class CsvExportService {
     required String csvContent,
     required String copiedMessage,
   }) {
-    return showDialog(
-      context: context,
-      builder: (ctx) {
-        final palette = AstroPalette.of(ctx);
-        return AlertDialog(
-          backgroundColor: palette.surface,
-          title: Text(
-            title,
-            style: TextStyle(color: palette.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          content: SizedBox(
-            width: 540,
-            child: SingleChildScrollView(
-              child: SelectableText(
-                csvContent,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  color: palette.textPrimary.withValues(alpha: 0.9),
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              icon: const Icon(Icons.copy_rounded, size: 16),
-              label: const Text("Copy CSV"),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: csvContent));
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(copiedMessage),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            FilledButton(
-              child: const Text("Done"),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
-          ],
-        );
-      },
+    return CsvExportDialog.show(
+      context,
+      title: title,
+      csvContent: csvContent,
+      copiedMessage: copiedMessage,
     );
   }
 }

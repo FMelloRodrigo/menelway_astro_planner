@@ -22,12 +22,15 @@ void main() async {
     fallbackFilters: initialSettings.filters,
   );
   final activeSite = ObservingSiteManager.instance.activeSite;
-  initialSettings.filters.observerLat = activeSite.latitude;
-  initialSettings.filters.observerLon = activeSite.longitude;
-  initialSettings.filters.observerElevation = activeSite.elevation;
-  initialSettings.filters.observerLocationName = activeSite.name;
+  final resolvedFilters = initialSettings.filters.copyWith(
+    observerLat: activeSite.latitude,
+    observerLon: activeSite.longitude,
+    observerElevation: activeSite.elevation,
+    observerLocationName: activeSite.name,
+  );
+  final resolvedSettings = initialSettings.copyWith(filters: resolvedFilters);
 
-  runApp(AstroTargetsApp(initialSettings: initialSettings));
+  runApp(AstroTargetsApp(initialSettings: resolvedSettings));
 }
 
 class AstroTargetsApp extends StatefulWidget {

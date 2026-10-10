@@ -11,12 +11,15 @@ class FilterDialogController extends ChangeNotifier {
 
   FilterDialogController({required FilterState initialFilters})
       : _initialFilters = initialFilters {
-    _state = initialFilters.copyWith();
-    _state.minAltitude = ((_state.minAltitude / 5.0).round() * 5.0).toDouble().clamp(10.0, 70.0);
-    _state.maxAltitude = ((_state.maxAltitude / 5.0).round() * 5.0).toDouble().clamp(50.0, 90.0);
-    if (_state.minAltitude >= _state.maxAltitude) {
-      _state.minAltitude = math.max(10.0, _state.maxAltitude - 5.0);
+    var minAlt = ((initialFilters.minAltitude / 5.0).round() * 5.0).toDouble().clamp(10.0, 70.0);
+    var maxAlt = ((initialFilters.maxAltitude / 5.0).round() * 5.0).toDouble().clamp(50.0, 90.0);
+    if (minAlt >= maxAlt) {
+      minAlt = math.max(10.0, maxAlt - 5.0);
     }
+    _state = initialFilters.copyWith(
+      minAltitude: minAlt,
+      maxAltitude: maxAlt,
+    );
   }
 
   FilterState get state => _state;
@@ -72,249 +75,223 @@ class FilterDialogController extends ChangeNotifier {
   }
 
   void applyPreset(int index) {
+    double minAz = _state.minAzimuth;
+    double maxAz = _state.maxAzimuth;
     switch (index) {
-      case 0:
-        _state.minAzimuth = 0.0;
-        _state.maxAzimuth = 360.0;
-        _state.quadrant = 0;
-        break;
-      case 1:
-        _state.minAzimuth = 315.0;
-        _state.maxAzimuth = 45.0;
-        _state.quadrant = 0;
-        break;
-      case 2:
-        _state.minAzimuth = 45.0;
-        _state.maxAzimuth = 135.0;
-        _state.quadrant = 0;
-        break;
-      case 3:
-        _state.minAzimuth = 135.0;
-        _state.maxAzimuth = 225.0;
-        _state.quadrant = 0;
-        break;
-      case 4:
-        _state.minAzimuth = 225.0;
-        _state.maxAzimuth = 315.0;
-        _state.quadrant = 0;
-        break;
-      case 5:
-        _state.minAzimuth = 0.0;
-        _state.maxAzimuth = 90.0;
-        _state.quadrant = 0;
-        break;
-      case 6:
-        _state.minAzimuth = 90.0;
-        _state.maxAzimuth = 180.0;
-        _state.quadrant = 0;
-        break;
-      case 7:
-        _state.minAzimuth = 180.0;
-        _state.maxAzimuth = 270.0;
-        _state.quadrant = 0;
-        break;
-      case 8:
-        _state.minAzimuth = 270.0;
-        _state.maxAzimuth = 360.0;
-        _state.quadrant = 0;
-        break;
-      case 9:
-        _state.quadrant = 0;
-        break;
+      case 0: minAz = 0.0; maxAz = 360.0; break;
+      case 1: minAz = 315.0; maxAz = 45.0; break;
+      case 2: minAz = 45.0; maxAz = 135.0; break;
+      case 3: minAz = 135.0; maxAz = 225.0; break;
+      case 4: minAz = 225.0; maxAz = 315.0; break;
+      case 5: minAz = 0.0; maxAz = 90.0; break;
+      case 6: minAz = 90.0; maxAz = 180.0; break;
+      case 7: minAz = 180.0; maxAz = 270.0; break;
+      case 8: minAz = 270.0; maxAz = 360.0; break;
+      case 9: break;
     }
+    _state = _state.copyWith(minAzimuth: minAz, maxAzimuth: maxAz, quadrant: 0);
     notifyListeners();
   }
 
   void setCustomAzimuth(double min, double max) {
-    _state.minAzimuth = min;
-    _state.maxAzimuth = max;
-    _state.quadrant = 0;
+    _state = _state.copyWith(minAzimuth: min, maxAzimuth: max, quadrant: 0);
     notifyListeners();
   }
 
   void setMinAzimuth(double value) {
-    _state.minAzimuth = value;
-    _state.quadrant = 0;
+    _state = _state.copyWith(minAzimuth: value, quadrant: 0);
     notifyListeners();
   }
 
   void setMaxAzimuth(double value) {
-    _state.maxAzimuth = value;
-    _state.quadrant = 0;
+    _state = _state.copyWith(maxAzimuth: value, quadrant: 0);
     notifyListeners();
   }
 
   void setMinAltitude(double value) {
     final snapped = ((value / 5.0).round() * 5.0).toDouble();
-    _state.minAltitude = snapped;
-    if (_state.minAltitude >= _state.maxAltitude) {
-      _state.maxAltitude = math.min(90.0, _state.minAltitude + 5.0);
+    var maxAlt = _state.maxAltitude;
+    if (snapped >= maxAlt) {
+      maxAlt = math.min(90.0, snapped + 5.0);
     }
+    _state = _state.copyWith(minAltitude: snapped, maxAltitude: maxAlt);
     notifyListeners();
   }
 
   void setMaxAltitude(double value) {
     final snapped = ((value / 5.0).round() * 5.0).toDouble();
-    _state.maxAltitude = snapped;
-    if (_state.maxAltitude <= _state.minAltitude) {
-      _state.minAltitude = math.max(10.0, _state.maxAltitude - 5.0);
+    var minAlt = _state.minAltitude;
+    if (snapped <= minAlt) {
+      minAlt = math.max(10.0, snapped - 5.0);
     }
+    _state = _state.copyWith(minAltitude: minAlt, maxAltitude: snapped);
     notifyListeners();
   }
 
   void setMinDurationHours(double value) {
-    _state.minDurationHours = value;
+    _state = _state.copyWith(minDurationHours: value);
     notifyListeners();
   }
 
   void setMinMoonSeparation(double value) {
-    _state.minMoonSeparation = value;
+    _state = _state.copyWith(minMoonSeparation: value);
     notifyListeners();
   }
 
   void setMaxMagnitude(double value) {
-    _state.maxMagnitude = value;
+    _state = _state.copyWith(maxMagnitude: value);
     notifyListeners();
   }
 
   void setMinSizeArcmin(double value) {
-    _state.minSizeArcmin = value;
+    _state = _state.copyWith(minSizeArcmin: value);
     notifyListeners();
   }
 
   void setMagnitudeRange(double min, double max) {
-    _state.minMagnitude = min;
-    _state.maxMagnitude = max;
+    _state = _state.copyWith(minMagnitude: min, maxMagnitude: max);
     notifyListeners();
   }
 
   void setSizeRange(double min, double max) {
-    _state.minSizeArcmin = min;
-    _state.maxSizeArcmin = max;
+    _state = _state.copyWith(minSizeArcmin: min, maxSizeArcmin: max);
     notifyListeners();
   }
 
   void setUseCustomTimeWindow(bool useCustom) {
-    _state.useCustomTimeWindow = useCustom;
+    var minDur = _state.minDurationHours;
     if (useCustom) {
       final maxDur = _state.windowDurationHours;
-      if (_state.minDurationHours > maxDur) {
-        _state.minDurationHours = math.max(0.5, maxDur);
+      if (minDur > maxDur) {
+        minDur = math.max(0.5, maxDur);
       }
     }
+    _state = _state.copyWith(useCustomTimeWindow: useCustom, minDurationHours: minDur);
     notifyListeners();
   }
 
   void setCustomStartTime(int hour, int minute) {
-    _state.customStartHour = hour;
-    _state.customStartMinute = minute;
-    final maxDur = _state.windowDurationHours;
-    if (_state.minDurationHours > maxDur) {
-      _state.minDurationHours = math.max(0.5, maxDur);
+    final tempState = _state.copyWith(customStartHour: hour, customStartMinute: minute);
+    final maxDur = tempState.windowDurationHours;
+    var minDur = tempState.minDurationHours;
+    if (minDur > maxDur) {
+      minDur = math.max(0.5, maxDur);
     }
+    _state = tempState.copyWith(minDurationHours: minDur);
     notifyListeners();
   }
 
   void setCustomEndTime(int hour, int minute) {
-    _state.customEndHour = hour;
-    _state.customEndMinute = minute;
-    final maxDur = _state.windowDurationHours;
-    if (_state.minDurationHours > maxDur) {
-      _state.minDurationHours = math.max(0.5, maxDur);
+    final tempState = _state.copyWith(customEndHour: hour, customEndMinute: minute);
+    final maxDur = tempState.windowDurationHours;
+    var minDur = tempState.minDurationHours;
+    if (minDur > maxDur) {
+      minDur = math.max(0.5, maxDur);
     }
+    _state = tempState.copyWith(minDurationHours: minDur);
     notifyListeners();
   }
 
   void setCustomTime({required bool isStart, required int hour, required int minute}) {
-    if (isStart) {
-      _state.customStartHour = hour;
-      _state.customStartMinute = minute;
-    } else {
-      _state.customEndHour = hour;
-      _state.customEndMinute = minute;
+    final tempState = isStart
+        ? _state.copyWith(customStartHour: hour, customStartMinute: minute)
+        : _state.copyWith(customEndHour: hour, customEndMinute: minute);
+    final maxDur = tempState.windowDurationHours;
+    var minDur = tempState.minDurationHours;
+    if (minDur > maxDur) {
+      minDur = math.max(0.5, maxDur);
     }
-    final maxDur = _state.windowDurationHours;
-    if (_state.minDurationHours > maxDur) {
-      _state.minDurationHours = math.max(0.5, maxDur);
-    }
+    _state = tempState.copyWith(minDurationHours: minDur);
     notifyListeners();
   }
 
   void setCustomWindow(int startH, int startM, int endH, int endM) {
-    _state.useCustomTimeWindow = true;
-    _state.customStartHour = startH;
-    _state.customStartMinute = startM;
-    _state.customEndHour = endH;
-    _state.customEndMinute = endM;
-    final maxDur = _state.windowDurationHours;
-    if (_state.minDurationHours > maxDur) {
-      _state.minDurationHours = math.max(0.5, maxDur);
+    final tempState = _state.copyWith(
+      useCustomTimeWindow: true,
+      customStartHour: startH,
+      customStartMinute: startM,
+      customEndHour: endH,
+      customEndMinute: endM,
+    );
+    final maxDur = tempState.windowDurationHours;
+    var minDur = tempState.minDurationHours;
+    if (minDur > maxDur) {
+      minDur = math.max(0.5, maxDur);
     }
+    _state = tempState.copyWith(minDurationHours: minDur);
     notifyListeners();
   }
 
   void setCatalogSelected(String catalog, bool selected) {
+    final set = Set<String>.from(_state.selectedCatalogs);
     if (selected) {
-      _state.selectedCatalogs.add(catalog);
-    } else if (_state.selectedCatalogs.length > 1) {
-      _state.selectedCatalogs.remove(catalog);
+      set.add(catalog);
+    } else if (set.length > 1) {
+      set.remove(catalog);
     }
+    _state = _state.copyWith(selectedCatalogs: set);
     notifyListeners();
   }
 
   void toggleCatalog(String catalog) {
-    if (_state.selectedCatalogs.contains(catalog)) {
-      if (_state.selectedCatalogs.length > 1) {
-        _state.selectedCatalogs.remove(catalog);
+    final set = Set<String>.from(_state.selectedCatalogs);
+    if (set.contains(catalog)) {
+      if (set.length > 1) {
+        set.remove(catalog);
       }
     } else {
-      _state.selectedCatalogs.add(catalog);
+      set.add(catalog);
     }
+    _state = _state.copyWith(selectedCatalogs: set);
     notifyListeners();
   }
 
   void selectAllCatalogs([List<String>? all]) {
-    _state.selectedCatalogs = Set<String>.from(all ?? defaultCatalogs);
+    _state = _state.copyWith(selectedCatalogs: Set<String>.from(all ?? defaultCatalogs));
     notifyListeners();
   }
 
   void clearCatalogs() {
-    _state.selectedCatalogs.clear();
+    _state = _state.copyWith(selectedCatalogs: <String>{});
     notifyListeners();
   }
 
   void setObjectTypeSelected(String type, bool selected) {
+    final set = Set<String>.from(_state.selectedObjectTypes);
     if (selected) {
-      _state.selectedObjectTypes.add(type);
-    } else if (_state.selectedObjectTypes.length > 1) {
-      _state.selectedObjectTypes.remove(type);
+      set.add(type);
+    } else if (set.length > 1) {
+      set.remove(type);
     }
+    _state = _state.copyWith(selectedObjectTypes: set);
     notifyListeners();
   }
 
   void toggleObjectType(String type) {
-    if (_state.selectedObjectTypes.contains(type)) {
-      if (_state.selectedObjectTypes.length > 1) {
-        _state.selectedObjectTypes.remove(type);
+    final set = Set<String>.from(_state.selectedObjectTypes);
+    if (set.contains(type)) {
+      if (set.length > 1) {
+        set.remove(type);
       }
     } else {
-      _state.selectedObjectTypes.add(type);
+      set.add(type);
     }
+    _state = _state.copyWith(selectedObjectTypes: set);
     notifyListeners();
   }
 
   void selectAllObjectTypes([List<String>? all]) {
-    _state.selectedObjectTypes = Set<String>.from(all ?? defaultObjectTypes);
+    _state = _state.copyWith(selectedObjectTypes: Set<String>.from(all ?? defaultObjectTypes));
     notifyListeners();
   }
 
   void clearObjectTypes() {
-    _state.selectedObjectTypes.clear();
+    _state = _state.copyWith(selectedObjectTypes: <String>{});
     notifyListeners();
   }
 
   void setUseCustomHorizon(bool val) {
-    _state.useCustomHorizon = val;
+    _state = _state.copyWith(useCustomHorizon: val);
     notifyListeners();
   }
 

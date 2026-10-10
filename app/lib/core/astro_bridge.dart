@@ -5,6 +5,8 @@ import 'package:ffi/ffi.dart';
 
 import 'astro_ffi_types.dart';
 import 'astro_engine.dart';
+import 'ffi_mappers.dart';
+import 'night_window_policy.dart';
 import 'native_library_resolver.dart';
 import 'app_logger.dart';
 import '../models/target_item.dart';
@@ -309,12 +311,16 @@ class AstroBridge implements AstroEngine {
         .asFunction<_AstroFreeStringDart>();
   }
 
+  String? _dbPath;
+  String? get databasePath => _dbPath;
+
   @override
   void initEngine(String dbPath) {
     if (_engine != null) {
       _engineDestroy(_engine!);
       _engine = null;
     }
+    _dbPath = dbPath;
     final dbPathUtf8 = dbPath.toNativeUtf8();
     try {
       final ptr = _engineCreate(dbPathUtf8);
@@ -369,63 +375,10 @@ class AstroBridge implements AstroEngine {
       }
 
       final s = summaryPtr.ref;
-      return NightSummary(
-        sunset: DateTime.fromMillisecondsSinceEpoch(s.sunsetUtc * 1000, isUtc: true).toLocal(),
-        civilDusk: DateTime.fromMillisecondsSinceEpoch(s.civilDuskUtc * 1000, isUtc: true).toLocal(),
-        nauticalDusk: DateTime.fromMillisecondsSinceEpoch(s.nauticalDuskUtc * 1000, isUtc: true).toLocal(),
-        astronomicalDusk: DateTime.fromMillisecondsSinceEpoch(s.astronomicalDuskUtc * 1000, isUtc: true).toLocal(),
-        solarMidnight: DateTime.fromMillisecondsSinceEpoch(s.solarMidnightUtc * 1000, isUtc: true).toLocal(),
-        astronomicalDawn: DateTime.fromMillisecondsSinceEpoch(s.astronomicalDawnUtc * 1000, isUtc: true).toLocal(),
-        nauticalDawn: DateTime.fromMillisecondsSinceEpoch(s.nauticalDawnUtc * 1000, isUtc: true).toLocal(),
-        civilDawn: DateTime.fromMillisecondsSinceEpoch(s.civilDawnUtc * 1000, isUtc: true).toLocal(),
-        sunrise: DateTime.fromMillisecondsSinceEpoch(s.sunriseUtc * 1000, isUtc: true).toLocal(),
-        moonIllumination: s.moonIllumination,
-        moonPhaseName: s.moonPhaseName.toDartString(),
-        hasAstronomicalNight: s.hasAstronomicalNight == 1,
-      );
+      return FfiMappers.mapNightSummary(s);
     } finally {
       calloc.free(obsPtr);
       calloc.free(summaryPtr);
-    }
-  }
-
-  void _populateCriteriaHorizon(
-    Pointer<AstroFilterCriteria> critPtr,
-    FilterState? filters,
-    List<Pointer<NativeType>> allocatedPointers,
-  ) {
-    if (filters == null) {
-      critPtr.ref.maxAltitudeDeg = 90.0;
-      critPtr.ref.useCustomHorizon = 0;
-      critPtr.ref.horizonPointsCount = 0;
-      critPtr.ref.horizonAzimuths = nullptr;
-      critPtr.ref.horizonAltitudes = nullptr;
-      return;
-    }
-
-    critPtr.ref.maxAltitudeDeg = filters.maxAltitude;
-
-    if (filters.useCustomHorizon && filters.horizonPoints.isNotEmpty) {
-      final count = filters.horizonPoints.length;
-      final azPtr = calloc<Double>(count);
-      final altPtr = calloc<Double>(count);
-      allocatedPointers.add(azPtr);
-      allocatedPointers.add(altPtr);
-
-      for (int i = 0; i < count; i++) {
-        azPtr[i] = filters.horizonPoints[i].azimuth;
-        altPtr[i] = filters.horizonPoints[i].altitude;
-      }
-
-      critPtr.ref.useCustomHorizon = 1;
-      critPtr.ref.horizonPointsCount = count;
-      critPtr.ref.horizonAzimuths = azPtr;
-      critPtr.ref.horizonAltitudes = altPtr;
-    } else {
-      critPtr.ref.useCustomHorizon = 0;
-      critPtr.ref.horizonPointsCount = 0;
-      critPtr.ref.horizonAzimuths = nullptr;
-      critPtr.ref.horizonAltitudes = nullptr;
     }
   }
 
@@ -441,78 +394,25 @@ class AstroBridge implements AstroEngine {
     final critPtr = calloc<AstroFilterCriteria>();
     final allocatedPointers = <Pointer<NativeType>>[];
 
-    Pointer<Utf8>? catUtf8;
-    Pointer<Utf8>? typeUtf8;
-    Pointer<Utf8>? searchUtf8;
-
     try {
-      obsPtr.ref.latitudeDeg = filters.observerLat;
-      obsPtr.ref.longitudeDeg = filters.observerLon;
-      obsPtr.ref.elevationM = filters.observerElevation;
+      FfiMappers.populateObserver(
+        obsPtr,
+        latitudeDeg: filters.observerLat,
+        longitudeDeg: filters.observerLon,
+        elevationM: filters.observerElevation,
+      );
 
-      critPtr.ref.minAltitudeDeg = filters.minAltitude;
-      critPtr.ref.minDurationHours = filters.minDurationHours;
-
-      int windowStartUtc;
-      int windowEndUtc;
-      if (filters.useCustomTimeWindow) {
-        final startDt = filters.getWindowStart(filters.date);
-        final endDt = filters.getWindowEnd(filters.date);
-        windowStartUtc = startDt.toUtc().millisecondsSinceEpoch ~/ 1000;
-        windowEndUtc = endDt.toUtc().millisecondsSinceEpoch ~/ 1000;
-      } else {
-        if (!night.hasAstronomicalNight || night.astronomicalDawn.isBefore(night.astronomicalDusk)) {
-          final start = (night.nauticalDusk.isBefore(night.nauticalDawn) && night.nauticalDusk.isAfter(night.sunset))
-              ? night.nauticalDusk
-              : night.sunset;
-          final end = (night.nauticalDawn.isAfter(start))
-              ? night.nauticalDawn
-              : (night.sunrise.isAfter(start) ? night.sunrise : start.add(const Duration(hours: 8)));
-          windowStartUtc = start.toUtc().millisecondsSinceEpoch ~/ 1000;
-          windowEndUtc = end.toUtc().millisecondsSinceEpoch ~/ 1000;
-        } else {
-          windowStartUtc = night.astronomicalDusk.toUtc().millisecondsSinceEpoch ~/ 1000;
-          windowEndUtc = night.astronomicalDawn.toUtc().millisecondsSinceEpoch ~/ 1000;
-        }
-      }
-      if (windowEndUtc <= windowStartUtc) {
-        windowEndUtc = windowStartUtc + 8 * 3600;
-      }
-      critPtr.ref.windowStartUtc = windowStartUtc;
-      critPtr.ref.windowEndUtc = windowEndUtc;
-      critPtr.ref.minMoonSeparationDeg = filters.minMoonSeparation;
-      critPtr.ref.minAzimuthDeg = filters.minAzimuth;
-      critPtr.ref.maxAzimuthDeg = filters.maxAzimuth;
-      critPtr.ref.quadrant = filters.quadrant;
-      critPtr.ref.maxMagnitude = filters.maxMagnitude;
-      critPtr.ref.minMagnitude = filters.minMagnitude;
-      critPtr.ref.minSizeArcmin = filters.minSizeArcmin;
-      critPtr.ref.maxSizeArcmin = filters.maxSizeArcmin;
-
-      final catStr = filters.selectedCatalogs.join(',');
-      catUtf8 = catStr.toNativeUtf8();
-      critPtr.ref.catalogsCsv = catUtf8;
-
-      final typeStr = filters.selectedObjectTypes.join(',');
-      typeUtf8 = typeStr.toNativeUtf8();
-      critPtr.ref.objectTypesCsv = typeUtf8;
-
-      searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
-      critPtr.ref.searchQuery = searchUtf8;
-
-      // Request a comprehensive candidate pool from C++ so UI-layer sorting
-      // (by brightness, altitude, duration, etc.) operates over the full observable
-      // catalog pool, allowing the true top targets for each sort mode to be presented accurately.
+      final window = NightWindowPolicy.calculateWindow(filters: filters, night: night);
       final candidatePoolLimit = math.max(filters.maxTargets * 10, 500);
-      critPtr.ref.limit = candidatePoolLimit;
-      critPtr.ref.offset = 0;
-      critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
-      critPtr.ref.customStartHour = filters.customStartHour;
-      critPtr.ref.customStartMinute = filters.customStartMinute;
-      critPtr.ref.customEndHour = filters.customEndHour;
-      critPtr.ref.customEndMinute = filters.customEndMinute;
-      critPtr.ref.utcOffsetMinutes = filters.date.timeZoneOffset.inMinutes;
-      _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
+
+      FfiMappers.populateCriteria(
+        critPtr,
+        filters: filters,
+        windowStartUtc: window.startUtcSeconds,
+        windowEndUtc: window.endUtcSeconds,
+        limit: candidatePoolLimit,
+        allocatedPointers: allocatedPointers,
+      );
 
       final listPtr = _filterTargets(_engine!, obsPtr, critPtr, stepMinutes);
       if (listPtr == nullptr) return [];
@@ -523,56 +423,7 @@ class AstroBridge implements AstroEngine {
         final results = <TargetItem>[];
 
         for (int i = 0; i < count; ++i) {
-          final item = itemsPtr[i];
-
-          final mag = item.magnitude < 900.0 ? item.magnitude : null;
-          final majAx = item.majorAxisArcmin >= 0.0 ? item.majorAxisArcmin : null;
-          final posAng = item.positionAngleDeg >= 0.0 ? item.positionAngleDeg : null;
-          final sb = item.surfaceBrightness >= 0.0 ? item.surfaceBrightness : null;
-
-          final nameStr = item.name.address != 0 ? item.name.toDartString() : '';
-          final mStr = item.messier.address != 0 ? item.messier.toDartString() : '';
-          final cStr = item.caldwell.address != 0 ? item.caldwell.toDartString() : '';
-          final arpStr = item.arp.address != 0 ? item.arp.toDartString() : '';
-          final herschelStr = item.herschel.address != 0 ? item.herschel.toDartString() : '';
-          final catStr = item.catalog.address != 0 ? item.catalog.toDartString() : '';
-          final typeStr = item.objectType.address != 0 ? item.objectType.toDartString() : '';
-          final constelStr = item.constellation.address != 0 ? item.constellation.toDartString() : '';
-          final commonStr = item.commonName.address != 0 ? item.commonName.toDartString() : '';
-
-          final transit = DateTime.fromMillisecondsSinceEpoch(item.transitUtc * 1000, isUtc: true).toLocal();
-          final vStart = item.visibleStartUtc > 0
-              ? DateTime.fromMillisecondsSinceEpoch(item.visibleStartUtc * 1000, isUtc: true).toLocal()
-              : null;
-          final vEnd = item.visibleEndUtc > 0
-              ? DateTime.fromMillisecondsSinceEpoch(item.visibleEndUtc * 1000, isUtc: true).toLocal()
-              : null;
-
-          results.add(TargetItem(
-            id: item.id,
-            name: nameStr,
-            messier: mStr.isNotEmpty ? mStr : null,
-            caldwell: cStr.isNotEmpty ? cStr : null,
-            arp: arpStr.isNotEmpty ? arpStr : null,
-            herschel: herschelStr.isNotEmpty ? herschelStr : null,
-            catalog: catStr,
-            objectType: typeStr,
-            constellation: constelStr,
-            raHours: item.raHours,
-            decDegrees: item.decDegrees,
-            magnitude: mag,
-            majorAxisArcmin: majAx,
-            positionAngleDeg: posAng,
-            surfaceBrightness: sb,
-            commonName: commonStr.isNotEmpty ? commonStr : null,
-            peakAltitudeDeg: item.peakAltitudeDeg,
-            visibleDurationHours: item.visibleDurationHours,
-            transitTime: transit,
-            visibleStartTime: vStart,
-            visibleEndTime: vEnd,
-            minMoonSepDeg: item.minMoonSepDeg,
-            meetsCriteria: item.meetsCriteria == 1,
-          ));
+          results.add(FfiMappers.mapTargetItem(itemsPtr[i]));
         }
 
         return results;
@@ -580,9 +431,6 @@ class AstroBridge implements AstroEngine {
         _freeTargetList(listPtr);
       }
     } finally {
-      if (catUtf8 != null) calloc.free(catUtf8);
-      if (typeUtf8 != null) calloc.free(typeUtf8);
-      if (searchUtf8 != null) calloc.free(searchUtf8);
       for (final p in allocatedPointers) {
         calloc.free(p);
       }
@@ -639,7 +487,6 @@ class AstroBridge implements AstroEngine {
 
   @override
   List<PeriodTargetItem> filterTargetsPeriod({
-
     required FilterState filters,
     required DateTime periodStart,
     required DateTime periodEnd,
@@ -651,55 +498,29 @@ class AstroBridge implements AstroEngine {
     final critPtr = calloc<AstroFilterCriteria>();
     final allocatedPointers = <Pointer<NativeType>>[];
 
-    Pointer<Utf8>? catUtf8;
-    Pointer<Utf8>? typeUtf8;
-    Pointer<Utf8>? searchUtf8;
-
     try {
-      obsPtr.ref.latitudeDeg = filters.observerLat;
-      obsPtr.ref.longitudeDeg = filters.observerLon;
-      obsPtr.ref.elevationM = filters.observerElevation;
+      FfiMappers.populateObserver(
+        obsPtr,
+        latitudeDeg: filters.observerLat,
+        longitudeDeg: filters.observerLon,
+        elevationM: filters.observerElevation,
+      );
 
-      critPtr.ref.minAltitudeDeg = filters.minAltitude;
-      critPtr.ref.minDurationHours = filters.minDurationHours;
-      critPtr.ref.minMoonSeparationDeg = filters.minMoonSeparation;
-      critPtr.ref.minAzimuthDeg = filters.minAzimuth;
-      critPtr.ref.maxAzimuthDeg = filters.maxAzimuth;
-      critPtr.ref.quadrant = filters.quadrant;
-      critPtr.ref.maxMagnitude = filters.maxMagnitude;
-      critPtr.ref.minMagnitude = filters.minMagnitude;
-      critPtr.ref.minSizeArcmin = filters.minSizeArcmin;
-      critPtr.ref.maxSizeArcmin = filters.maxSizeArcmin;
-
-      final catStr = filters.selectedCatalogs.join(',');
-      catUtf8 = catStr.toNativeUtf8();
-      critPtr.ref.catalogsCsv = catUtf8;
-
-      final typeStr = filters.selectedObjectTypes.join(',');
-      typeUtf8 = typeStr.toNativeUtf8();
-      critPtr.ref.objectTypesCsv = typeUtf8;
-
-      searchUtf8 = filters.searchQuery.trim().toNativeUtf8();
-      critPtr.ref.searchQuery = searchUtf8;
-
-      // Request a comprehensive candidate pool from C++ so UI-layer sorting
-      // (by brightness, peak altitude, days observable, peak date) operates over
-      // the full observable catalog pool, ensuring true top targets for each sort mode.
       final candidatePoolLimit = math.max(filters.maxTargets * 10, 500);
-      critPtr.ref.limit = candidatePoolLimit;
-      critPtr.ref.offset = 0;
-      critPtr.ref.useCustomTimeWindow = filters.useCustomTimeWindow ? 1 : 0;
-      critPtr.ref.customStartHour = filters.customStartHour;
-      critPtr.ref.customStartMinute = filters.customStartMinute;
-      critPtr.ref.customEndHour = filters.customEndHour;
-      critPtr.ref.customEndMinute = filters.customEndMinute;
-      critPtr.ref.utcOffsetMinutes = DateTime.now().timeZoneOffset.inMinutes;
-      _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
-
       final startUtc = DateTime.utc(periodStart.year, periodStart.month, periodStart.day, 12, 0, 0)
               .millisecondsSinceEpoch ~/ 1000;
       final endUtc = DateTime.utc(periodEnd.year, periodEnd.month, periodEnd.day, 12, 0, 0)
               .millisecondsSinceEpoch ~/ 1000;
+
+      FfiMappers.populateCriteria(
+        critPtr,
+        filters: filters,
+        windowStartUtc: startUtc,
+        windowEndUtc: endUtc,
+        limit: candidatePoolLimit,
+        allocatedPointers: allocatedPointers,
+        utcOffsetMinutes: periodStart.timeZoneOffset.inMinutes,
+      );
 
       final listPtr = _filterTargetsPeriod(
         _engine!,
@@ -718,53 +539,7 @@ class AstroBridge implements AstroEngine {
         final results = <PeriodTargetItem>[];
 
         for (int i = 0; i < count; i++) {
-          final cItem = itemsPtr[i];
-          final peakUnix = cItem.peakDateUtc;
-          final peakDt = peakUnix > 0
-              ? () {
-                  final utc = DateTime.fromMillisecondsSinceEpoch(peakUnix * 1000, isUtc: true);
-                  return DateTime(utc.year, utc.month, utc.day);
-                }()
-              : null;
-
-          results.add(PeriodTargetItem(
-            id: cItem.id,
-            name: cItem.name.address != 0 ? cItem.name.toDartString() : '',
-            messier: cItem.messier.address != 0 && cItem.messier.toDartString().isNotEmpty
-                ? cItem.messier.toDartString()
-                : null,
-            caldwell: cItem.caldwell.address != 0 && cItem.caldwell.toDartString().isNotEmpty
-                ? cItem.caldwell.toDartString()
-                : null,
-            arp: cItem.arp.address != 0 && cItem.arp.toDartString().isNotEmpty
-                ? cItem.arp.toDartString()
-                : null,
-            herschel: cItem.herschel.address != 0 && cItem.herschel.toDartString().isNotEmpty
-                ? cItem.herschel.toDartString()
-                : null,
-            catalog: cItem.catalog.address != 0 ? cItem.catalog.toDartString() : '',
-            objectType: cItem.objectType.address != 0 ? cItem.objectType.toDartString() : '',
-            constellation: cItem.constellation.address != 0 ? cItem.constellation.toDartString() : '',
-            raHours: cItem.raHours,
-            decDegrees: cItem.decDegrees,
-            magnitude: cItem.magnitude < 900.0 ? cItem.magnitude : null,
-            majorAxisArcmin: cItem.majorAxisArcmin >= 0 ? cItem.majorAxisArcmin : null,
-            positionAngleDeg: cItem.positionAngleDeg >= 0 ? cItem.positionAngleDeg : null,
-            surfaceBrightness: cItem.surfaceBrightness >= 0 ? cItem.surfaceBrightness : null,
-            commonName: cItem.commonName.address != 0 && cItem.commonName.toDartString().isNotEmpty
-                ? cItem.commonName.toDartString()
-                : null,
-            peakAltitudeDeg: cItem.peakAltitudeDeg,
-            maxHoursObservable: cItem.maxHoursObservable,
-            peakDate: peakDt,
-            observableDaysCount: cItem.observableDaysCount,
-            totalPeriodDays: cItem.totalPeriodDays,
-            startMonth: cItem.startMonth,
-            startDay: cItem.startDay,
-            endMonth: cItem.endMonth,
-            endDay: cItem.endDay,
-            isObservable: cItem.isObservable != 0,
-          ));
+          results.add(FfiMappers.mapPeriodTargetItem(itemsPtr[i]));
         }
 
         return results;
@@ -772,9 +547,6 @@ class AstroBridge implements AstroEngine {
         _freePeriodTargetList(listPtr);
       }
     } finally {
-      if (catUtf8 != null) calloc.free(catUtf8);
-      if (typeUtf8 != null) calloc.free(typeUtf8);
-      if (searchUtf8 != null) calloc.free(searchUtf8);
       for (final p in allocatedPointers) {
         calloc.free(p);
       }
@@ -820,14 +592,7 @@ class AstroBridge implements AstroEngine {
         final points = <AltitudePoint>[];
 
         for (int i = 0; i < count; ++i) {
-          final p = pointsPtr[i];
-          points.add(AltitudePoint(
-            time: DateTime.fromMillisecondsSinceEpoch(p.timestampUtc * 1000, isUtc: true).toLocal(),
-            altitude: p.altitudeDeg,
-            azimuth: p.azimuthDeg,
-            moonSeparation: p.moonSeparationDeg,
-            meetsCriteria: p.meetsCriteria == 1,
-          ));
+          points.add(FfiMappers.mapAltitudePoint(pointsPtr[i]));
         }
         return points;
       } finally {
@@ -932,7 +697,7 @@ class AstroBridge implements AstroEngine {
     critPtr.ref.customEndHour = filters?.customEndHour ?? 23;
     critPtr.ref.customEndMinute = filters?.customEndMinute ?? 0;
     critPtr.ref.utcOffsetMinutes = filters?.date.timeZoneOffset.inMinutes ?? DateTime.now().timeZoneOffset.inMinutes;
-    _populateCriteriaHorizon(critPtr, filters, allocatedPointers);
+    FfiMappers.populateCustomHorizon(critPtr, filters, allocatedPointers);
 
     try {
       final jsonPtr = _getTargetYearlyVisibilityJson(

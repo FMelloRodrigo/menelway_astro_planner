@@ -176,6 +176,14 @@ std::vector<catalog::TargetWithVisibility> TargetFilterService::filter_targets(
         results.push_back(std::move(s.item));
     }
 
+    if (filter_options.offset > 0) {
+        if (static_cast<size_t>(filter_options.offset) >= results.size()) {
+            results.clear();
+        } else {
+            results.erase(results.begin(), results.begin() + filter_options.offset);
+        }
+    }
+
     if (filter_options.limit > 0 && results.size() > static_cast<size_t>(filter_options.limit)) {
         results.resize(filter_options.limit);
     }
@@ -207,6 +215,14 @@ std::vector<catalog::TargetWithPeriodVisibility> TargetFilterService::filter_tar
 
     std::vector<catalog::DsoObject> candidates = catalog_repo_.query_objects(candidate_opts);
     if (candidates.empty()) return results;
+
+    time::JulianDate eval_jd = start_jd;
+    if (end_jd.value > start_jd.value) {
+        eval_jd = time::JulianDate{(start_jd.value + end_jd.value) * 0.5};
+    }
+    for (auto& dso : candidates) {
+        decorate_solar_system_body(dso, eval_jd, obs);
+    }
 
     auto period_ctx = visibility::prepare_period_context(obs, visibility_criteria, start_jd, end_jd, step_minutes);
 
@@ -301,6 +317,14 @@ std::vector<catalog::TargetWithPeriodVisibility> TargetFilterService::filter_tar
             }
             return a.dso.id < b.dso.id;
         });
+    }
+
+    if (filter_options.offset > 0) {
+        if (static_cast<size_t>(filter_options.offset) >= results.size()) {
+            results.clear();
+        } else {
+            results.erase(results.begin(), results.begin() + filter_options.offset);
+        }
     }
 
     if (filter_options.limit > 0 && results.size() > static_cast<size_t>(filter_options.limit)) {

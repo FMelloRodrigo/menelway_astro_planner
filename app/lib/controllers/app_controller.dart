@@ -295,7 +295,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Persists current application settings and user profile to storage.
-  void saveSettings({bool isRedNightMode = false, String? languageCode}) {
+  void saveSettings({bool? isRedNightMode, String? languageCode}) {
     SettingsService.saveSettings(
       filters: _filters,
       isRedNightMode: isRedNightMode,
@@ -310,7 +310,7 @@ class AppController extends ChangeNotifier {
   }
 
   /// Resets target filter criteria back to defaults while preserving active observer coordinates.
-  void resetFiltersOnly({bool isRedNightMode = false, String? languageCode}) {
+  void resetFiltersOnly({bool? isRedNightMode, String? languageCode}) {
     _filters = FilterState(
       observerLat: _filters.observerLat,
       observerLon: _filters.observerLon,
@@ -362,10 +362,12 @@ class AppController extends ChangeNotifier {
         _filters.observerLon != site.longitude ||
         _filters.observerElevation != site.elevation ||
         _filters.observerLocationName != site.name) {
-      _filters.observerLat = site.latitude;
-      _filters.observerLon = site.longitude;
-      _filters.observerElevation = site.elevation;
-      _filters.observerLocationName = site.name;
+      _filters = _filters.copyWith(
+        observerLat: site.latitude,
+        observerLon: site.longitude,
+        observerElevation: site.elevation,
+        observerLocationName: site.name,
+      );
 
       _nightSummary = engine.getNightSummary(
         latitude: site.latitude,

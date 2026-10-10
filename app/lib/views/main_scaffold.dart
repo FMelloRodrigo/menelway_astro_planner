@@ -1158,7 +1158,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                     maxTargets: _filters.maxTargets,
                     onMaxTargetsChanged: (newLimit) {
                       setState(() {
-                        _filters.maxTargets = newLimit;
+                        _filters = _filters.copyWith(maxTargets: newLimit);
                       });
                       _saveSettings();
                       _runFiltering();

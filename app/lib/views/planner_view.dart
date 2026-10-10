@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/astro_bridge.dart';
 import '../core/astro_engine.dart';
+import '../core/astro_isolate.dart';
 import '../core/app_logger.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
@@ -12,6 +15,7 @@ import 'filter_dialog.dart';
 import 'target_details_sheet.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
+import '../widgets/add_target_to_list_dialog.dart';
 
 enum PeriodSortBy {
   days,
@@ -93,43 +97,59 @@ class _PlannerViewState extends State<PlannerView> {
     super.dispose();
   }
 
-  void _runPeriodQuery() {
+  int _periodRequestId = 0;
+
+  void _runPeriodQuery() async {
+    final requestId = ++_periodRequestId;
     setState(() => _isLoading = true);
 
-    Future.microtask(() {
-      try {
-        final results = _engine.filterTargetsPeriod(
+    try {
+      final engine = _engine;
+      final path = engine is AstroBridge ? engine.databasePath : null;
+      List<PeriodTargetItem> results;
+
+      if (path != null && !kIsWeb) {
+        results = await AstroIsolate.filterTargetsPeriod(
+          dbPath: path,
           filters: widget.filters,
           periodStart: _startDate,
           periodEnd: _endDate,
           stepMinutes: 10,
         );
-
-        if (mounted) {
-          setState(() {
-            _targets = results;
-            _isLoading = false;
-            // Update selection if it exists or clear if removed
-            if (_selectedTarget != null) {
-              final matching = _targets.where((t) => t.id == _selectedTarget!.id).firstOrNull;
-              _selectedTarget = matching;
-            }
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n.errorCalculatingPeriodTargets(e.toString()),
-              ),
-            ),
-          );
-        }
+      } else {
+        // Test / Web fallback
+        results = await Future(() => _engine.filterTargetsPeriod(
+          filters: widget.filters,
+          periodStart: _startDate,
+          periodEnd: _endDate,
+          stepMinutes: 10,
+        ));
       }
-    });
+
+      if (mounted && requestId == _periodRequestId) {
+        setState(() {
+          _targets = results;
+          _isLoading = false;
+          // Update selection if it exists or clear if removed
+          if (_selectedTarget != null) {
+            final matching = _targets.where((t) => t.id == _selectedTarget!.id).firstOrNull;
+            _selectedTarget = matching;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted && requestId == _periodRequestId) {
+        setState(() => _isLoading = false);
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.errorCalculatingPeriodTargets(e.toString()),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   // Preset Handlers
@@ -942,77 +962,14 @@ class _PlannerViewState extends State<PlannerView> {
   }
 
   void _showAddToListDialog(PeriodTargetItem target) {
-    final l10n = AppLocalizations.of(context);
-    final palette = AstroPalette.of(context);
-    final textColor = palette.textPrimary;
-    final accentColor = palette.accent;
-
-    if (widget.availableLists.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.noObservingListsFound),
-          action: SnackBarAction(label: l10n.okBtn, onPressed: () {}),
-        ),
-      );
-      return;
-    }
-
-    showDialog(
+    AddTargetToListDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: palette.surface,
-        title: Text(l10n.addToObservingList, style: TextStyle(color: textColor, fontSize: 16)),
-        content: SizedBox(
-          width: 320,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.addNamedTargetTo(target.displayName),
-                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
-              ),
-              const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widget.availableLists.length,
-                  itemBuilder: (context, idx) {
-                    final list = widget.availableLists[idx];
-                    return ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.playlist_play_rounded, color: accentColor),
-                      title: Text(list.name, style: TextStyle(color: textColor, fontSize: 13)),
-                      subtitle: Text(
-                        "${l10n.observingListItemCount(list.items.length)}${list.sessionDate.isNotEmpty ? ' • ${list.sessionDate}' : ''}",
-                        style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 11),
-                      ),
-                      onTap: () {
-                        widget.onAddToList(list.id, target.id, null);
-                        Navigator.of(ctx).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.addedTargetToList(target.displayName, list.name)),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.cancel, style: TextStyle(color: textColor.withValues(alpha: 0.7))),
-          ),
-        ],
-      ),
+      targetId: target.id,
+      targetDisplayName: target.displayName,
+      availableLists: widget.availableLists,
+      onAddToList: (listId, dsoId, notes) {
+        widget.onAddToList(listId, dsoId, notes);
+      },
     );
   }
 

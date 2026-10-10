@@ -1,5 +1,4 @@
 #include "astro/storage.hpp"
-#include "astro/target_filter_service.hpp"
 #include "astro/ephemeris.hpp"
 #include "astro/time.hpp"
 #include "sqlite3.h"
@@ -150,6 +149,93 @@ std::string build_fts_query(const std::string& input) {
     return phrase + " OR (" + prefix_and + ")";
 }
 
+struct ParamBind {
+    enum class Type { Text, Double, Int64 };
+    Type type;
+    std::string str_val;
+    double dbl_val{0.0};
+    int64_t int_val{0};
+};
+
+void append_dso_filter_clauses(
+    const catalog::DsoFilterOptions& options,
+    std::ostringstream& sql,
+    std::vector<ParamBind>& binds
+) {
+    // Catalogs filter
+    if (!options.catalogs.empty()) {
+        sql << "AND (";
+        for (size_t i = 0; i < options.catalogs.size(); ++i) {
+            if (i > 0) sql << " OR ";
+            const auto& cat = options.catalogs[i];
+            if (cat == "Messier") {
+                sql << "d.messier IS NOT NULL";
+            } else if (cat == "Caldwell") {
+                sql << "d.caldwell IS NOT NULL";
+            } else if (cat == "Arp") {
+                sql << "d.arp IS NOT NULL";
+            } else if (cat == "Herschel") {
+                sql << "d.herschel IS NOT NULL";
+            } else {
+                sql << "d.catalog = ?";
+                binds.push_back({ParamBind::Type::Text, cat, 0.0, 0});
+            }
+        }
+        sql << ") ";
+    }
+
+    // Object types filter
+    if (!options.object_types.empty()) {
+        sql << "AND d.object_type IN (";
+        for (size_t i = 0; i < options.object_types.size(); ++i) {
+            if (i > 0) sql << ",";
+            sql << "?";
+            binds.push_back({ParamBind::Type::Text, options.object_types[i], 0.0, 0});
+        }
+        sql << ") ";
+    }
+
+    // Magnitude
+    if (options.max_magnitude.has_value()) {
+        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude <= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.max_magnitude, 0});
+    }
+    if (options.min_magnitude.has_value()) {
+        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude >= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.min_magnitude, 0});
+    }
+
+    // Size
+    if (options.min_size_arcmin.has_value()) {
+        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin >= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.min_size_arcmin, 0});
+    }
+    if (options.max_size_arcmin.has_value()) {
+        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin <= ?) ";
+        binds.push_back({ParamBind::Type::Double, "", *options.max_size_arcmin, 0});
+    }
+
+    // Constellation
+    if (options.constellation.has_value() && !options.constellation->empty()) {
+        sql << "AND d.constellation = ? ";
+        binds.push_back({ParamBind::Type::Text, *options.constellation, 0.0, 0});
+    }
+}
+
+void bind_params(sqlite3_stmt* stmt, const std::vector<ParamBind>& binds) {
+    for (size_t i = 0; i < binds.size(); ++i) {
+        int idx = static_cast<int>(i + 1);
+        const auto& b = binds[i];
+        if (b.type == ParamBind::Type::Text) {
+            sqlite3_bind_text(stmt, idx, b.str_val.c_str(), -1, SQLITE_TRANSIENT);
+        } else if (b.type == ParamBind::Type::Double) {
+            sqlite3_bind_double(stmt, idx, b.dbl_val);
+        } else if (b.type == ParamBind::Type::Int64) {
+            sqlite3_bind_int64(stmt, idx, b.int_val);
+        }
+    }
+}
+
 } // namespace
 
 SqliteStorage::SqliteStorage(const std::string& catalog_db_path, const std::string& user_db_path) {
@@ -210,6 +296,13 @@ SqliteStorage::SqliteStorage(const std::string& catalog_db_path, const std::stri
             sqlite3_finalize(attach_stmt);
         } else {
             last_error_ = sqlite3_errmsg(db_);
+        }
+
+        if (!has_user_db_) {
+            last_error_ = "Failed to attach user database: " + last_error_;
+            sqlite3_close(db_);
+            db_ = nullptr;
+            return;
         }
     }
 
@@ -306,18 +399,23 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
             << "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
             << "FROM dso_objects d "
             << "JOIN dso_fts f ON d.id = f.rowid "
-            << "WHERE dso_fts MATCH ? "
-            << "ORDER BY bm25(dso_fts) "
-            << "LIMIT " << options.limit << " OFFSET " << options.offset << ";";
+            << "WHERE dso_fts MATCH ? ";
 
-        std::string fts_query = build_fts_query(options.search_query);
+        std::vector<ParamBind> binds;
+        binds.push_back({ParamBind::Type::Text, build_fts_query(options.search_query), 0.0, 0});
+        append_dso_filter_clauses(options, sql, binds);
+
+        sql << "ORDER BY bm25(dso_fts) "
+            << "LIMIT ? OFFSET ?;";
+        binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.limit)});
+        binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.offset)});
 
         sqlite3_stmt* raw_stmt = nullptr;
         std::string sql_str = sql.str();
         int rc = sqlite3_prepare_v2(db_, sql_str.c_str(), -1, &raw_stmt, nullptr);
         if (rc == SQLITE_OK) {
             UniqueStmt stmt(raw_stmt);
-            sqlite3_bind_text(stmt.get(), 1, fts_query.c_str(), -1, SQLITE_TRANSIENT);
+            bind_params(stmt.get(), binds);
             while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
                 results.push_back(row_to_dso(stmt.get()));
             }
@@ -325,21 +423,31 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
 
         // Fallback: If FTS returned 0 candidates, execute LIKE fallback on exact fields
         if (results.empty()) {
-            const char* fallback_sql =
-                "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
-                "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
-                "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
-                "FROM dso_objects d "
-                "WHERE d.name LIKE ? OR d.messier LIKE ? OR d.caldwell LIKE ? OR d.arp LIKE ? "
-                "   OR d.herschel LIKE ? OR d.ngc_ic LIKE ? OR d.common_names LIKE ? OR d.identifiers LIKE ? "
-                "LIMIT 50;";
+            std::ostringstream fb_sql;
+            fb_sql << "SELECT d.id, d.name, d.messier, d.caldwell, d.arp, d.herschel, d.ngc_ic, d.catalog, d.catalog_number, "
+                   << "d.object_type, d.constellation, d.ra_deg, d.dec_deg, d.magnitude, d.b_mag, "
+                   << "d.major_axis_arcmin, d.minor_axis_arcmin, d.position_angle_deg, d.surface_brightness, d.common_names, d.identifiers "
+                   << "FROM dso_objects d "
+                   << "WHERE (d.name LIKE ? OR d.messier LIKE ? OR d.caldwell LIKE ? OR d.arp LIKE ? "
+                   << "   OR d.herschel LIKE ? OR d.ngc_ic LIKE ? OR d.common_names LIKE ? OR d.identifiers LIKE ?) ";
+
+            std::vector<ParamBind> fb_binds;
+            std::string like_pattern = "%" + options.search_query + "%";
+            for (int i = 0; i < 8; ++i) {
+                fb_binds.push_back({ParamBind::Type::Text, like_pattern, 0.0, 0});
+            }
+            append_dso_filter_clauses(options, fb_sql, fb_binds);
+
+            fb_sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC "
+                   << "LIMIT ? OFFSET ?;";
+            fb_binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.limit)});
+            fb_binds.push_back({ParamBind::Type::Int64, "", 0.0, static_cast<int64_t>(options.offset)});
+
             sqlite3_stmt* fb_stmt = nullptr;
-            if (sqlite3_prepare_v2(db_, fallback_sql, -1, &fb_stmt, nullptr) == SQLITE_OK) {
+            std::string fb_sql_str = fb_sql.str();
+            if (sqlite3_prepare_v2(db_, fb_sql_str.c_str(), -1, &fb_stmt, nullptr) == SQLITE_OK) {
                 UniqueStmt stmt(fb_stmt);
-                std::string like_pattern = "%" + options.search_query + "%";
-                for (int i = 1; i <= 8; ++i) {
-                    sqlite3_bind_text(stmt.get(), i, like_pattern.c_str(), -1, SQLITE_TRANSIENT);
-                }
+                bind_params(stmt.get(), fb_binds);
                 while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
                     results.push_back(row_to_dso(stmt.get()));
                 }
@@ -357,73 +465,8 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         << "FROM dso_objects d "
         << "WHERE 1=1 ";
 
-    struct ParamBind {
-        enum class Type { Text, Double, Int64 };
-        Type type;
-        std::string str_val;
-        double dbl_val{0.0};
-        int64_t int_val{0};
-    };
     std::vector<ParamBind> binds;
-
-    // Catalogs filter
-    if (!options.catalogs.empty()) {
-        sql << "AND (";
-        for (size_t i = 0; i < options.catalogs.size(); ++i) {
-            if (i > 0) sql << " OR ";
-            const auto& cat = options.catalogs[i];
-            if (cat == "Messier") {
-                sql << "d.messier IS NOT NULL";
-            } else if (cat == "Caldwell") {
-                sql << "d.caldwell IS NOT NULL";
-            } else if (cat == "Arp") {
-                sql << "d.arp IS NOT NULL";
-            } else if (cat == "Herschel") {
-                sql << "d.herschel IS NOT NULL";
-            } else {
-                sql << "d.catalog = ?";
-                binds.push_back({ParamBind::Type::Text, cat, 0.0, 0});
-            }
-        }
-        sql << ") ";
-    }
-
-    // Object types filter
-    if (!options.object_types.empty()) {
-        sql << "AND d.object_type IN (";
-        for (size_t i = 0; i < options.object_types.size(); ++i) {
-            if (i > 0) sql << ",";
-            sql << "?";
-            binds.push_back({ParamBind::Type::Text, options.object_types[i], 0.0, 0});
-        }
-        sql << ") ";
-    }
-
-    // Magnitude
-    if (options.max_magnitude.has_value()) {
-        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude <= ?) ";
-        binds.push_back({ParamBind::Type::Double, "", *options.max_magnitude, 0});
-    }
-    if (options.min_magnitude.has_value()) {
-        sql << "AND (d.magnitude IS NOT NULL AND d.magnitude >= ?) ";
-        binds.push_back({ParamBind::Type::Double, "", *options.min_magnitude, 0});
-    }
-
-    // Size
-    if (options.min_size_arcmin.has_value()) {
-        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin >= ?) ";
-        binds.push_back({ParamBind::Type::Double, "", *options.min_size_arcmin, 0});
-    }
-    if (options.max_size_arcmin.has_value()) {
-        sql << "AND (d.major_axis_arcmin IS NOT NULL AND d.major_axis_arcmin <= ?) ";
-        binds.push_back({ParamBind::Type::Double, "", *options.max_size_arcmin, 0});
-    }
-
-    // Constellation
-    if (options.constellation.has_value() && !options.constellation->empty()) {
-        sql << "AND d.constellation = ? ";
-        binds.push_back({ParamBind::Type::Text, *options.constellation, 0.0, 0});
-    }
+    append_dso_filter_clauses(options, sql, binds);
 
     // Order and Limit
     sql << "ORDER BY (d.messier IS NOT NULL OR d.caldwell IS NOT NULL OR d.arp IS NOT NULL OR d.herschel IS NOT NULL) DESC, (d.magnitude IS NULL), d.magnitude ASC ";
@@ -439,18 +482,7 @@ std::vector<catalog::DsoObject> SqliteStorage::query_objects(
         return results;
     }
     UniqueStmt stmt(raw_stmt);
-
-    for (size_t i = 0; i < binds.size(); ++i) {
-        int idx = static_cast<int>(i + 1);
-        const auto& b = binds[i];
-        if (b.type == ParamBind::Type::Text) {
-            sqlite3_bind_text(stmt.get(), idx, b.str_val.c_str(), -1, SQLITE_TRANSIENT);
-        } else if (b.type == ParamBind::Type::Double) {
-            sqlite3_bind_double(stmt.get(), idx, b.dbl_val);
-        } else if (b.type == ParamBind::Type::Int64) {
-            sqlite3_bind_int64(stmt.get(), idx, b.int_val);
-        }
-    }
+    bind_params(stmt.get(), binds);
 
     while (sqlite3_step(stmt.get()) == SQLITE_ROW) {
         results.push_back(row_to_dso(stmt.get()));
@@ -480,28 +512,6 @@ std::optional<catalog::DsoObject> SqliteStorage::get_object_by_id(std::int64_t i
     }
 
     return std::nullopt;
-}
-
-std::vector<catalog::TargetWithVisibility> SqliteStorage::filter_targets(
-    const coordinates::ObserverLocation& obs,
-    const catalog::DsoFilterOptions& filter_options,
-    const visibility::VisibilityCriteria& visibility_criteria,
-    int step_minutes
-) {
-    services::TargetFilterService service(*this);
-    return service.filter_targets(obs, filter_options, visibility_criteria, step_minutes);
-}
-
-std::vector<catalog::TargetWithPeriodVisibility> SqliteStorage::filter_targets_period(
-    const coordinates::ObserverLocation& obs,
-    const catalog::DsoFilterOptions& filter_options,
-    const visibility::VisibilityCriteria& visibility_criteria,
-    time::JulianDate start_jd,
-    time::JulianDate end_jd,
-    int step_minutes
-) {
-    services::TargetFilterService service(*this);
-    return service.filter_targets_period(obs, filter_options, visibility_criteria, start_jd, end_jd, step_minutes);
 }
 
 std::int64_t SqliteStorage::create_list(

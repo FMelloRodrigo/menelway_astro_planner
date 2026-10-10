@@ -40,6 +40,38 @@ class AppSettingsData {
     this.hasCompletedTutorial = false,
     this.schemaVersion = SettingsService.currentSchemaVersion,
   });
+
+  AppSettingsData copyWith({
+    FilterState? filters,
+    bool? isRedNightMode,
+    String? sortMode,
+    int? selectedTargetId,
+    List<ObservingListModel>? observingListsBackup,
+    List<EquipmentProfile>? equipmentProfiles,
+    String? activeEquipmentProfileId,
+    List<ObservingSite>? observingSites,
+    String? activeObservingSiteId,
+    List<TargetItem>? favorites,
+    String? languageCode,
+    bool? hasCompletedTutorial,
+    int? schemaVersion,
+  }) {
+    return AppSettingsData(
+      filters: filters ?? this.filters,
+      isRedNightMode: isRedNightMode ?? this.isRedNightMode,
+      sortMode: sortMode ?? this.sortMode,
+      selectedTargetId: selectedTargetId ?? this.selectedTargetId,
+      observingListsBackup: observingListsBackup ?? this.observingListsBackup,
+      equipmentProfiles: equipmentProfiles ?? this.equipmentProfiles,
+      activeEquipmentProfileId: activeEquipmentProfileId ?? this.activeEquipmentProfileId,
+      observingSites: observingSites ?? this.observingSites,
+      activeObservingSiteId: activeObservingSiteId ?? this.activeObservingSiteId,
+      favorites: favorites ?? this.favorites,
+      languageCode: languageCode ?? this.languageCode,
+      hasCompletedTutorial: hasCompletedTutorial ?? this.hasCompletedTutorial,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+    );
+  }
 }
 
 class SettingsService {
@@ -266,7 +298,7 @@ class SettingsService {
   /// Saves current filters, location, night mode, observing lists backup, equipment profiles, observing sites, and favorites.
   static Future<void> saveSettings({
     required FilterState filters,
-    required bool isRedNightMode,
+    bool? isRedNightMode,
     String? sortMode,
     int? selectedTargetId,
     List<ObservingListModel>? observingLists,
@@ -281,7 +313,9 @@ class SettingsService {
     try {
       final data = await _readSettingsJson();
 
-      data['isRedNightMode'] = isRedNightMode;
+      if (isRedNightMode != null) {
+        data['isRedNightMode'] = isRedNightMode;
+      }
       data['filters'] = filters.toJson();
 
       if (sortMode != null) {

@@ -1466,7 +1466,7 @@ class TargetVectorPainter extends CustomPainter {
         oldDelegate.isPhotoOnly != isPhotoOnly ||
         oldDelegate.showReticle != showReticle ||
         oldDelegate.showFraming != showFraming ||
-        oldDelegate.equipment?.id != equipment?.id ||
+        oldDelegate.equipment != equipment ||
         oldDelegate.cameraAngleDeg != cameraAngleDeg ||
         oldDelegate.showRuleOfThirds != showRuleOfThirds ||
         oldDelegate.panOffsetArcminX != panOffsetArcminX ||

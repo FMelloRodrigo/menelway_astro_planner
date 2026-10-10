@@ -16,6 +16,9 @@ abstract class TargetBodyRenderer {
   /// Maximum clamped planet radius in pixels.
   static const double maxPlanetRadiusPixels = 140.0;
 
+  /// Returns whether this renderer strategy can handle the given [target].
+  bool canRender(TargetItem target);
+
   /// Renders the celestial body apparent physical dimensions and features on [canvas].
   void render(
     Canvas canvas, {
@@ -29,16 +32,25 @@ abstract class TargetBodyRenderer {
     required Color goldColor,
   });
 
-  /// Factory strategy selector determining the appropriate renderer for [target].
+  /// Extensible strategy registry. Checked in order from first to last.
+  static final List<TargetBodyRenderer> _registry = [
+    const PlanetBodyRenderer(),
+    const StarBodyRenderer(),
+    const DeepSkyBodyRenderer(),
+  ];
+
+  /// Register an additional renderer with precedence over built-in defaults.
+  static void registerRenderer(TargetBodyRenderer renderer) {
+    _registry.insert(0, renderer);
+  }
+
+  /// Strategy selector determining the appropriate renderer for [target] via registry inspection.
   static TargetBodyRenderer selectRenderer(TargetItem target) {
-    final lowerType = target.objectType.toLowerCase();
-    final isPlanet = target.catalog == 'Solar System' ||
-        (lowerType.contains('planet') && !lowerType.contains('planetary'));
-    if (isPlanet) return const PlanetBodyRenderer();
-
-    final isStar = lowerType.contains('star') && !lowerType.contains('cluster');
-    if (isStar) return const StarBodyRenderer();
-
+    for (final renderer in _registry) {
+      if (renderer.canRender(target)) {
+        return renderer;
+      }
+    }
     return const DeepSkyBodyRenderer();
   }
 }

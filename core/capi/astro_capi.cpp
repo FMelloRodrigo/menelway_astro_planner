@@ -21,21 +21,18 @@ struct AstroEngineContext {
     std::string cached_moon_phase;
 };
 
-struct AstroTargetListImpl {
-    AstroTargetList public_list;
-    std::vector<AstroTargetItem> items;
+struct AstroTargetListImpl : public AstroTargetList {
+    std::vector<AstroTargetItem> items_storage;
     std::deque<std::string> string_pool;
 };
 
-struct AstroPeriodTargetListImpl {
-    AstroPeriodTargetList public_list;
-    std::vector<AstroPeriodTargetItem> items;
+struct AstroPeriodTargetListImpl : public AstroPeriodTargetList {
+    std::vector<AstroPeriodTargetItem> items_storage;
     std::deque<std::string> string_pool;
 };
 
-struct AstroCurveDataImpl {
-    AstroCurveData public_curve;
-    std::vector<AstroAltitudePoint> points;
+struct AstroCurveDataImpl : public AstroCurveData {
+    std::vector<AstroAltitudePoint> points_storage;
 };
 
 static std::vector<std::string> split_csv(const char* csv) {
@@ -82,7 +79,56 @@ static void apply_criteria_extra(const AstroFilterCriteria* criteria, astro::vis
     }
 }
 
-static std::string g_init_error;
+static astro::catalog::DsoFilterOptions parse_filter_options(const AstroFilterCriteria* criteria) {
+    astro::catalog::DsoFilterOptions filter_opts;
+    if (!criteria) return filter_opts;
+    filter_opts.catalogs = split_csv(criteria->catalogs_csv);
+    filter_opts.object_types = split_csv(criteria->object_types_csv);
+    if (criteria->search_query && criteria->search_query[0] != '\0') {
+        filter_opts.search_query = criteria->search_query;
+    }
+    bool has_mag_filter = !(criteria->max_magnitude == 0.0 && criteria->min_magnitude == 0.0);
+    if (has_mag_filter && criteria->max_magnitude < 900.0) {
+        filter_opts.max_magnitude = criteria->max_magnitude;
+    }
+    if (has_mag_filter && criteria->min_magnitude > -900.0) {
+        filter_opts.min_magnitude = criteria->min_magnitude;
+    }
+    if (criteria->min_size_arcmin > 0.0) {
+        filter_opts.min_size_arcmin = criteria->min_size_arcmin;
+    }
+    if (criteria->max_size_arcmin > 0.0 && criteria->max_size_arcmin < 90000.0) {
+        filter_opts.max_size_arcmin = criteria->max_size_arcmin;
+    }
+    filter_opts.limit = criteria->limit > 0 ? criteria->limit : 500;
+    filter_opts.offset = criteria->offset;
+    return filter_opts;
+}
+
+static astro::visibility::VisibilityCriteria parse_visibility_criteria(const AstroFilterCriteria* criteria) {
+    astro::visibility::VisibilityCriteria vis_crit;
+    if (!criteria) return vis_crit;
+    vis_crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
+    vis_crit.min_duration_hours = criteria->min_duration_hours;
+    vis_crit.window_start = astro::time::unix_to_julian_date(criteria->window_start_utc);
+    vis_crit.window_end = astro::time::unix_to_julian_date(criteria->window_end_utc);
+    vis_crit.min_moon_separation = astro::units::Degrees{criteria->min_moon_separation_deg};
+    vis_crit.azimuth_range = astro::horizon::AzimuthRange{
+        astro::units::Degrees{criteria->min_azimuth_deg},
+        astro::units::Degrees{criteria->max_azimuth_deg}
+    };
+    vis_crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
+    vis_crit.use_custom_time_window = (criteria->use_custom_time_window != 0);
+    vis_crit.custom_start_hour = criteria->custom_start_hour;
+    vis_crit.custom_start_minute = criteria->custom_start_minute;
+    vis_crit.custom_end_hour = criteria->custom_end_hour;
+    vis_crit.custom_end_minute = criteria->custom_end_minute;
+    vis_crit.utc_offset_minutes = criteria->utc_offset_minutes;
+    apply_criteria_extra(criteria, vis_crit);
+    return vis_crit;
+}
+
+static thread_local std::string g_init_error;
 
 AstroEngine* astro_engine_create_with_user_db(const char* catalog_db_path, const char* user_db_path) {
     try {
@@ -207,45 +253,14 @@ AstroTargetList* astro_filter_targets(
             observer->elevation_m
         };
 
-        astro::catalog::DsoFilterOptions filter_opts;
-        filter_opts.catalogs = split_csv(criteria->catalogs_csv);
-        filter_opts.object_types = split_csv(criteria->object_types_csv);
-        if (criteria->search_query && criteria->search_query[0] != '\0') {
-            filter_opts.search_query = criteria->search_query;
-        }
-        if (criteria->max_magnitude < 900.0) {
-            filter_opts.max_magnitude = criteria->max_magnitude;
-        }
-        if (criteria->min_magnitude > -900.0) {
-            filter_opts.min_magnitude = criteria->min_magnitude;
-        }
-        if (criteria->min_size_arcmin > 0.0) {
-            filter_opts.min_size_arcmin = criteria->min_size_arcmin;
-        }
-        if (criteria->max_size_arcmin < 90000.0) {
-            filter_opts.max_size_arcmin = criteria->max_size_arcmin;
-        }
-        filter_opts.limit = criteria->limit > 0 ? criteria->limit : 500;
-        filter_opts.offset = criteria->offset;
-
-        astro::visibility::VisibilityCriteria vis_crit;
-        vis_crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
-        vis_crit.min_duration_hours = criteria->min_duration_hours;
-        vis_crit.window_start = astro::time::unix_to_julian_date(criteria->window_start_utc);
-        vis_crit.window_end = astro::time::unix_to_julian_date(criteria->window_end_utc);
-        vis_crit.min_moon_separation = astro::units::Degrees{criteria->min_moon_separation_deg};
-        vis_crit.azimuth_range = astro::horizon::AzimuthRange{
-            astro::units::Degrees{criteria->min_azimuth_deg},
-            astro::units::Degrees{criteria->max_azimuth_deg}
-        };
-        vis_crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
-        apply_criteria_extra(criteria, vis_crit);
+        auto filter_opts = parse_filter_options(criteria);
+        auto vis_crit = parse_visibility_criteria(criteria);
 
         int step = step_minutes > 0 ? step_minutes : 10;
         auto results = ctx->filter_service->filter_targets(obs, filter_opts, vis_crit, step);
 
         auto impl = std::make_unique<AstroTargetListImpl>();
-        impl->items.reserve(results.size());
+        impl->items_storage.reserve(results.size());
         // String pool uses std::deque to guarantee pointer stability across push_back calls
 
         auto intern_str = [&](const std::string& s) -> const char* {
@@ -280,14 +295,14 @@ AstroTargetList* astro_filter_targets(
             item.min_moon_sep_deg = r.visibility.min_moon_separation_during_visibility.value;
             item.meets_criteria = r.visibility.meets_criteria ? 1 : 0;
 
-            impl->items.push_back(item);
+            impl->items_storage.push_back(item);
         }
 
-        impl->public_list.items = impl->items.data();
-        impl->public_list.count = impl->items.size();
+        impl->items = impl->items_storage.data();
+        impl->count = static_cast<int32_t>(impl->items_storage.size());
 
         ctx->last_error.clear();
-        return reinterpret_cast<AstroTargetList*>(impl.release());
+        return impl.release();
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
         return nullptr;
@@ -299,7 +314,7 @@ AstroTargetList* astro_filter_targets(
 
 void astro_free_target_list(AstroTargetList* list) {
     if (list) {
-        delete reinterpret_cast<AstroTargetListImpl*>(list);
+        delete static_cast<AstroTargetListImpl*>(list);
     }
 }
 
@@ -321,43 +336,8 @@ AstroPeriodTargetList* astro_filter_targets_period(
             observer->elevation_m
         };
 
-        astro::catalog::DsoFilterOptions filter_opts;
-        filter_opts.catalogs = split_csv(criteria->catalogs_csv);
-        filter_opts.object_types = split_csv(criteria->object_types_csv);
-        if (criteria->search_query && criteria->search_query[0] != '\0') {
-            filter_opts.search_query = criteria->search_query;
-        }
-        if (criteria->max_magnitude < 900.0) {
-            filter_opts.max_magnitude = criteria->max_magnitude;
-        }
-        if (criteria->min_magnitude > -900.0) {
-            filter_opts.min_magnitude = criteria->min_magnitude;
-        }
-        if (criteria->min_size_arcmin > 0.0) {
-            filter_opts.min_size_arcmin = criteria->min_size_arcmin;
-        }
-        if (criteria->max_size_arcmin < 90000.0) {
-            filter_opts.max_size_arcmin = criteria->max_size_arcmin;
-        }
-        filter_opts.limit = criteria->limit > 0 ? criteria->limit : 500;
-        filter_opts.offset = criteria->offset;
-
-        astro::visibility::VisibilityCriteria vis_crit;
-        vis_crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
-        vis_crit.min_duration_hours = criteria->min_duration_hours;
-        vis_crit.min_moon_separation = astro::units::Degrees{criteria->min_moon_separation_deg};
-        vis_crit.azimuth_range = astro::horizon::AzimuthRange{
-            astro::units::Degrees{criteria->min_azimuth_deg},
-            astro::units::Degrees{criteria->max_azimuth_deg}
-        };
-        vis_crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
-        vis_crit.use_custom_time_window = criteria->use_custom_time_window != 0;
-        vis_crit.custom_start_hour = criteria->custom_start_hour;
-        vis_crit.custom_start_minute = criteria->custom_start_minute;
-        vis_crit.custom_end_hour = criteria->custom_end_hour;
-        vis_crit.custom_end_minute = criteria->custom_end_minute;
-        vis_crit.utc_offset_minutes = criteria->utc_offset_minutes;
-        apply_criteria_extra(criteria, vis_crit);
+        auto filter_opts = parse_filter_options(criteria);
+        auto vis_crit = parse_visibility_criteria(criteria);
 
         astro::time::JulianDate start_jd = astro::time::unix_to_julian_date(period_start_utc);
         astro::time::JulianDate end_jd = astro::time::unix_to_julian_date(period_end_utc);
@@ -366,7 +346,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
         auto results = ctx->filter_service->filter_targets_period(obs, filter_opts, vis_crit, start_jd, end_jd, step);
 
         auto impl = std::make_unique<AstroPeriodTargetListImpl>();
-        impl->items.reserve(results.size());
+        impl->items_storage.reserve(results.size());
         // String pool uses std::deque to guarantee pointer stability across push_back calls
 
         auto intern_str = [&](const std::string& s) -> const char* {
@@ -404,14 +384,14 @@ AstroPeriodTargetList* astro_filter_targets_period(
             item.end_day = r.visibility.end_day;
             item.is_observable = r.visibility.is_observable ? 1 : 0;
 
-            impl->items.push_back(item);
+            impl->items_storage.push_back(item);
         }
 
-        impl->public_list.items = impl->items.data();
-        impl->public_list.count = impl->items.size();
+        impl->items = impl->items_storage.data();
+        impl->count = static_cast<int32_t>(impl->items_storage.size());
 
         ctx->last_error.clear();
-        return reinterpret_cast<AstroPeriodTargetList*>(impl.release());
+        return impl.release();
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
         return nullptr;
@@ -423,7 +403,7 @@ AstroPeriodTargetList* astro_filter_targets_period(
 
 void astro_free_period_target_list(AstroPeriodTargetList* list) {
     if (list) {
-        delete reinterpret_cast<AstroPeriodTargetListImpl*>(list);
+        delete static_cast<AstroPeriodTargetListImpl*>(list);
     }
 }
 
@@ -473,7 +453,7 @@ AstroCurveData* astro_generate_curve(
         }
 
         auto impl = std::make_unique<AstroCurveDataImpl>();
-        impl->points.reserve(points.size());
+        impl->points_storage.reserve(points.size());
 
         for (const auto& p : points) {
             AstroAltitudePoint ap{};
@@ -482,14 +462,14 @@ AstroCurveData* astro_generate_curve(
             ap.azimuth_deg = p.azimuth.value;
             ap.moon_separation_deg = p.moon_separation.value;
             ap.meets_criteria = p.meets_instant_criteria ? 1 : 0;
-            impl->points.push_back(ap);
+            impl->points_storage.push_back(ap);
         }
 
-        impl->public_curve.points = impl->points.data();
-        impl->public_curve.count = impl->points.size();
+        impl->points = impl->points_storage.data();
+        impl->count = static_cast<int32_t>(impl->points_storage.size());
 
         ctx->last_error.clear();
-        return reinterpret_cast<AstroCurveData*>(impl.release());
+        return impl.release();
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
         return nullptr;
@@ -501,7 +481,7 @@ AstroCurveData* astro_generate_curve(
 
 void astro_free_curve_data(AstroCurveData* curve) {
     if (curve) {
-        delete reinterpret_cast<AstroCurveDataImpl*>(curve);
+        delete static_cast<AstroCurveDataImpl*>(curve);
     }
 }
 
@@ -521,6 +501,8 @@ int64_t astro_create_observing_list(
         );
         if (id <= 0) {
             ctx->last_error = ctx->storage->last_error();
+        } else {
+            ctx->last_error.clear();
         }
         return id;
     } catch (const std::exception& e) {
@@ -539,6 +521,8 @@ int32_t astro_delete_observing_list(AstroEngine* engine, int64_t list_id) {
         bool ok = ctx->storage->delete_list(list_id);
         if (!ok) {
             ctx->last_error = ctx->storage->last_error();
+        } else {
+            ctx->last_error.clear();
         }
         return ok ? 1 : 0;
     } catch (const std::exception& e) {
@@ -562,6 +546,8 @@ int32_t astro_add_to_observing_list(
         bool ok = ctx->storage->add_target_to_list(list_id, dso_id, notes ? notes : "");
         if (!ok) {
             ctx->last_error = ctx->storage->last_error();
+        } else {
+            ctx->last_error.clear();
         }
         return ok ? 1 : 0;
     } catch (const std::exception& e) {
@@ -584,6 +570,8 @@ int32_t astro_remove_from_observing_list(
         bool ok = ctx->storage->remove_target_from_list(list_id, dso_id);
         if (!ok) {
             ctx->last_error = ctx->storage->last_error();
+        } else {
+            ctx->last_error.clear();
         }
         return ok ? 1 : 0;
     } catch (const std::exception& e) {
@@ -652,6 +640,7 @@ const char* astro_get_observing_lists_json(AstroEngine* engine) {
         }
         ss << "]";
 
+        ctx->last_error.clear();
         return duplicate_string(ss.str());
     } catch (const std::exception& e) {
         ctx->last_error = e.what();
@@ -669,6 +658,8 @@ int32_t astro_clear_all_observing_lists(AstroEngine* engine) {
         bool ok = ctx->storage->clear_all_lists();
         if (!ok) {
             ctx->last_error = ctx->storage->last_error();
+        } else {
+            ctx->last_error.clear();
         }
         return ok ? 1 : 0;
     } catch (const std::exception& e) {
@@ -704,20 +695,10 @@ const char* astro_get_target_yearly_visibility_json(
 
         astro::visibility::VisibilityCriteria crit;
         if (criteria) {
-            crit.min_altitude = astro::units::Degrees{criteria->min_altitude_deg};
-            crit.min_duration_hours = criteria->min_duration_hours > 0 ? criteria->min_duration_hours : 2.0;
-            crit.azimuth_range = astro::horizon::AzimuthRange{
-                astro::units::Degrees{criteria->min_azimuth_deg},
-                astro::units::Degrees{criteria->max_azimuth_deg}
-            };
-            crit.quadrant = static_cast<astro::horizon::Quadrant>(criteria->quadrant);
-            crit.use_custom_time_window = (criteria->use_custom_time_window != 0);
-            crit.custom_start_hour = criteria->custom_start_hour;
-            crit.custom_start_minute = criteria->custom_start_minute;
-            crit.custom_end_hour = criteria->custom_end_hour;
-            crit.custom_end_minute = criteria->custom_end_minute;
-            crit.utc_offset_minutes = criteria->utc_offset_minutes;
-            apply_criteria_extra(criteria, crit);
+            crit = parse_visibility_criteria(criteria);
+            if (criteria->min_duration_hours <= 0.0) {
+                crit.min_duration_hours = 2.0;
+            }
         } else {
             crit.min_altitude = astro::units::Degrees{30.0};
             crit.min_duration_hours = 2.0;

@@ -11,6 +11,9 @@ class DeepSkyBodyRenderer extends TargetBodyRenderer {
   const DeepSkyBodyRenderer();
 
   @override
+  bool canRender(TargetItem target) => true;
+
+  @override
   void render(
     Canvas canvas, {
     required TargetItem target,

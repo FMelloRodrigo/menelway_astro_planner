@@ -54,6 +54,20 @@ class TelescopeProfile {
       reducerFactor: reducerFactor ?? this.reducerFactor,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TelescopeProfile &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          focalLengthMm == other.focalLengthMm &&
+          apertureMm == other.apertureMm &&
+          reducerFactor == other.reducerFactor;
+
+  @override
+  int get hashCode => Object.hash(id, name, focalLengthMm, apertureMm, reducerFactor);
 }
 
 class CameraProfile {
@@ -120,6 +134,30 @@ class CameraProfile {
       resolutionHeightPx: resolutionHeightPx ?? this.resolutionHeightPx,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CameraProfile &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          sensorWidthMm == other.sensorWidthMm &&
+          sensorHeightMm == other.sensorHeightMm &&
+          pixelSizeMicrons == other.pixelSizeMicrons &&
+          resolutionWidthPx == other.resolutionWidthPx &&
+          resolutionHeightPx == other.resolutionHeightPx;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        name,
+        sensorWidthMm,
+        sensorHeightMm,
+        pixelSizeMicrons,
+        resolutionWidthPx,
+        resolutionHeightPx,
+      );
 }
 
 class EquipmentProfile {
@@ -225,4 +263,17 @@ class EquipmentProfile {
       camera: camera ?? this.camera,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EquipmentProfile &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          telescope == other.telescope &&
+          camera == other.camera;
+
+  @override
+  int get hashCode => Object.hash(id, name, telescope, camera);
 }

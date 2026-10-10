@@ -10,6 +10,12 @@ class StarBodyRenderer extends TargetBodyRenderer {
   const StarBodyRenderer();
 
   @override
+  bool canRender(TargetItem target) {
+    final lowerType = target.objectType.toLowerCase();
+    return lowerType.contains('star') && !lowerType.contains('cluster');
+  }
+
+  @override
   void render(
     Canvas canvas, {
     required TargetItem target,

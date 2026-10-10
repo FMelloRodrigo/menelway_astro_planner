@@ -11,6 +11,13 @@ class PlanetBodyRenderer extends TargetBodyRenderer {
   const PlanetBodyRenderer();
 
   @override
+  bool canRender(TargetItem target) {
+    final lowerType = target.objectType.toLowerCase();
+    return target.catalog == 'Solar System' ||
+        (lowerType.contains('planet') && !lowerType.contains('planetary'));
+  }
+
+  @override
   void render(
     Canvas canvas, {
     required TargetItem target,

@@ -46,7 +46,7 @@ void main() {
                 });
               },
               onDeleteList: (_) {},
-              onRemoveItem: (_, __) {},
+              onRemoveItem: (_, _) {},
             );
           },
         ),
