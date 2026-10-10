@@ -117,3 +117,13 @@ $zipSizeMb = (Get-Item $zipFileMenelway).Length / 1MB
 Write-Host "Portable package created successfully!" -ForegroundColor Green
 Write-Host "  Zip Path: $zipFileMenelway" -ForegroundColor Green
 Write-Host "  Zip Size: $([math]::Round($zipSizeMb, 2)) MB" -ForegroundColor Green
+
+# Copy release APK to dist if present
+$apkSource = Join-Path $workspaceRoot "app\build\app\outputs\flutter-apk\app-release.apk"
+$apkDist = Join-Path $workspaceRoot "dist\menelway_astro_planner.apk"
+if (Test-Path $apkSource) {
+    Copy-Item $apkSource $apkDist -Force
+    $apkSizeMb = (Get-Item $apkDist).Length / 1MB
+    Write-Host "  APK Path: $apkDist" -ForegroundColor Green
+    Write-Host "  APK Size: $([math]::Round($apkSizeMb, 2)) MB" -ForegroundColor Green
+}
