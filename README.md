@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://flutter.dev)
 
-**MENELWAY** is a high-performance, native desktop application for visual astronomy and deep-sky astrophotography session planning. It couples a blazing-fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
+**MENELWAY** is a high-performance, native desktop application for deep-sky astrophotography session planning. It couples a fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
 
 ---
 

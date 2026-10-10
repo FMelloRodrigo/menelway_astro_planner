@@ -94,5 +94,31 @@ void main() {
       expect(FavoritesManager.instance.isEmpty, isTrue);
       expect(controller.targets.isNotEmpty, isTrue);
     });
+
+    test('Preserves planets and bright stars without recomputing when only searchQuery changes', () async {
+      await controller.bootstrap();
+      expect(controller.planets.isNotEmpty, isTrue);
+      expect(controller.brightStars.isNotEmpty, isTrue);
+
+      final initialPlanets = controller.planets;
+      final initialBrightStars = controller.brightStars;
+
+      controller.updateFilters(controller.filters.copyWith(searchQuery: 'm33'));
+      await controller.runFiltering();
+
+      expect(controller.planets, same(initialPlanets));
+      expect(controller.brightStars, same(initialBrightStars));
+      expect(controller.filters.searchQuery, 'm33');
+    });
+
+    test('Re-evaluates planets and bright stars when observer coordinates change', () async {
+      await controller.bootstrap();
+      final initialPlanets = controller.planets;
+
+      controller.updateFilters(controller.filters.copyWith(observerLat: 10.0));
+      await controller.runFiltering();
+
+      expect(controller.planets, isNot(same(initialPlanets)));
+    });
   });
 }

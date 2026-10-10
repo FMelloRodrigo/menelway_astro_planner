@@ -41,6 +41,9 @@ class AppController extends ChangeNotifier {
   double _dbSizeMb = 0.0;
   String? _dbPath;
 
+  int _filterRequestId = 0;
+  FilterState? _lastEphemerisFilters;
+
   bool _disposed = false;
 
   AppController({
@@ -153,10 +156,36 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Checks whether ephemeris-dependent parameters (observer, date, altitude/time window, horizon profile)
+  /// changed between two filter configurations. Used to avoid redundant background calculations of
+  /// solar system objects and bright stars when only searching deep sky objects by name.
+  bool _areEphemerisFiltersEqual(FilterState a, FilterState b) {
+    return a.observerLat == b.observerLat &&
+        a.observerLon == b.observerLon &&
+        a.observerElevation == b.observerElevation &&
+        a.date.year == b.date.year &&
+        a.date.month == b.date.month &&
+        a.date.day == b.date.day &&
+        a.minAltitude == b.minAltitude &&
+        a.maxAltitude == b.maxAltitude &&
+        a.minDurationHours == b.minDurationHours &&
+        a.useCustomTimeWindow == b.useCustomTimeWindow &&
+        a.customStartHour == b.customStartHour &&
+        a.customStartMinute == b.customStartMinute &&
+        a.customEndHour == b.customEndHour &&
+        a.customEndMinute == b.customEndMinute &&
+        a.useCustomHorizon == b.useCustomHorizon &&
+        a.showTerrainSilhouette == b.showTerrainSilhouette;
+  }
+
   /// Evaluates and filters celestial targets, planets, and bright stars for the active night.
   /// When running in production with AstroBridge, executes in background Dart isolates to maintain 60/120fps.
+  /// Uses a monotonic request sequence counter to discard stale out-of-order queries when rapid search
+  /// typing occurs on lower-end devices.
   Future<void> runFiltering({bool notify = true}) async {
     if (_nightSummary == null || _disposed) return;
+
+    final requestId = ++_filterRequestId;
 
     _isLoadingTargets = true;
     _isLoadingPlanets = true;
@@ -168,56 +197,80 @@ class AppController extends ChangeNotifier {
       final currentFilters = _filters;
       final path = _dbPath;
 
-      if (enableIsolate && engine is AstroBridge && path != null && !kIsWeb) {
-        // Concurrently compute deep sky, solar system, and bright stars in background isolates
-        final results = await Future.wait([
-          AstroIsolate.filterTargets(
-            dbPath: path,
-            filters: currentFilters,
-            night: night,
-            stepMinutes: 10,
-          ),
-          AstroIsolate.getPlanets(
-            dbPath: path,
-            filters: currentFilters,
-            night: night,
-            stepMinutes: 10,
-          ),
-          AstroIsolate.getBrightStars(
-            dbPath: path,
-            filters: currentFilters,
-            night: night,
-            stepMinutes: 10,
-          ),
-        ]);
+      final needEphemerisRefresh = _planets.isEmpty ||
+          _brightStars.isEmpty ||
+          _lastEphemerisFilters == null ||
+          !_areEphemerisFiltersEqual(_lastEphemerisFilters!, currentFilters);
 
-        if (!_disposed) {
+      if (enableIsolate && engine is AstroBridge && path != null && !kIsWeb) {
+        final targetsFuture = AstroIsolate.filterTargets(
+          dbPath: path,
+          filters: currentFilters,
+          night: night,
+          stepMinutes: 10,
+        );
+
+        final planetsFuture = needEphemerisRefresh
+            ? AstroIsolate.getPlanets(
+                dbPath: path,
+                filters: currentFilters,
+                night: night,
+                stepMinutes: 10,
+              )
+            : Future.value(_planets);
+
+        final starsFuture = needEphemerisRefresh
+            ? AstroIsolate.getBrightStars(
+                dbPath: path,
+                filters: currentFilters,
+                night: night,
+                stepMinutes: 10,
+              )
+            : Future.value(_brightStars);
+
+        final results = await Future.wait([targetsFuture, planetsFuture, starsFuture]);
+
+        // Guard against race conditions: only commit if this is still the freshest in-flight request
+        if (!_disposed && requestId == _filterRequestId) {
           _targets = results[0];
           _planets = results[1];
           _brightStars = results[2];
+          _lastEphemerisFilters = currentFilters;
         }
       } else {
         // In-isolate / test execution (e.g., FakeAstroEngine)
-        _targets = engine.filterTargets(
+        final t = engine.filterTargets(
           filters: currentFilters,
           night: night,
           stepMinutes: 10,
         );
-        _planets = engine.getPlanets(
-          filters: currentFilters,
-          night: night,
-          stepMinutes: 10,
-        );
-        _brightStars = engine.getBrightStars(
-          filters: currentFilters,
-          night: night,
-          stepMinutes: 10,
-        );
+        final p = needEphemerisRefresh
+            ? engine.getPlanets(
+                filters: currentFilters,
+                night: night,
+                stepMinutes: 10,
+              )
+            : _planets;
+        final b = needEphemerisRefresh
+            ? engine.getBrightStars(
+                filters: currentFilters,
+                night: night,
+                stepMinutes: 10,
+              )
+            : _brightStars;
+
+        // Guard against race conditions: only commit if this is still the freshest in-flight request
+        if (!_disposed && requestId == _filterRequestId) {
+          _targets = t;
+          _planets = p;
+          _brightStars = b;
+          _lastEphemerisFilters = currentFilters;
+        }
       }
     } catch (e, st) {
       AppLogger.error('Error during runFiltering: $e\n$st', tag: 'AppController');
     } finally {
-      if (!_disposed) {
+      if (!_disposed && requestId == _filterRequestId) {
         _isLoadingTargets = false;
         _isLoadingPlanets = false;
         _isLoadingBrightStars = false;
@@ -285,6 +338,7 @@ class AppController extends ChangeNotifier {
 
     // 5. Reset in-memory filters and ephemeris
     _filters = FilterState();
+    _lastEphemerisFilters = null;
     _observingLists = [];
     _planets = [];
     _brightStars = [];

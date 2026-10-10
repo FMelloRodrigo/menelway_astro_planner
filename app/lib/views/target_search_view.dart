@@ -34,6 +34,13 @@ class TargetSearchView extends StatefulWidget {
   final void Function(int listId, int dsoId, String notes) onAddToList;
   final GlobalKey? filterButtonKey;
 
+  /// Debounce delay for general target search queries to prevent premature execution while typing.
+  static const Duration searchDebounceDelay = Duration(milliseconds: 600);
+
+  /// Slightly longer debounce delay for single-character queries (e.g. typing "m" before "m33")
+  /// on mobile devices to prevent triggering heavy wide-catalog database queries.
+  static const Duration singleCharSearchDebounceDelay = Duration(milliseconds: 750);
+
   const TargetSearchView({
     super.key,
     required this.targets,
@@ -58,6 +65,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   TargetItem? _selectedTarget;
   Timer? _debounceTimer;
   bool _hideOutsideFilters = false;
+  String _lastSubmittedQuery = '';
 
   SortMode get _effectiveSortMode {
     if (widget.filters.searchQuery.isEmpty && _sortMode == SortMode.relevance) {
@@ -70,6 +78,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   void initState() {
     super.initState();
     _searchController.text = widget.filters.searchQuery;
+    _lastSubmittedQuery = widget.filters.searchQuery;
     if (widget.filters.searchQuery.isNotEmpty) {
       _sortMode = SortMode.relevance;
       if (widget.targets.isNotEmpty) {
@@ -82,8 +91,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   void didUpdateWidget(TargetSearchView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.filters.searchQuery != oldWidget.filters.searchQuery) {
-      if (_searchController.text != widget.filters.searchQuery) {
-        _searchController.text = widget.filters.searchQuery;
+      // Only synchronize controller text if the change originated externally (e.g. filter reset)
+      // and not from active user typing in this view.
+      if (widget.filters.searchQuery != _lastSubmittedQuery) {
+        _lastSubmittedQuery = widget.filters.searchQuery;
+        if (_searchController.text != widget.filters.searchQuery) {
+          _searchController.text = widget.filters.searchQuery;
+        }
       }
       if (widget.filters.searchQuery.isNotEmpty && oldWidget.filters.searchQuery.isEmpty) {
         if (_sortMode != SortMode.relevance) {
@@ -121,9 +135,22 @@ class _TargetSearchViewState extends State<TargetSearchView> {
 
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
-      widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
+    final trimmed = query.trim();
+    final delay = trimmed.length <= 1
+        ? TargetSearchView.singleCharSearchDebounceDelay
+        : TargetSearchView.searchDebounceDelay;
+    _debounceTimer = Timer(delay, () {
+      _commitSearch(trimmed);
     });
+  }
+
+  void _commitSearch(String trimmed) {
+    _debounceTimer?.cancel();
+    if (_lastSubmittedQuery == trimmed && widget.filters.searchQuery == trimmed) {
+      return;
+    }
+    _lastSubmittedQuery = trimmed;
+    widget.onFilterChanged(widget.filters.copyWith(searchQuery: trimmed));
   }
 
   List<TargetItem> get _sortedTargets {
@@ -329,7 +356,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                   _debounceTimer?.cancel();
                                   _searchController.clear();
                                   setState(() {});
-                                  widget.onFilterChanged(widget.filters.copyWith(searchQuery: ''));
+                                  _commitSearch('');
                                 },
                               ),
                               IconButton(
@@ -338,10 +365,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                                 padding: EdgeInsets.zero,
                                 tooltip: l10n.searchTargetTooltip,
                                 onPressed: () {
-                                  _debounceTimer?.cancel();
-                                  widget.onFilterChanged(
-                                    widget.filters.copyWith(searchQuery: _searchController.text.trim()),
-                                  );
+                                  _commitSearch(_searchController.text.trim());
                                 },
                               ),
                             ],
@@ -353,8 +377,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                     _onSearchChanged(text);
                   },
                   onSubmitted: (query) {
-                    _debounceTimer?.cancel();
-                    widget.onFilterChanged(widget.filters.copyWith(searchQuery: query.trim()));
+                    _commitSearch(query.trim());
                   },
                 ),
               );

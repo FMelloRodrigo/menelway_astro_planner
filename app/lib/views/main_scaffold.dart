@@ -61,7 +61,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   AstroEngine get _engine => _controller.engine;
   FilterState get _filters => _controller.filters;
-  set _filters(FilterState val) => _controller.updateFilters(val);
+  set _filters(FilterState val) => _controller.updateFilters(val, triggerQuery: false);
   NightSummary? get _nightSummary => _controller.nightSummary;
   List<TargetItem> get _targets => _controller.targets;
   List<TargetItem> get _planets => _controller.planets;

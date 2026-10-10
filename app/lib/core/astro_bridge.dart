@@ -600,6 +600,7 @@ class AstroBridge implements AstroEngine {
     final planetFilters = filters.copyWith(
       selectedCatalogs: {'Solar System'},
       selectedObjectTypes: {'Planet', 'Star'},
+      searchQuery: '',
       minMagnitude: -30.0,
       maxMagnitude: 20.0,
       minSizeArcmin: 0.0,
@@ -622,6 +623,7 @@ class AstroBridge implements AstroEngine {
     final starFilters = filters.copyWith(
       selectedCatalogs: {'Stars'},
       selectedObjectTypes: {'Star', 'Double Star'},
+      searchQuery: '',
       minMagnitude: -5.0,
       maxMagnitude: 10.0,
       minSizeArcmin: 0.0,
