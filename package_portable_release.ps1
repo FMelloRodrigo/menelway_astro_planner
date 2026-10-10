@@ -50,6 +50,17 @@ if (Test-Path "$releaseDir\terrain_cache") {
 # Copy release files to Menelway dist folder
 Copy-Item "$releaseDir\*" -Destination $distDirMenelway -Recurse -Force
 
+# Guarantee that the portable release bundle is clean of any local user configuration or cache
+if (Test-Path "$distDirMenelway\user_settings.json") {
+    Remove-Item "$distDirMenelway\user_settings.json" -Force
+}
+if (Test-Path "$distDirMenelway\user_settings.json.bak") {
+    Remove-Item "$distDirMenelway\user_settings.json.bak" -Force
+}
+if (Test-Path "$distDirMenelway\terrain_cache") {
+    Remove-Item "$distDirMenelway\terrain_cache" -Recurse -Force
+}
+
 # Ensure menelway_astro_planner.exe is the sole executable in the portable distribution
 if (Test-Path "$distDirMenelway\app.exe") {
     Copy-Item "$distDirMenelway\app.exe" "$distDirMenelway\menelway_astro_planner.exe" -Force
@@ -64,15 +75,12 @@ if (Test-Path "$distDirMenelway\data\flutter_assets\assets\catalogs.db") {
     Copy-Item "$distDirMenelway\data\flutter_assets\assets\catalogs.db" "$distDirMenelway\catalogs.db" -Force
 }
 
-# Restore user configuration and terrain cache into dist and runner
+# Restore user configuration and terrain cache ONLY into runner releaseDir (for local development testing)
 if ((Get-ChildItem "$tempBackupDir\terrain_cache" -File).Count -gt 0) {
-    New-Item -ItemType Directory -Path "$distDirMenelway\terrain_cache" -Force | Out-Null
-    Copy-Item "$tempBackupDir\terrain_cache\*" -Destination "$distDirMenelway\terrain_cache" -Force
     New-Item -ItemType Directory -Path "$releaseDir\terrain_cache" -Force | Out-Null
     Copy-Item "$tempBackupDir\terrain_cache\*" -Destination "$releaseDir\terrain_cache" -Force
 }
 if (Test-Path "$tempBackupDir\user_settings.json") {
-    Copy-Item "$tempBackupDir\user_settings.json" -Destination "$distDirMenelway\user_settings.json" -Force
     Copy-Item "$tempBackupDir\user_settings.json" -Destination "$releaseDir\user_settings.json" -Force
 }
 Remove-Item $tempBackupDir -Recurse -Force -ErrorAction SilentlyContinue
