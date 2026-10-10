@@ -25,7 +25,8 @@
 ## Development Notes
 
 Beyond building a tool that I truly needed, this was an opportunity to learn. I am an experienced game developer primarily working with Unreal Engine. While I write C++ daily, Unreal's C++ is a different beast from modern, standard C++. This project was a chance to dive into modern C++20, explore fundamental astronomical mathematics and algorithms, and pick up Flutter/Dart as a bonus.
-Worked on this app in my free time, generative AI was heavily utilized to accelerate development, and I haven't had the time to meticulously study, review and refactor the entire codebase yet. As such, the code is by no means an reference for architecture. It is first and foremost a personal utility and learning playground of mine.
+
+Worked on this app in my free time, generative AI was heavily utilized to accelerate development, and I haven't had the time to meticulously study, review the entire codebase yet. As such, the code is by no means an reference for architecture. It is first and foremost a personal utility and learning playground of mine.
 
 ---
 
