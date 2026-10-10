@@ -53,6 +53,11 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   bool _isLoading = false;
   bool _hasError = false;
 
+  bool get isLoading => _isLoading;
+  bool get hasError => _hasError;
+  Uint8List? get imageBytes => _imageBytes;
+  PreviewDisplayMode get displayMode => _displayMode;
+
   Timer? _panDebounceTimer;
   double _imageBasePanX = 0.0;
   double _imageBasePanY = 0.0;
@@ -81,7 +86,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     _lastObservedPanX = _imageBasePanX;
     _lastObservedPanY = _imageBasePanY;
     EquipmentManager.instance.addListener(_onEquipmentStateChanged);
-    _loadImage();
+    if (widget.target.catalog != 'Solar System') {
+      _loadImage();
+    }
   }
 
   @override
@@ -131,14 +138,19 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.target.id != widget.target.id) {
       _panDebounceTimer?.cancel();
-      _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
       _imageBytes = null;
       _hasError = false;
       _imageBasePanX = EquipmentManager.instance.panOffsetArcminX;
       _imageBasePanY = EquipmentManager.instance.panOffsetArcminY;
       _lastObservedPanX = _imageBasePanX;
       _lastObservedPanY = _imageBasePanY;
-      _loadImage();
+      if (widget.target.catalog == 'Solar System') {
+        _displayMode = PreviewDisplayMode.vectorOnly;
+        _fovDeg = (widget.target.name == 'Sun' || widget.target.name == 'Moon') ? 1.5 : 0.25;
+      } else {
+        _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
+        _loadImage();
+      }
     }
   }
 
@@ -209,9 +221,8 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           _hasError = false;
         } else {
           _hasError = true;
-          if (_imageBytes == null) {
-            _displayMode = PreviewDisplayMode.vectorOnly;
-          }
+          // Defensive UI: preserve user's _displayMode so that once network recovers
+          // or user taps Retry/pans, the photographic view is restored automatically.
         }
       });
     }
@@ -384,7 +395,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   ),
                 ),
 
-              // 4. Offline / Error Status Banner
+              // 4. Offline / Error Status Banner with Interactive Retry
               if (_hasError && _imageBytes == null)
                 Positioned(
                   top: 8,
@@ -392,9 +403,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.75),
+                      color: Colors.black.withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.6)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -404,6 +415,34 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                         Text(
                           l10n.offlineSkyFallback,
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _loadImage,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.refresh_rounded, size: 12, color: Colors.amber),
+                                const SizedBox(width: 3),
+                                Text(
+                                  l10n.retry,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),

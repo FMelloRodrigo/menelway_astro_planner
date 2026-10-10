@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import 'app_logger.dart';
+import 'catalog_manager.dart';
 
 class SkySurvey {
   final String id;
@@ -21,6 +25,7 @@ class SkyImageService {
   SkyImageService._();
   static final SkyImageService instance = SkyImageService._();
   static const String _tag = 'SkyImageService';
+  static const MethodChannel _storageChannel = MethodChannel('com.astrotargets.app/storage');
 
   static const List<SkySurvey> availableSurveys = [
     SkySurvey(
@@ -49,9 +54,35 @@ class SkyImageService {
   static const int maxMemCacheEntries = 30;
   static const int maxDiskCacheEntries = 100;
 
+  /// Official CDS Strasbourg HiPS endpoints and active mirrors.
+  static const String primaryEndpoint = 'https://alasky.cds.unistra.fr/hips-image-services/hips2fits';
+  static const String mirrorEndpoint = 'https://alaskybis.cds.unistra.fr/hips-image-services/hips2fits';
+  static const String altMirrorEndpoint = 'https://alasky.u-strasbg.fr/hips-image-services/hips2fits';
+
+  static const List<String> fallbackEndpoints = [
+    primaryEndpoint,
+    mirrorEndpoint,
+    altMirrorEndpoint,
+  ];
+
+  /// Default overall request timeout and per-attempt timeout.
+  static const Duration defaultTimeout = Duration(seconds: 25);
+  static const Duration perAttemptTimeout = Duration(seconds: 12);
+
   final Map<String, Uint8List> _memCache = {};
   Directory? _diskCacheDir;
   bool _diskCacheInitialized = false;
+
+  /// Backoff duration between retries (configurable; default Duration.zero for instant mirror failover).
+  Duration retryBackoff = Duration.zero;
+
+  /// Reusable persistent HTTP client for connection pooling and Keep-Alive.
+  http.Client _client = http.Client();
+
+  @visibleForTesting
+  void setClientForTesting(http.Client client) {
+    _client = client;
+  }
 
   /// Computes a recommended FOV in degrees based on the target's major axis in arcminutes.
   /// Generates a comfortable frame (approx 2.2x the target's physical extent) clamped
@@ -74,13 +105,16 @@ class SkyImageService {
     int width = 512,
     int height = 512,
     String format = 'jpg',
+    String endpoint = primaryEndpoint,
   }) {
-    final raDeg = (raHours * 15.0) % 360.0;
+    var raDeg = (raHours * 15.0) % 360.0;
+    if (raDeg < 0) raDeg += 360.0;
+    final clampedDec = decDegrees.clamp(-90.0, 90.0);
     final cleanRa = raDeg.toStringAsFixed(5);
-    final cleanDec = decDegrees.toStringAsFixed(5);
+    final cleanDec = clampedDec.toStringAsFixed(5);
     final cleanFov = fovDeg.toStringAsFixed(4);
 
-    return 'https://alasky.cds.unistra.fr/hips-image-services/hips2fits'
+    return '$endpoint'
         '?hips=${Uri.encodeComponent(surveyId)}'
         '&ra=$cleanRa'
         '&dec=$cleanDec'
@@ -90,31 +124,73 @@ class SkyImageService {
         '&format=$format';
   }
 
-  /// Hashes a URL to create a safe local filename.
+  /// Returns candidate mirror URLs for failover when the primary server is congested or down.
+  static List<String> getMirrorCandidateUrls(String url) {
+    final candidates = <String>[url];
+    for (final ep in fallbackEndpoints) {
+      for (final existingEp in fallbackEndpoints) {
+        if (url.startsWith(existingEp) && ep != existingEp) {
+          final substituted = url.replaceFirst(existingEp, ep);
+          if (!candidates.contains(substituted)) {
+            candidates.add(substituted);
+          }
+        }
+      }
+    }
+    return candidates;
+  }
+
+  /// Normalizes a HiPS URL to its query parameters so caching is shared across primary and mirrors.
+  static String normalizeCacheKey(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasQuery) {
+      return uri.query;
+    }
+    return url;
+  }
+
+  /// Hashes a URL query string to create a consistent local filename across all mirrors.
   static String _urlToCacheFilename(String url) {
-    // Simple fast 64-bit integer hash fallback if crypto is not imported
+    final key = normalizeCacheKey(url);
     var hash = 0xcbf29ce484222325;
-    for (var i = 0; i < url.length; i++) {
-      hash ^= url.codeUnitAt(i);
+    for (var i = 0; i < key.length; i++) {
+      hash ^= key.codeUnitAt(i);
       hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
     }
     return 'sky_${hash.toRadixString(16).padLeft(16, '0')}.jpg';
   }
 
-  /// Initializes the local disk cache directory.
+  /// Initializes the local disk cache directory safely across mobile (Android/iOS) and desktop platforms.
   Future<Directory?> _getCacheDirectory() async {
     if (_diskCacheInitialized) return _diskCacheDir;
 
+    // 1. Android specific verified cache directory
+    if (Platform.isAndroid) {
+      try {
+        final String? nativeCacheDir = await _storageChannel.invokeMethod<String>('getCacheDir');
+        if (nativeCacheDir != null && nativeCacheDir.isNotEmpty) {
+          final dir = Directory(p.join(nativeCacheDir, 'astro_sky_images'));
+          if (!dir.existsSync()) {
+            dir.createSync(recursive: true);
+          }
+          _diskCacheDir = dir;
+          _diskCacheInitialized = true;
+          return _diskCacheDir;
+        }
+      } catch (e) {
+        AppLogger.debug('Storage channel getCacheDir fallback on Android: $e', tag: _tag);
+      }
+    }
+
+    // 2. Standard system temp fallback (cross-platform desktop & testing)
     try {
       final baseTemp = Directory.systemTemp;
       final cacheDir = Directory(p.join(baseTemp.path, 'astro_sky_images'));
-      if (!await cacheDir.exists()) {
-        await cacheDir.create(recursive: true);
+      if (!cacheDir.existsSync()) {
+        cacheDir.createSync(recursive: true);
       }
       _diskCacheDir = cacheDir;
       _diskCacheInitialized = true;
-      // Auto-prune existing disk cache on startup to enforce the cap
-      Future.microtask(() => pruneDiskCache());
       return _diskCacheDir;
     } catch (e) {
       AppLogger.warning('Failed to initialize sky image cache directory', tag: _tag, error: e);
@@ -124,13 +200,20 @@ class SkyImageService {
   }
 
   /// Fetches sky image bytes from memory cache, local disk cache, or CDS HiPS2FITS API.
+  /// Automatically tries active CDS mirror endpoints if primary times out or returns HTTP errors.
   Future<Uint8List?> fetchSkyImage(
     String url, {
-    Duration timeout = const Duration(seconds: 8),
+    Duration timeout = defaultTimeout,
+    Duration attemptTimeout = perAttemptTimeout,
+    int maxRetries = 2,
+    Duration? retryBackoff,
   }) async {
+    final effectiveBackoff = retryBackoff ?? this.retryBackoff;
+    final cacheKey = normalizeCacheKey(url);
+
     // 1. Check memory cache (fastest, 0ms)
-    if (_memCache.containsKey(url)) {
-      return _memCache[url];
+    if (_memCache.containsKey(cacheKey)) {
+      return _memCache[cacheKey];
     }
 
     // 2. Check disk cache
@@ -139,10 +222,10 @@ class SkyImageService {
     if (diskDir != null) {
       cacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url)));
       try {
-        if (await cacheFile.exists()) {
+        if (cacheFile.existsSync()) {
           final bytes = await cacheFile.readAsBytes();
           if (bytes.isNotEmpty) {
-            _addToMemCache(url, bytes);
+            _addToMemCache(cacheKey, bytes);
             // Touch file to update LRU timestamp
             try {
               await cacheFile.setLastModified(DateTime.now());
@@ -157,48 +240,67 @@ class SkyImageService {
       }
     }
 
-    // 3. Network fetch via CDS HiPS2FITS
-    try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
-        },
-      ).timeout(timeout);
+    // 3. Network fetch via CDS HiPS2FITS with mirror failover
+    final candidateUrls = getMirrorCandidateUrls(url);
+    final totalAttempts = math.min(candidateUrls.length, maxRetries + 1);
 
-      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-        final bytes = response.bodyBytes;
-        _addToMemCache(url, bytes);
+    for (var attempt = 0; attempt < totalAttempts; attempt++) {
+      final candidateUrl = candidateUrls[attempt];
+      try {
+        final response = await _client.get(
+          Uri.parse(candidateUrl),
+          headers: const {
+            'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
+            'Accept': 'image/jpeg,image/*,*/*',
+          },
+        ).timeout(attemptTimeout);
 
-        // Asynchronously persist to disk cache and enforce count cap
-        if (cacheFile != null) {
-          Future.microtask(() async {
-            try {
-              await cacheFile!.writeAsBytes(bytes);
-              await pruneDiskCache();
-            } catch (e) {
-              AppLogger.debug('Failed writing sky image to disk cache: $e', tag: _tag);
-            }
-          });
+        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+          final bytes = response.bodyBytes;
+          _addToMemCache(cacheKey, bytes);
+
+          // Asynchronously persist to disk cache and enforce count cap
+          if (cacheFile != null) {
+            Future.microtask(() async {
+              try {
+                await cacheFile!.writeAsBytes(bytes);
+                await pruneDiskCache();
+              } catch (e) {
+                AppLogger.debug('Failed writing sky image to disk cache: $e', tag: _tag);
+              }
+            });
+          }
+
+          return bytes;
+        } else {
+          AppLogger.warning(
+            'CDS HiPS2FITS endpoint attempt ${attempt + 1} returned HTTP ${response.statusCode} ($candidateUrl)',
+            tag: _tag,
+          );
         }
-
-        return bytes;
-      } else {
-        AppLogger.warning('CDS HiPS2FITS request failed with HTTP ${response.statusCode}', tag: _tag);
+      } catch (e) {
+        AppLogger.debug(
+          'CDS HiPS2FITS fetch attempt ${attempt + 1} failed for ($candidateUrl): $e',
+          tag: _tag,
+        );
       }
-    } catch (e) {
-      AppLogger.debug('Network fetch failed for sky image ($url): $e', tag: _tag);
+
+      // Small backoff before trying mirror or retrying (e.g. 500ms)
+      if (attempt < totalAttempts - 1 && effectiveBackoff > Duration.zero) {
+        await Future.delayed(effectiveBackoff * (attempt + 1));
+      }
     }
 
     return null;
   }
 
   void _addToMemCache(String url, Uint8List bytes) {
+    final key = normalizeCacheKey(url);
     if (_memCache.length >= maxMemCacheEntries) {
       // Evict oldest entry
       _memCache.remove(_memCache.keys.first);
     }
-    _memCache[url] = bytes;
+    _memCache[key] = bytes;
   }
 
   /// Prunes disk cache to ensure it does not exceed [maxEntries] (default: 100).
@@ -285,6 +387,11 @@ class SkyImageService {
       AppLogger.debug('Error calculating disk cache size: $e', tag: _tag);
     }
     return totalBytes;
+  }
+
+  /// Clears in-memory sky image cache synchronously.
+  void clearMemoryCache() {
+    _memCache.clear();
   }
 
   /// Clears both in-memory and on-disk sky image cache.

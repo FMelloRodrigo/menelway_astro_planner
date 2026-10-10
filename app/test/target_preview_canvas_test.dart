@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:app/core/sky_image_service.dart';
 import 'package:app/l10n/app_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:app/core/equipment_manager.dart';
@@ -423,5 +425,79 @@ void main() {
 
       expect(find.textContaining('visibility clamp applied'), findsNothing);
     });
+
+    testWidgets('Renders offline fallback with Retry button when image fetch fails without corrupting displayMode', (tester) async {
+      SkyImageService.instance.clearMemoryCache();
+      final mockClient = _ImmediateFailingClient();
+      SkyImageService.instance.setClientForTesting(mockClient);
+      final origBackoff = SkyImageService.instance.retryBackoff;
+      SkyImageService.instance.retryBackoff = Duration.zero;
+
+      final uncachedTarget = TargetItem(
+        id: 999999,
+        name: 'Uncached Test DSO',
+        catalog: 'Custom',
+        objectType: 'Galaxy',
+        constellation: 'Cnc',
+        raHours: 8.76543,
+        decDegrees: 23.4567,
+        magnitude: 10.0,
+        majorAxisArcmin: 12.0,
+        peakAltitudeDeg: 50.0,
+        visibleDurationHours: 4.0,
+        transitTime: DateTime(2026, 9, 6, 22, 0),
+        minMoonSepDeg: 60.0,
+        meetsCriteria: true,
+      );
+
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: TargetPreviewCanvas(
+                target: uncachedTarget,
+                isRedNightMode: false,
+                height: 300,
+              ),
+            ),
+          ),
+        );
+
+        // Advance real microtasks so async fetch finishes
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 100));
+        });
+        await tester.pump();
+
+        final state = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+        expect(state.hasError, isTrue);
+
+        // Find the Retry button on the offline banner
+        expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+        expect(find.text('Retry'), findsOneWidget);
+
+        // Verify that the user can tap Retry without errors
+        await tester.tap(find.byIcon(Icons.refresh_rounded));
+        await tester.runAsync(() async {
+          await Future.delayed(const Duration(milliseconds: 100));
+        });
+        await tester.pump();
+
+        // Canvas remains properly rendered
+        expect(find.byType(CustomPaint), findsWidgets);
+      } finally {
+        SkyImageService.instance.retryBackoff = origBackoff;
+        SkyImageService.instance.setClientForTesting(http.Client());
+      }
+    });
   });
+}
+
+class _ImmediateFailingClient extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    throw http.ClientException('Network unavailable', request.url);
+  }
 }
