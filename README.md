@@ -133,12 +133,12 @@ Menelway is designed specifically for **session planning, telescope pointing, an
 ### 1. Compile C++ Core Engine
 
 ```powershell
-# From workspace root using MSBuild
-& "C:\Development\Programas\Visual Studio\MSBuild\Current\Bin\MSBuild.exe" "core\build\astro_core.sln" /p:Configuration=Release /p:Platform=x64
-
-# Or using CMake directly:
+# Using CMake directly:
 cmake -B core/build -S core -DCMAKE_BUILD_TYPE=Release
 cmake --build core/build --config Release
+
+# Or using MSBuild (from Developer Command Prompt / VS Developer PowerShell):
+msbuild "core\build\astro_core.sln" /p:Configuration=Release /p:Platform=x64
 ```
 
 ### 2. Run Test Suites

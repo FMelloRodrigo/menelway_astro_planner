@@ -142,7 +142,7 @@ class _RefineLocationDialogState extends State<RefineLocationDialog> {
               TextField(
                 controller: _searchCtrl,
                 decoration: InputDecoration(
-                  hintText: "e.g. Cônego, Nova Friburgo or Rua...",
+                  hintText: "Detailed address, usually street name is enough to get a precise location",
                   prefixIcon: const Icon(Icons.search_rounded, size: 18),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.arrow_forward_rounded, size: 18),

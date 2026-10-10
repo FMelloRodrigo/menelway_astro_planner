@@ -55,5 +55,15 @@ __pycache__/
 # Core catalog build output
 core/data/catalogs.db
 
-# Local agent rules
-.agents/rules/engineering_standards.md
+# User runtime configuration & local caches
+user_settings.json
+user_settings.json.bak
+terrain_cache/
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.iml
+
+# Local agent rules & AI workspace configs
+.agents/
