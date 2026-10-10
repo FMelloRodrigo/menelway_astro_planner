@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/FMelloRodrigo/astro_targets_tool/actions/workflows/ci.yml/badge.svg)](https://github.com/FMelloRodrigo/astro_targets_tool/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://flutter.dev)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20Mobile-blue.svg)](https://flutter.dev)
 
-**MENELWAY** is a high-performance, native desktop application for deep-sky astrophotography session planning. It couples a fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
+**MENELWAY** is a high-performance application for deep-sky astrophotography session planning, supporting desktop and mobile environments. It couples a fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
 
 ---
 
@@ -18,6 +18,7 @@
 - **Observing Lists & Notes**: User-curated observing plans stored in a local SQLite database with SQLite FTS5 full-text search.
 - **Telescope Red Night-Vision Mode**: Complete dark-adaptation red theme with high contrast and zero blinding UI elements via `AstroPalette`.
 - **Bilingual Support**: Full internationalization for English and Portuguese (Brasil).
+- **Responsive Layout**: Adaptive UI supporting desktop workstations and mobile screens in the field.
 
 ---
 
@@ -76,12 +77,12 @@ astro_targets_tool/
 │   ├── data/                   # Catalogs SQLite database builder (build_catalogs.py)
 │   └── tests/                  # C++ test suites (test_astro, test_storage, test_capi)
 │
-├── app/                        # Modern Flutter Desktop UI (Windows x64)
+├── app/                        # Modern Flutter UI (Desktop & Mobile)
 │   ├── lib/
 │   │   ├── core/               # Dart FFI bindings & bridge (AstroEngine, AstroBridge)
 │   │   ├── models/             # Domain models (TargetItem, FilterState, NightSummary)
 │   │   ├── theme/              # AstroPalette token system (Obsidian Dark & Night-Vision Red)
-│   │   ├── views/              # Master/detail responsive desktop views and dialogs
+│   │   ├── views/              # Master/detail responsive desktop and mobile views and dialogs
 │   │   └── widgets/            # Custom painters (AltitudeCurveChart, TargetPreviewCanvas)
 │   └── test/                   # 146+ comprehensive unit and widget tests
 │

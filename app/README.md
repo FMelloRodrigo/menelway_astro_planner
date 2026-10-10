@@ -1,6 +1,6 @@
 # Menelway Astro Planner - Flutter Application
 
-Frontend desktop application for visual astronomy and deep-sky astrophotography planning.
+Frontend application for visual astronomy and deep-sky astrophotography planning, supporting desktop and mobile viewports.
 
 ## Architecture
 
