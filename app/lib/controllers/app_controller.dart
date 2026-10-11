@@ -288,6 +288,30 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Synchronizes active target filtering date with the current observing session date.
+  /// Typically called when the app returns to the foreground after being backgrounded across midnight/dawn.
+  void syncObservingDateIfNeeded() {
+    final expectedDate = FilterState.currentObservingDate();
+    if (_filters.date.year != expectedDate.year ||
+        _filters.date.month != expectedDate.month ||
+        _filters.date.day != expectedDate.day) {
+      AppLogger.info(
+        'Observing session date rollover from ${_filters.date.toIso8601String().split('T').first} '
+        'to ${expectedDate.toIso8601String().split('T').first}, refreshing ephemeris and targets.',
+        tag: 'AppController',
+      );
+      _filters = _filters.copyWith(date: expectedDate);
+      _nightSummary = engine.getNightSummary(
+        latitude: _filters.observerLat,
+        longitude: _filters.observerLon,
+        elevation: _filters.observerElevation,
+        date: _filters.date,
+      );
+      notifyListeners();
+      runFiltering();
+    }
+  }
+
   /// Refreshes saved observing lists from repository.
   void refreshObservingLists() {
     _observingLists = engine.getObservingLists();

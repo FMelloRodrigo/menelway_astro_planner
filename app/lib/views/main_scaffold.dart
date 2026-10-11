@@ -49,7 +49,7 @@ class MainScaffold extends StatefulWidget {
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
-class _MainScaffoldState extends State<MainScaffold> {
+class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver {
   late final AppController _controller;
   bool _ownsController = false;
 
@@ -79,6 +79,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.controller != null) {
       _controller = widget.controller!;
     } else {
@@ -104,11 +105,19 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.removeListener(_onControllerUpdated);
     if (_ownsController) {
       _controller.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _controller.syncObservingDateIfNeeded();
+    }
   }
 
   void _onControllerUpdated() {

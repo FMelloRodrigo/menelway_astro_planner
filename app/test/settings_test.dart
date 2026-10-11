@@ -247,5 +247,68 @@ void main() {
       expect(file.existsSync(), isTrue);
       expect(await file.length(), greaterThan(1024 * 1024));
     });
+
+    test('FilterState.currentObservingDate anchors to previous evening before dawn cutoff and today after', () {
+      // 03:00 AM on Oct 11 -> active session began evening of Oct 10
+      final morning3am = DateTime(2026, 10, 11, 3, 0);
+      final sessionMorning = FilterState.currentObservingDate(morning3am);
+      expect(sessionMorning, DateTime(2026, 10, 10));
+
+      // 05:59 AM on Oct 11 -> active session began evening of Oct 10
+      final morning559am = DateTime(2026, 10, 11, 5, 59);
+      final session559 = FilterState.currentObservingDate(morning559am);
+      expect(session559, DateTime(2026, 10, 10));
+
+      // 06:00 AM on Oct 11 -> dawn cutoff reached, planning for evening of Oct 11
+      final morning6am = DateTime(2026, 10, 11, 6, 0);
+      final session6am = FilterState.currentObservingDate(morning6am);
+      expect(session6am, DateTime(2026, 10, 11));
+
+      // 16:00 PM on Oct 11 -> planning for tonight (Oct 11)
+      final afternoon4pm = DateTime(2026, 10, 11, 16, 0);
+      final sessionAfternoon = FilterState.currentObservingDate(afternoon4pm);
+      expect(sessionAfternoon, DateTime(2026, 10, 11));
+    });
+
+    test('FilterState.toJson excludes date by default and SettingsService replaces stale persisted dates', () async {
+      final staleDateFilters = FilterState(
+        date: DateTime(2026, 10, 10),
+        observerLocationName: 'Stale Date Test Site',
+      );
+
+      // Verify date is not included in toJson by default
+      final defaultJson = staleDateFilters.toJson();
+      expect(defaultJson.containsKey('date'), isFalse);
+
+      // Verify opt-in includeDate works
+      final explicitJson = staleDateFilters.toJson(includeDate: true);
+      expect(explicitJson.containsKey('date'), isTrue);
+
+      // Test that SettingsService loading settings replaces any stale date on disk
+      final tempDir = Directory.systemTemp.createTempSync('astro_settings_date_test_');
+      final settingsFile = File('${tempDir.path}/settings.json');
+      SettingsService.customSettingsFile = settingsFile;
+
+      try {
+        // Manually write an older settings file with a stale date from Oct 10
+        await settingsFile.writeAsString('''{
+          "version": 1,
+          "filters": {
+            "date": "2026-10-10T00:00:00.000",
+            "observerLocationName": "Saved Test Site"
+          }
+        }''');
+
+        final loaded = await SettingsService.loadSettings();
+        expect(loaded.filters.observerLocationName, 'Saved Test Site');
+        // Date must NOT be the stale Oct 10 from disk
+        expect(loaded.filters.date, FilterState.currentObservingDate());
+      } finally {
+        SettingsService.customSettingsFile = null;
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      }
+    });
   });
 }

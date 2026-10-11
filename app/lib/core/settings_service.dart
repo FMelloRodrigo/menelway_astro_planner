@@ -225,7 +225,10 @@ class SettingsService {
       FilterState filters = FilterState();
       if (data.containsKey('filters') && data['filters'] is Map<String, dynamic>) {
         try {
-          filters = FilterState.fromJson(data['filters'] as Map<String, dynamic>);
+          final loaded = FilterState.fromJson(data['filters'] as Map<String, dynamic>);
+          // Stored filters preserve user limits, equipment profiles, and catalogs,
+          // but ephemeris session date must always anchor to the current observing session.
+          filters = loaded.copyWith(date: FilterState.currentObservingDate());
         } catch (e) {
           AppLogger.warning('Failed to parse saved FilterState, using defaults', tag: _tag, error: e);
         }

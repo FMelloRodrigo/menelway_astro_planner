@@ -5,6 +5,7 @@ import 'core/equipment_manager.dart';
 import 'core/observing_site_manager.dart';
 import 'core/settings_service.dart';
 import 'l10n/app_localizations.dart';
+import 'models/filter_state.dart';
 import 'theme/astro_theme.dart';
 import 'views/main_scaffold.dart';
 
@@ -27,6 +28,7 @@ void main() async {
     observerLon: activeSite.longitude,
     observerElevation: activeSite.elevation,
     observerLocationName: activeSite.name,
+    date: FilterState.currentObservingDate(),
   );
   final resolvedSettings = initialSettings.copyWith(filters: resolvedFilters);
 

@@ -27,8 +27,8 @@ if (-not (Test-Path $distDir)) {
 
 # Ensure obsolete APK naming is cleaned up
 $obsoleteApks = @(
-    Join-Path $distDir "astro_targets_planner_android.apk",
-    Join-Path $distDir "menelway_astro_planner.apk"
+    (Join-Path $distDir "astro_targets_planner_android.apk"),
+    (Join-Path $distDir "menelway_astro_planner.apk")
 )
 foreach ($oldApk in $obsoleteApks) {
     if (Test-Path $oldApk) {

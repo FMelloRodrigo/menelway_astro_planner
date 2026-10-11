@@ -89,6 +89,25 @@ class FilterState {
   final double observerElevation;
   final String observerLocationName;
 
+  /// Cutoff hour in local time (00:00 to 23:59) separating the previous night's observing
+  /// session from the upcoming night's session.
+  /// Observers active between midnight and 06:00 AM (astronomical dawn) are in the session
+  /// that began on the previous evening. From 06:00 AM onward, observers are planning for
+  /// the upcoming night starting that evening.
+  static const int observingSessionCutoffHour = 6;
+
+  /// Returns the current observing session date.
+  /// If the current local time is before [observingSessionCutoffHour] (e.g. 03:00 AM),
+  /// the active session began on the previous evening ([referenceTime] - 1 day).
+  /// Otherwise, it begins on the evening of [referenceTime].
+  static DateTime currentObservingDate([DateTime? referenceTime]) {
+    final now = referenceTime ?? DateTime.now();
+    final effective = now.hour < observingSessionCutoffHour
+        ? now.subtract(const Duration(days: 1))
+        : now;
+    return DateTime(effective.year, effective.month, effective.day);
+  }
+
   FilterState({
     this.minAltitude = 30.0,
     this.maxAltitude = 90.0,
@@ -126,7 +145,7 @@ class FilterState {
     this.observerLocationName = ObservingSite.defaultSiteName,
   })  : date = date != null
             ? DateTime(date.year, date.month, date.day)
-            : DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+            : currentObservingDate(),
         horizonPoints = horizonPoints ?? const [],
         selectedCatalogs = selectedCatalogs ?? const {'Messier', 'Caldwell'},
         selectedObjectTypes = selectedObjectTypes ?? const {
@@ -323,11 +342,11 @@ class FilterState {
     );
   }
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeDate = false}) => {
     'minAltitude': minAltitude,
     'maxAltitude': maxAltitude,
     'minDurationHours': minDurationHours,
-    'date': date.toIso8601String(),
+    if (includeDate) 'date': date.toIso8601String(),
     'minMoonSeparation': minMoonSeparation,
     'minAzimuth': minAzimuth,
     'maxAzimuth': maxAzimuth,
