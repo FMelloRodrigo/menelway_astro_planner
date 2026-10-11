@@ -1,13 +1,11 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import 'app_logger.dart';
-import 'catalog_manager.dart';
 
 class SkySurvey {
   final String id;
