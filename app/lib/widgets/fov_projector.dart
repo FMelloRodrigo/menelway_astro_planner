@@ -44,6 +44,21 @@ class FovProjector {
   /// Minimum viewport dimension in pixels.
   double get minDim => math.min(viewportSize.width, viewportSize.height);
 
+  /// Maximum viewport dimension in pixels.
+  double get maxDim => math.max(viewportSize.width, viewportSize.height);
+
+  /// Viewport aspect ratio compensation factor (maxDim / minDim).
+  /// Used to ensure photographic cutouts cover the entire rectangular viewport
+  /// while maintaining strict 1:1 scale parity with the sensor overlay and vector canvas.
+  double get aspectScaleFactor {
+    if (minDim <= 0.0) return 1.0;
+    return maxDim / minDim;
+  }
+
+  /// The effective field of view (in degrees) required for a square sky cutout
+  /// to completely cover this rectangular viewport without scaling distortions.
+  double get coverageFovDeg => fovDeg * aspectScaleFactor;
+
   /// Number of screen pixels per arcminute of sky.
   double get pixelsPerArcmin {
     final arcmin = fovArcmin;
@@ -60,6 +75,24 @@ class FovProjector {
       viewportCenter.dx - (panOffsetArcminX * pixelsPerArcmin),
       viewportCenter.dy - (panOffsetArcminY * pixelsPerArcmin),
     );
+  }
+
+  /// Computes the precise screen positioning and bounds for a photographic sky
+  /// cutout fetched with [imageFovDeg]. Ensures that 1 arcminute in the photograph
+  /// occupies exactly [pixelsPerArcmin] screen pixels, completely eliminating
+  /// mobile / desktop aspect ratio framing mismatches.
+  Rect calculateImageRect({
+    required double imageFovDeg,
+    double imageBasePanX = 0.0,
+    double imageBasePanY = 0.0,
+  }) {
+    final effectiveImageFov = (imageFovDeg > 0.0) ? imageFovDeg : fovDeg;
+    final imageSidePixels = (effectiveImageFov * 60.0) * pixelsPerArcmin;
+    final shiftX = -(panOffsetArcminX - imageBasePanX) * pixelsPerArcmin;
+    final shiftY = -(panOffsetArcminY - imageBasePanY) * pixelsPerArcmin;
+    final left = (viewportSize.width - imageSidePixels) / 2.0 + shiftX;
+    final top = (viewportSize.height - imageSidePixels) / 2.0 + shiftY;
+    return Rect.fromLTWH(left, top, imageSidePixels, imageSidePixels);
   }
 
   /// Computes screen pixel dimensions for a camera sensor rectangle.

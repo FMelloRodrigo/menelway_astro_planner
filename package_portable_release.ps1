@@ -128,7 +128,11 @@ Write-Host "  Zip Size: $([math]::Round($zipSizeMb, 2)) MB" -ForegroundColor Gre
 
 # Copy release APK to dist if present
 $apkSource = Join-Path $workspaceRoot "app\build\app\outputs\flutter-apk\app-release.apk"
-$apkDist = Join-Path $workspaceRoot "dist\menelway_astro_planner.apk"
+$apkDist = Join-Path $workspaceRoot "dist\menelway_astro_planner_android.apk"
+$obsoleteApk = Join-Path $workspaceRoot "dist\menelway_astro_planner.apk"
+if (Test-Path $obsoleteApk) {
+    Remove-Item $obsoleteApk -Force -ErrorAction SilentlyContinue
+}
 if (Test-Path $apkSource) {
     Copy-Item $apkSource $apkDist -Force
     $apkSizeMb = (Get-Item $apkDist).Length / 1MB

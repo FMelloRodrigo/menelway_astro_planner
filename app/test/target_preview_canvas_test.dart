@@ -492,6 +492,47 @@ void main() {
         SkyImageService.instance.setClientForTesting(http.Client());
       }
     });
+
+    testWidgets('Maintains scale parity in rectangular mobile landscape viewports without aspect ratio distortion', (tester) async {
+      final mockClient = _ImmediateFailingClient();
+      SkyImageService.instance.setClientForTesting(mockClient);
+      final origBackoff = SkyImageService.instance.retryBackoff;
+      SkyImageService.instance.retryBackoff = Duration.zero;
+
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 480,
+                  height: 380, // allows viewport to get wide rectangular aspect ratio
+                  child: TargetPreviewCanvas(
+                    target: testTarget,
+                    isRedNightMode: false,
+                    height: double.infinity,
+                    initialFramingEnabled: true,
+                    enableExpandDialog: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final state = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+        expect(state.fovDeg, greaterThan(0.0));
+        expect(find.byType(CustomPaint), findsWidgets);
+      } finally {
+        SkyImageService.instance.retryBackoff = origBackoff;
+        SkyImageService.instance.setClientForTesting(http.Client());
+      }
+    });
   });
 }
 

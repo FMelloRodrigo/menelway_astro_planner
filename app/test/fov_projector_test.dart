@@ -175,5 +175,76 @@ void main() {
       );
       expect(extremeZoomProjector.isTargetSubpixelClamped(jupiter), isFalse);
     });
+
+    test('calculates aspect ratio and coverage FOV correctly for non-square viewports', () {
+      // 1. Square Viewport (500x500)
+      const squareProjector = FovProjector(
+        viewportSize: Size(500, 500),
+        fovDeg: 2.0,
+      );
+      expect(squareProjector.minDim, 500.0);
+      expect(squareProjector.maxDim, 500.0);
+      expect(squareProjector.aspectScaleFactor, 1.0);
+      expect(squareProjector.coverageFovDeg, 2.0);
+
+      // 2. Wide Landscape Viewport (typical mobile/tablet landscape: 480x270)
+      const wideProjector = FovProjector(
+        viewportSize: Size(480, 270),
+        fovDeg: 2.0,
+      );
+      expect(wideProjector.minDim, 270.0);
+      expect(wideProjector.maxDim, 480.0);
+      expect(wideProjector.aspectScaleFactor, closeTo(480.0 / 270.0, 1e-6));
+      expect(wideProjector.coverageFovDeg, closeTo(2.0 * (480.0 / 270.0), 1e-6));
+
+      // 3. Tall Portrait Viewport (300x600)
+      const tallProjector = FovProjector(
+        viewportSize: Size(300, 600),
+        fovDeg: 1.5,
+      );
+      expect(tallProjector.minDim, 300.0);
+      expect(tallProjector.maxDim, 600.0);
+      expect(tallProjector.aspectScaleFactor, 2.0);
+      expect(tallProjector.coverageFovDeg, 3.0);
+    });
+
+    test('calculateImageRect guarantees strict 1:1 scale parity with pixelsPerArcmin', () {
+      const wideProjector = FovProjector(
+        viewportSize: Size(480, 270),
+        fovDeg: 2.0, // 120 arcminutes -> px/arcmin = 270 / 120 = 2.25
+        panOffsetArcminX: 10.0,
+        panOffsetArcminY: -5.0,
+      );
+
+      final pxScale = wideProjector.pixelsPerArcmin;
+      expect(pxScale, closeTo(2.25, 1e-6));
+
+      // Coverage image with coverageFovDeg
+      final coverageFov = wideProjector.coverageFovDeg;
+      final imageRect = wideProjector.calculateImageRect(
+        imageFovDeg: coverageFov,
+        imageBasePanX: 0.0,
+        imageBasePanY: 0.0,
+      );
+
+      // 1. The image side in pixels must equal maxDim (480px) to fully cover the wide viewport
+      expect(imageRect.width, closeTo(480.0, 1e-6));
+      expect(imageRect.height, closeTo(480.0, 1e-6));
+
+      // 2. Scale parity: width in pixels divided by (imageFov * 60 arcminutes) must exactly equal pixelsPerArcmin
+      final imageScale = imageRect.width / (coverageFov * 60.0);
+      expect(imageScale, closeTo(pxScale, 1e-6));
+
+      // 3. Sensor pixel dimensions at the same scale
+      final sensor = wideProjector.calculateSensorPixelSize(102.2, 68.3); // Generic 150 + T3i FOV in arcmin
+      expect(sensor.width, closeTo(102.2 * pxScale, 1e-6));
+      expect(sensor.height, closeTo(68.3 * pxScale, 1e-6));
+
+      // 4. Center of the image shifts with pan offset
+      final expectedCenterX = (480.0 / 2.0) - (10.0 * pxScale);
+      final expectedCenterY = (270.0 / 2.0) - (-5.0 * pxScale);
+      expect(imageRect.center.dx, closeTo(expectedCenterX, 1e-6));
+      expect(imageRect.center.dy, closeTo(expectedCenterY, 1e-6));
+    });
   });
 }

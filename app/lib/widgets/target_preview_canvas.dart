@@ -67,6 +67,11 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   String _lastActiveProfileId = '';
   static double _zoomStepPercent = 0.25;
 
+  /// Tracks the actual sky FOV of the currently loaded image bytes
+  double _imageFovDeg = 0.6;
+  /// Tracks the measured layout viewport size
+  Size? _viewportSize;
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +86,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     } else {
       _fovDeg = SkyImageService.computeRecommendedFovDeg(widget.target.majorAxisArcmin);
     }
+    _imageFovDeg = _fovDeg;
     _imageBasePanX = EquipmentManager.instance.panOffsetArcminX;
     _imageBasePanY = EquipmentManager.instance.panOffsetArcminY;
     _lastObservedPanX = _imageBasePanX;
@@ -200,10 +206,15 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     final reqPanX = EquipmentManager.instance.panOffsetArcminX;
     final reqPanY = EquipmentManager.instance.panOffsetArcminY;
 
+    final aspectFactor = (_viewportSize != null && _viewportSize!.width > 0 && _viewportSize!.height > 0)
+        ? (math.max(_viewportSize!.width, _viewportSize!.height) / math.min(_viewportSize!.width, _viewportSize!.height))
+        : 1.0;
+    final reqFovDeg = (_fovDeg * aspectFactor).clamp(0.15, 14.0);
+
     final url = SkyImageService.buildHiPSUrl(
       raHours: centerRa,
       decDegrees: centerDec,
-      fovDeg: _fovDeg,
+      fovDeg: reqFovDeg,
       surveyId: _selectedSurveyId,
       width: 512,
       height: 512,
@@ -216,6 +227,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         _isLoading = false;
         if (bytes != null && bytes.isNotEmpty) {
           _imageBytes = bytes;
+          _imageFovDeg = reqFovDeg;
           _imageBasePanX = reqPanX;
           _imageBasePanY = reqPanY;
           _hasError = false;
@@ -314,29 +326,46 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
         builder: (context, constraints) {
           final effectiveWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 400.0;
           final effectiveHeight = constraints.maxHeight.isFinite ? constraints.maxHeight : (widget.height.isFinite ? widget.height : 400.0);
-          final minDim = math.min(effectiveWidth, effectiveHeight);
-          final pixelsPerArcmin = minDim / fovArcmin;
-          final shiftX = -(panX - _imageBasePanX) * pixelsPerArcmin;
-          final shiftY = -(panY - _imageBasePanY) * pixelsPerArcmin;
+          final currentSize = Size(effectiveWidth, effectiveHeight);
+
+          if (_viewportSize == null ||
+              (_viewportSize!.width - effectiveWidth).abs() > 30 ||
+              (_viewportSize!.height - effectiveHeight).abs() > 30) {
+            final oldAspect = (_viewportSize != null && _viewportSize!.height > 0)
+                ? _viewportSize!.width / _viewportSize!.height
+                : 1.0;
+            final newAspect = effectiveHeight > 0 ? effectiveWidth / effectiveHeight : 1.0;
+            _viewportSize = currentSize;
+            if ((oldAspect - newAspect).abs() > 0.08 && widget.target.catalog != 'Solar System') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _loadImage();
+              });
+            }
+          }
 
           final projector = FovProjector(
-            viewportSize: Size(effectiveWidth, effectiveHeight),
+            viewportSize: currentSize,
             fovDeg: _fovDeg,
             panOffsetArcminX: panX,
             panOffsetArcminY: panY,
           );
           final isPlanetClamped = projector.isTargetSubpixelClamped(widget.target);
+          final imageRect = projector.calculateImageRect(
+            imageFovDeg: _imageFovDeg,
+            imageBasePanX: _imageBasePanX,
+            imageBasePanY: _imageBasePanY,
+          );
 
           return Stack(
             fit: StackFit.expand,
             children: [
-              // 1. Photographic Sky Image Layer (dynamically shifted during real-time panning before debounced tile loads)
+              // 1. Photographic Sky Image Layer (strictly projected with 1:1 scale parity against sensor overlay)
               if (showPhoto)
-                Transform.translate(
-                  offset: Offset(shiftX, shiftY),
+                Positioned.fromRect(
+                  rect: imageRect,
                   child: Image.memory(
                     _imageBytes!,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fill,
                     gaplessPlayback: true,
                     filterQuality: FilterQuality.medium,
                     color: (widget.isRedNightMode ?? palette.isRedNightMode) ? AstroColors.nightVisionRed : null,
