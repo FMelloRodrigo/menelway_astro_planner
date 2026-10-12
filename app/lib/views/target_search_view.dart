@@ -167,13 +167,22 @@ class _TargetSearchViewState extends State<TargetSearchView> {
     int getTier(TargetItem t) {
       if (!hasSearch) return 0;
       String norm(String s) => s.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
-      if (norm(t.name) == normQuery) return 0;
-      if (t.messier != null && norm(t.messier!) == normQuery) return 0;
-      if (t.caldwell != null && norm(t.caldwell!) == normQuery) return 0;
-      if (t.arp != null && norm(t.arp!) == normQuery) return 0;
-      if (t.herschel != null && norm(t.herschel!) == normQuery) return 0;
-      if (t.commonName != null && norm(t.commonName!) == normQuery) return 0;
-      if (t.commonName != null && norm(t.commonName!).contains(normQuery)) return 1;
+      var q = normQuery;
+      if (q.startsWith('messier') && q.length > 7) {
+        q = 'm${q.substring(7)}';
+      } else if (q.startsWith('caldwell') && q.length > 8) {
+        q = 'c${q.substring(8)}';
+      } else if (q.startsWith('herschel') && q.length > 8) {
+        q = 'h${q.substring(8)}';
+      }
+
+      if (norm(t.name) == normQuery || norm(t.name) == q) return 0;
+      if (t.messier != null && (norm(t.messier!) == normQuery || norm(t.messier!) == q)) return 0;
+      if (t.caldwell != null && (norm(t.caldwell!) == normQuery || norm(t.caldwell!) == q)) return 0;
+      if (t.arp != null && (norm(t.arp!) == normQuery || norm(t.arp!) == q)) return 0;
+      if (t.herschel != null && (norm(t.herschel!) == normQuery || norm(t.herschel!) == q)) return 0;
+      if (t.commonName != null && (norm(t.commonName!) == normQuery || norm(t.commonName!) == q)) return 0;
+      if (t.commonName != null && (norm(t.commonName!).contains(normQuery) || norm(t.commonName!).contains(q))) return 1;
       return 2;
     }
 
@@ -915,11 +924,15 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                           children: [
                             Icon(Icons.trending_up_rounded, size: 14, color: AstroColors.starGold),
                             const SizedBox(width: 4),
-                            Text(
-                              target.peakAltitudeDeg > 0
-                                  ? (l10n.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0)))
-                                  : (l10n.belowHorizon),
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                            Flexible(
+                              child: Text(
+                                target.peakAltitudeDeg > 0
+                                    ? (l10n.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0)))
+                                    : (l10n.belowHorizon),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -930,9 +943,13 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                             children: [
                               Icon(Icons.schedule_rounded, size: 14, color: textColor.withValues(alpha: 0.5)),
                               const SizedBox(width: 4),
-                              Text(
-                                windowSpanText,
-                                style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                              Flexible(
+                                child: Text(
+                                  windowSpanText,
+                                  style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),

@@ -71,6 +71,8 @@ class _FavoritesViewState extends State<FavoritesView> {
     if (_searchQuery.trim().isEmpty) return favs;
 
     final q = _searchQuery.trim().toLowerCase();
+    final normQ = q.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    String norm(String? s) => s == null ? '' : s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     return favs.where((t) {
       final name = t.name.toLowerCase();
       final messier = t.messier?.toLowerCase() ?? '';
@@ -81,12 +83,12 @@ class _FavoritesViewState extends State<FavoritesView> {
       final constel = t.constellation.toLowerCase();
       final type = t.objectType.toLowerCase();
 
-      return name.contains(q) ||
-          messier.contains(q) ||
-          caldwell.contains(q) ||
-          arp.contains(q) ||
-          herschel.contains(q) ||
-          common.contains(q) ||
+      return name.contains(q) || (normQ.isNotEmpty && norm(name).contains(normQ)) ||
+          messier.contains(q) || (normQ.isNotEmpty && norm(messier).contains(normQ)) ||
+          caldwell.contains(q) || (normQ.isNotEmpty && norm(caldwell).contains(normQ)) ||
+          arp.contains(q) || (normQ.isNotEmpty && norm(arp).contains(normQ)) ||
+          herschel.contains(q) || (normQ.isNotEmpty && norm(herschel).contains(normQ)) ||
+          common.contains(q) || (normQ.isNotEmpty && norm(common).contains(normQ)) ||
           constel.contains(q) ||
           type.contains(q);
     }).toList();

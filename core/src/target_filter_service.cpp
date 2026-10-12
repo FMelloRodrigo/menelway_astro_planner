@@ -24,19 +24,28 @@ std::string normalize_ident(std::string_view s) {
 int compute_search_match_score(const catalog::DsoObject& dso, const std::string& norm_query) {
     if (norm_query.empty()) return 3;
 
+    std::string query_alt = norm_query;
+    if (query_alt.rfind("messier", 0) == 0 && query_alt.size() > 7) {
+        query_alt = "m" + query_alt.substr(7);
+    } else if (query_alt.rfind("caldwell", 0) == 0 && query_alt.size() > 8) {
+        query_alt = "c" + query_alt.substr(8);
+    } else if (query_alt.rfind("herschel", 0) == 0 && query_alt.size() > 8) {
+        query_alt = "h" + query_alt.substr(8);
+    }
+
     // Tier 0: Exact match on primary catalog designations
-    if (normalize_ident(dso.name) == norm_query) return 0;
-    if (dso.messier && normalize_ident(*dso.messier) == norm_query) return 0;
-    if (dso.caldwell && normalize_ident(*dso.caldwell) == norm_query) return 0;
-    if (dso.arp && normalize_ident(*dso.arp) == norm_query) return 0;
-    if (dso.herschel && normalize_ident(*dso.herschel) == norm_query) return 0;
-    if (!dso.ngc_ic.empty() && normalize_ident(dso.ngc_ic) == norm_query) return 0;
+    if (normalize_ident(dso.name) == norm_query || normalize_ident(dso.name) == query_alt) return 0;
+    if (dso.messier && (normalize_ident(*dso.messier) == norm_query || normalize_ident(*dso.messier) == query_alt)) return 0;
+    if (dso.caldwell && (normalize_ident(*dso.caldwell) == norm_query || normalize_ident(*dso.caldwell) == query_alt)) return 0;
+    if (dso.arp && (normalize_ident(*dso.arp) == norm_query || normalize_ident(*dso.arp) == query_alt)) return 0;
+    if (dso.herschel && (normalize_ident(*dso.herschel) == norm_query || normalize_ident(*dso.herschel) == query_alt)) return 0;
+    if (!dso.ngc_ic.empty() && (normalize_ident(dso.ngc_ic) == norm_query || normalize_ident(dso.ngc_ic) == query_alt)) return 0;
 
     // Tier 1: Substring / token match in common names (or Tier 0 if exact)
     if (dso.common_names) {
         std::string norm_cn = normalize_ident(*dso.common_names);
-        if (norm_cn == norm_query) return 0;
-        if (norm_cn.find(norm_query) != std::string::npos) {
+        if (norm_cn == norm_query || norm_cn == query_alt) return 0;
+        if (norm_cn.find(norm_query) != std::string::npos || norm_cn.find(query_alt) != std::string::npos) {
             return 1;
         }
     }
@@ -79,11 +88,19 @@ std::vector<catalog::TargetWithVisibility> TargetFilterService::filter_targets(
     std::string norm_query = has_search_query ? normalize_ident(filter_options.search_query) : "";
 
     // Candidate pool sizing:
-    // When actively searching, keep pool focused so FTS BM25 relevance is respected.
+    // When actively searching, keep pool focused so FTS BM25 relevance is respected,
+    // and clear browsing filters so searched targets (e.g. M44, M69) are not excluded by unselected object types/catalogs.
     // When browsing catalogs, pull a wide candidate pool so the visibility engine can rank all visible objects.
     catalog::DsoFilterOptions candidate_opts = filter_options;
     if (has_search_query) {
         candidate_opts.limit = filter_options.limit > 0 ? std::max(filter_options.limit * 5, 100) : 500;
+        candidate_opts.catalogs.clear();
+        candidate_opts.object_types.clear();
+        candidate_opts.min_magnitude.reset();
+        candidate_opts.max_magnitude.reset();
+        candidate_opts.min_size_arcmin.reset();
+        candidate_opts.max_size_arcmin.reset();
+        candidate_opts.constellation.reset();
     } else {
         candidate_opts.limit = 15000;
     }
@@ -208,6 +225,13 @@ std::vector<catalog::TargetWithPeriodVisibility> TargetFilterService::filter_tar
     catalog::DsoFilterOptions candidate_opts = filter_options;
     if (has_search_query) {
         candidate_opts.limit = filter_options.limit > 0 ? std::max(filter_options.limit * 5, 100) : 500;
+        candidate_opts.catalogs.clear();
+        candidate_opts.object_types.clear();
+        candidate_opts.min_magnitude.reset();
+        candidate_opts.max_magnitude.reset();
+        candidate_opts.min_size_arcmin.reset();
+        candidate_opts.max_size_arcmin.reset();
+        candidate_opts.constellation.reset();
     } else {
         candidate_opts.limit = 15000;
     }

@@ -122,13 +122,42 @@ std::string build_fts_query(const std::string& input) {
     while (!clean.empty() && clean.back() == ' ') clean.pop_back();
     if (clean.empty()) return "";
 
+    // Check catalog names without number
+    std::string clean_lower = clean;
+    for (char& c : clean_lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+    if (clean_lower == "messier") {
+        return "messier : M*";
+    }
+    if (clean_lower == "caldwell") {
+        return "caldwell : C*";
+    }
+    if (clean_lower == "arp") {
+        return "arp : *";
+    }
+    if (clean_lower == "herschel") {
+        return "herschel : *";
+    }
+
     // Check if the query is a catalog prefix followed immediately or with space by digits
-    // (e.g. M31, M 31, NGC7000, NGC 7000, IC434, IC 434, C20, C 20, Arp208, Arp 208)
+    // (e.g. M31, M 31, messier 31, messier31, NGC7000, NGC 7000, IC434, IC 434, C20, C 20, caldwell 20, Arp208, Arp 208)
     static const std::regex cat_regex(R"(^([A-Za-z]+)\s*(\d+.*)$)");
     std::smatch match;
     if (std::regex_match(clean, match, cat_regex)) {
         std::string cat = match[1].str();
         std::string num = match[2].str();
+        std::string cat_low = cat;
+        for (char& c : cat_low) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+        if (cat_low == "messier" || cat_low == "m") {
+            return "\"M " + num + "\"* OR \"M" + num + "\"*";
+        } else if (cat_low == "caldwell" || cat_low == "c") {
+            return "\"C " + num + "\"* OR \"C" + num + "\"*";
+        } else if (cat_low == "herschel" || cat_low == "h") {
+            return "\"H " + num + "\"* OR \"H" + num + "\"*";
+        } else if (cat_low == "arp") {
+            return "\"Arp " + num + "\"* OR \"Arp" + num + "\"*";
+        }
         return "\"" + cat + " " + num + "\"* OR \"" + cat + num + "\"*";
     }
 

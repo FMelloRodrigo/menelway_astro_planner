@@ -239,15 +239,17 @@ class _PlannerViewState extends State<PlannerView> {
 
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase().trim();
+      final normQ = q.replaceAll(RegExp(r'[^a-z0-9]'), '');
+      String norm(String? s) => s == null ? '' : s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
       list = list.where((t) {
-        final nameMatch = t.name.toLowerCase().contains(q);
-        final commonMatch = t.commonName?.toLowerCase().contains(q) ?? false;
+        final nameMatch = t.name.toLowerCase().contains(q) || (normQ.isNotEmpty && norm(t.name).contains(normQ));
+        final commonMatch = (t.commonName?.toLowerCase().contains(q) ?? false) || (normQ.isNotEmpty && norm(t.commonName).contains(normQ));
         final constMatch = t.constellation.toLowerCase().contains(q);
         final catMatch = t.catalog.toLowerCase().contains(q);
-        final mMatch = t.messier?.toLowerCase().contains(q) ?? false;
-        final cMatch = t.caldwell?.toLowerCase().contains(q) ?? false;
-        final aMatch = t.arp?.toLowerCase().contains(q) ?? false;
-        final hMatch = t.herschel?.toLowerCase().contains(q) ?? false;
+        final mMatch = (t.messier?.toLowerCase().contains(q) ?? false) || (normQ.isNotEmpty && norm(t.messier).contains(normQ));
+        final cMatch = (t.caldwell?.toLowerCase().contains(q) ?? false) || (normQ.isNotEmpty && norm(t.caldwell).contains(normQ));
+        final aMatch = (t.arp?.toLowerCase().contains(q) ?? false) || (normQ.isNotEmpty && norm(t.arp).contains(normQ));
+        final hMatch = (t.herschel?.toLowerCase().contains(q) ?? false) || (normQ.isNotEmpty && norm(t.herschel).contains(normQ));
         return nameMatch || commonMatch || constMatch || catMatch || mMatch || cMatch || aMatch || hMatch;
       }).toList();
     }

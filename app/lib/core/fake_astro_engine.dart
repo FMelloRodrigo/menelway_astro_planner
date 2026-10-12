@@ -71,10 +71,16 @@ class FakeAstroEngine implements AstroEngine {
       return targets;
     }
     final q = filters.searchQuery.trim().toLowerCase();
+    final normQ = q.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    String norm(String? s) => s == null ? '' : s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
     return targets
         .where((t) =>
             t.name.toLowerCase().contains(q) ||
+            (normQ.isNotEmpty && norm(t.name).contains(normQ)) ||
             t.displayName.toLowerCase().contains(q) ||
+            (normQ.isNotEmpty && norm(t.displayName).contains(normQ)) ||
+            (t.messier != null && norm(t.messier).contains(normQ)) ||
+            (t.commonName != null && norm(t.commonName).contains(normQ)) ||
             t.constellation.toLowerCase().contains(q))
         .toList();
   }
