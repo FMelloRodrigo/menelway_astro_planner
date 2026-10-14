@@ -4,13 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64%20%7C%20Mobile-blue.svg)](https://flutter.dev)
 
-**MENELWAY** is a high-performance application for deep-sky astrophotography session planning, supporting desktop and mobile environments. It couples a fast C++ calculation core with a modern Flutter user interface, running offline with self-contained databases and ephemerides.
+**MENELWAY** is a lightweight application for astrophotography session planning and equipment frame preview, running offline with self-contained databases and ephemerides. Currently with Windows and Android releases. 
 
 ## Development Notes
 
-Beyond building a tool that I truly needed, this was an opportunity to learn. I am an experienced game developer primarily working with Unreal Engine. While I write C++ daily, Unreal's C++ is a different beast from modern, standard C++. This project was a chance to dive into modern C++20, explore fundamental astronomical mathematics and algorithms, and pick up Flutter/Dart as a bonus.
+Beyond building a tool that I truly needed, this project was an opportunity to learn. I am an experienced game developer primarily working with Unreal Engine. While I write C++ daily, Unreal's C++ is a different beast from modern, standard C++. This project was a chance to dive into modern C++20, explore fundamental astronomical mathematics and algorithms, and pick up Flutter/Dart as a bonus.
 
-Worked on this app in my free time, generative AI was heavily utilized to accelerate development, and I haven't had the time to meticulously study, review the entire codebase yet. As such, the code is by no means an reference for architecture. It is first and foremost a personal utility and learning playground of mine.
+Worked on this app in my free time, under my supervision and architecture generative AI was heavily utilized to accelerate development. I haven't had the time to meticulously study, review the entire codebase yet. As such, the code is by no means a reference. This project is first and foremost a personal utility and learning playground of mine.
 
 ---
 
@@ -22,9 +22,8 @@ Worked on this app in my free time, generative AI was heavily utilized to accele
 - **Period Planner**: Search targets observable within future date intervals (e.g. upcoming 7 days, 14 days, next month) with Moon phase analysis.
 - **Equipment Framing Simulator**: Focal length and sensor dimension framing simulator with FOV overlays, visual target dimensions, and interactive panning and zooming.
 - **Observing Lists & Notes**: User-curated observing plans stored in a local SQLite database with SQLite FTS5 full-text search.
-- **Telescope Red Night-Vision Mode**: Complete dark-adaptation red theme with high contrast and zero blinding UI elements via `AstroPalette`.
 - **Bilingual Support**: Full internationalization for English and Portuguese (Brasil).
-- **Responsive Layout**: Adaptive UI supporting desktop workstations and mobile screens in the field.
+- **Responsive Layout**: Adaptive UI supporting desktop workstations and mobile.
 
 ---
 
