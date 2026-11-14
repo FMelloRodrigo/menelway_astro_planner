@@ -384,6 +384,8 @@
   "rotatePlus15": "Girar +15°",
   "fitFovToSensorTooltip": "Ajustar FOV ao Tamanho do Sensor",
   "offlineSkyFallback": "Modo Céu Offline",
+  "skyServerUnreachable": "Servidor de imagens inacessível",
+  "skyStreamingUnreachableDesc": "O servidor externo de imagens está temporariamente inacessível. Exibindo alvo no modo vetorial offline.",
 
   "noAltitudeData": "Nenhum dado de altitude disponível para a janela",
   "altitudeVsTimeTarget": "Altitude vs. Tempo: {targetName}",

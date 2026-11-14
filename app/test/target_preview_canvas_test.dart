@@ -474,9 +474,10 @@ void main() {
         final state = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
         expect(state.hasError, isTrue);
 
-        // Find the Retry button on the offline banner
+        // Find the Retry button and server unreachable message on the offline banner
         expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
+        expect(find.text('Sky image server unreachable'), findsOneWidget);
 
         // Verify that the user can tap Retry without errors
         await tester.tap(find.byIcon(Icons.refresh_rounded));

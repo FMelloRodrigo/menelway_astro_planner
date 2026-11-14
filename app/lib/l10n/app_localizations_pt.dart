@@ -1214,6 +1214,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get offlineSkyFallback => 'Modo Céu Offline';
 
   @override
+  String get skyServerUnreachable => 'Servidor de imagens inacessível';
+
+  @override
+  String get skyStreamingUnreachableDesc =>
+      'O servidor externo de imagens está temporariamente inacessível. Exibindo alvo no modo vetorial offline.';
+
+  @override
   String get noAltitudeData =>
       'Nenhum dado de altitude disponível para a janela';
 

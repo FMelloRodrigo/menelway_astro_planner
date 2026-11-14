@@ -194,7 +194,40 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     return (widget.target.decDegrees + dDecDeg).clamp(-90.0, 90.0);
   }
 
-  void _loadImage() async {
+  DateTime? _lastUnreachableNoticeTime;
+
+  void _showUnreachableNotice({bool force = false}) {
+    if (!mounted) return;
+    final now = DateTime.now();
+    if (!force &&
+        _lastUnreachableNoticeTime != null &&
+        now.difference(_lastUnreachableNoticeTime!) < const Duration(seconds: 15)) {
+      return;
+    }
+    _lastUnreachableNoticeTime = now;
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, color: Colors.amber, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.skyStreamingUnreachableDesc,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _loadImage({bool forceNotice = false}) async {
     final reqId = ++_imageLoadRequestId;
     setState(() {
       _isLoading = true;
@@ -237,6 +270,9 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
           // or user taps Retry/pans, the photographic view is restored automatically.
         }
       });
+      if (bytes == null || bytes.isEmpty) {
+        _showUnreachableNotice(force: forceNotice);
+      }
     }
   }
 
@@ -436,44 +472,56 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.amber.withValues(alpha: 0.6)),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.offlineSkyFallback,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
-                        ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: _loadImage,
-                          borderRadius: BorderRadius.circular(4),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-                            ),
+                    child: Tooltip(
+                      message: l10n.skyStreamingUnreachableDesc,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () => _showUnreachableNotice(force: true),
+                            borderRadius: BorderRadius.circular(4),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.refresh_rounded, size: 12, color: Colors.amber),
-                                const SizedBox(width: 3),
+                                const Icon(Icons.cloud_off_rounded, size: 14, color: Colors.amber),
+                                const SizedBox(width: 6),
                                 Text(
-                                  l10n.retry,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amber,
-                                  ),
+                                  l10n.skyServerUnreachable,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _loadImage(forceNotice: true),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.refresh_rounded, size: 12, color: Colors.amber),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    l10n.retry,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

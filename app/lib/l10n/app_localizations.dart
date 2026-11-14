@@ -2198,6 +2198,18 @@ abstract class AppLocalizations {
   /// **'Offline Sky Fallback'**
   String get offlineSkyFallback;
 
+  /// No description provided for @skyServerUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky image server unreachable'**
+  String get skyServerUnreachable;
+
+  /// No description provided for @skyStreamingUnreachableDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'External sky survey server is currently unreachable. Displaying target in offline vector mode.'**
+  String get skyStreamingUnreachableDesc;
+
   /// No description provided for @noAltitudeData.
   ///
   /// In en, this message translates to:

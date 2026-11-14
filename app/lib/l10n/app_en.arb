@@ -655,6 +655,8 @@
   "rotatePlus15": "Rotate +15°",
   "fitFovToSensorTooltip": "Fit FOV to Sensor Size",
   "offlineSkyFallback": "Offline Sky Fallback",
+  "skyServerUnreachable": "Sky image server unreachable",
+  "skyStreamingUnreachableDesc": "External sky survey server is currently unreachable. Displaying target in offline vector mode.",
 
   "noAltitudeData": "No altitude data available for window",
   "altitudeVsTimeTarget": "Altitude vs. Time: {targetName}",

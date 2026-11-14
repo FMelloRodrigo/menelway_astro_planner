@@ -1206,6 +1206,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineSkyFallback => 'Offline Sky Fallback';
 
   @override
+  String get skyServerUnreachable => 'Sky image server unreachable';
+
+  @override
+  String get skyStreamingUnreachableDesc =>
+      'External sky survey server is currently unreachable. Displaying target in offline vector mode.';
+
+  @override
   String get noAltitudeData => 'No altitude data available for window';
 
   @override
