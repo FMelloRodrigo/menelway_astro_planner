@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import 'app_logger.dart';
+import 'esa_hips_service.dart';
 
 class SkySurvey {
   final String id;
@@ -65,7 +66,7 @@ class SkyImageService {
 
   /// Default overall request timeout and per-attempt timeout.
   static const Duration defaultTimeout = Duration(seconds: 25);
-  static const Duration perAttemptTimeout = Duration(seconds: 12);
+  static const Duration perAttemptTimeout = Duration(seconds: 4);
 
   final Map<String, Uint8List> _memCache = {};
   Directory? _diskCacheDir;
@@ -270,6 +271,12 @@ class SkyImageService {
           }
 
           return bytes;
+        } else if (response.statusCode == 404) {
+          AppLogger.warning(
+            'CDS HiPS2FITS endpoint returned 404 Not Found ($candidateUrl), advancing to ESA fallback',
+            tag: _tag,
+          );
+          break;
         } else {
           AppLogger.warning(
             'CDS HiPS2FITS endpoint attempt ${attempt + 1} returned HTTP ${response.statusCode} ($candidateUrl)',
@@ -281,11 +288,46 @@ class SkyImageService {
           'CDS HiPS2FITS fetch attempt ${attempt + 1} failed for ($candidateUrl): $e',
           tag: _tag,
         );
+        if (e is SocketException ||
+            e.toString().contains('timed out') ||
+            e.toString().contains('Failed host lookup')) {
+          AppLogger.warning(
+            'CDS infrastructure unreachable ($e), advancing to ESA fallback',
+            tag: _tag,
+          );
+          break;
+        }
       }
 
       // Small backoff before trying mirror or retrying (e.g. 500ms)
       if (attempt < totalAttempts - 1 && effectiveBackoff > Duration.zero) {
         await Future.delayed(effectiveBackoff * (attempt + 1));
+      }
+    }
+
+    // 4. Secondary Tier: Direct ESA ESASky static HEALPix tile fallback
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasQuery) {
+      final params = uri.queryParameters;
+      final raDeg = double.tryParse(params['ra'] ?? '');
+      final decDeg = double.tryParse(params['dec'] ?? '');
+      final fovDeg = double.tryParse(params['fov'] ?? '');
+      final surveyId = params['hips'] ?? defaultSurveyId;
+
+      if (raDeg != null && decDeg != null && fovDeg != null) {
+        final esaBytes = await EsaHipsService.instance.fetchReprojectedCutout(
+          raHours: raDeg / 15.0,
+          decDegrees: decDeg,
+          fovDeg: fovDeg,
+          surveyId: surveyId,
+          client: _client,
+        );
+
+        if (esaBytes != null && esaBytes.isNotEmpty) {
+          _addToMemCache(cacheKey, esaBytes);
+          // Note: Per user request, skip disk caching for fallback tiles
+          return esaBytes;
+        }
       }
     }
 

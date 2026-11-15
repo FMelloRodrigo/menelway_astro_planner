@@ -121,6 +121,44 @@ void main() {
       SkyImageService.instance.setClientForTesting(http.Client());
     });
 
+    test('fetchSkyImage falls back to ESA static tiles when CDS returns 404', () async {
+      await SkyImageService.instance.clearCache();
+      final requestedUrls = <String>[];
+
+      final testClient = _MockHttpClient((request) async {
+        requestedUrls.add(request.url.toString());
+        if (request.url.host.contains('unistra.fr')) {
+          // CDS is down returning 404
+          return http.Response('Not Found', 404);
+        } else if (request.url.host.contains('esa.int')) {
+          // Return simulated ESA response
+          return http.Response('Not Found', 404);
+        }
+        return http.Response('Error', 500);
+      });
+
+      SkyImageService.instance.setClientForTesting(testClient);
+
+      final url = SkyImageService.buildHiPSUrl(
+        raHours: 5.588,
+        decDegrees: -5.391,
+        fovDeg: 1.5,
+      );
+
+      await SkyImageService.instance.fetchSkyImage(
+        url,
+        attemptTimeout: const Duration(seconds: 2),
+        retryBackoff: Duration.zero,
+      );
+
+      // Verify that ESA endpoint was requested after CDS returned 404
+      expect(requestedUrls.any((u) => u.contains('unistra.fr')), isTrue);
+      expect(requestedUrls.any((u) => u.contains('skies.esac.esa.int')), isTrue);
+
+      // Restore client
+      SkyImageService.instance.setClientForTesting(http.Client());
+    });
+
     test('pruneDiskCache respects entry limit', () async {
       final service = SkyImageService.instance;
       // pruneDiskCache should execute without throwing error
