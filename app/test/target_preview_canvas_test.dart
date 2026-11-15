@@ -467,7 +467,12 @@ void main() {
 
         // Advance real microtasks so async fetch finishes
         await tester.runAsync(() async {
-          await Future.delayed(const Duration(milliseconds: 100));
+          final stopwatch = Stopwatch()..start();
+          while (stopwatch.elapsedMilliseconds < 2000) {
+            final st = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+            if (!st.isLoading) break;
+            await Future.delayed(const Duration(milliseconds: 20));
+          }
         });
         await tester.pump();
 
@@ -482,7 +487,12 @@ void main() {
         // Verify that the user can tap Retry without errors
         await tester.tap(find.byIcon(Icons.refresh_rounded));
         await tester.runAsync(() async {
-          await Future.delayed(const Duration(milliseconds: 100));
+          final stopwatch = Stopwatch()..start();
+          while (stopwatch.elapsedMilliseconds < 2000) {
+            final st = tester.state<TargetPreviewCanvasState>(find.byType(TargetPreviewCanvas));
+            if (!st.isLoading) break;
+            await Future.delayed(const Duration(milliseconds: 20));
+          }
         });
         await tester.pump();
 

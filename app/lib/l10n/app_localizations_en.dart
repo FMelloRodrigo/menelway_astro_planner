@@ -1489,4 +1489,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String resetToTodayTooltip(String date) {
     return 'Reset trajectory to session date ($date)';
   }
+
+  @override
+  String get settingsSectionSkySurvey => 'Sky Survey Streaming';
+
+  @override
+  String get settingsSkySurveyProvider => 'Sky Survey Provider';
+
+  @override
+  String get settingsSkySurveyProviderDesc =>
+      'Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.';
+
+  @override
+  String get settingsSkyCacheLimit => 'Sky Image Cache Limit';
+
+  @override
+  String get clearSkyCache => 'Clear Sky Image Cache';
+
+  @override
+  String get skyCacheCleared => 'Sky image cache cleared successfully';
+
+  @override
+  String get providerFallbackLabel => 'Fallback';
+
+  @override
+  String get providerCdsLabel => 'CDS hips2fits';
+
+  @override
+  String get providerEsaLabel => 'ESA HEALPix';
 }

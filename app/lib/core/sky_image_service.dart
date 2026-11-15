@@ -20,11 +20,54 @@ class SkySurvey {
   });
 }
 
-class SkyImageService {
+/// Available sky survey image providers.
+enum SkySurveyProvider {
+  cdsHips2Fits,
+  esaHealpix,
+}
+
+extension SkySurveyProviderExtension on SkySurveyProvider {
+  String get id => switch (this) {
+    SkySurveyProvider.cdsHips2Fits => 'cds',
+    SkySurveyProvider.esaHealpix => 'esa',
+  };
+
+  static SkySurveyProvider fromString(String? str) {
+    if (str == 'esa') return SkySurveyProvider.esaHealpix;
+    return SkySurveyProvider.cdsHips2Fits;
+  }
+}
+
+class SkyImageService extends ChangeNotifier {
   SkyImageService._();
   static final SkyImageService instance = SkyImageService._();
   static const String _tag = 'SkyImageService';
   static const MethodChannel _storageChannel = MethodChannel('com.astrotargets.app/storage');
+
+  SkySurveyProvider _provider = SkySurveyProvider.cdsHips2Fits;
+  SkySurveyProvider get provider => _provider;
+  set provider(SkySurveyProvider val) {
+    if (_provider != val) {
+      _provider = val;
+      notifyListeners();
+    }
+  }
+
+  SkySurveyProvider _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
+  SkySurveyProvider get lastFulfillmentProvider => _lastFulfillmentProvider;
+
+  int _maxDiskCacheSizeBytes = 50 * 1024 * 1024; // 50 MB default
+  int get maxDiskCacheSizeBytes => _maxDiskCacheSizeBytes;
+  set maxDiskCacheSizeBytes(int bytes) {
+    _maxDiskCacheSizeBytes = math.max(5 * 1024 * 1024, bytes);
+  }
+
+  void init({SkySurveyProvider? provider, int? maxCacheSizeBytes}) {
+    if (provider != null) _provider = provider;
+    if (maxCacheSizeBytes != null) {
+      _maxDiskCacheSizeBytes = math.max(5 * 1024 * 1024, maxCacheSizeBytes);
+    }
+  }
 
   static const List<SkySurvey> availableSurveys = [
     SkySurvey(
@@ -148,15 +191,17 @@ class SkyImageService {
     return url;
   }
 
-  /// Hashes a URL query string to create a consistent local filename across all mirrors.
-  static String _urlToCacheFilename(String url) {
+  /// Hashes a URL query string to create a consistent local filename.
+  /// Generates isolated file prefixes per provider to prevent cache collisions.
+  static String _urlToCacheFilename(String url, SkySurveyProvider provider) {
     final key = normalizeCacheKey(url);
     var hash = 0xcbf29ce484222325;
     for (var i = 0; i < key.length; i++) {
       hash ^= key.codeUnitAt(i);
       hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
     }
-    return 'sky_${hash.toRadixString(16).padLeft(16, '0')}.jpg';
+    final ext = (provider == SkySurveyProvider.esaHealpix) ? 'png' : 'jpg';
+    return 'sky_${provider.id}_${hash.toRadixString(16).padLeft(16, '0')}.$ext';
   }
 
   /// Initializes the local disk cache directory safely across mobile (Android/iOS) and desktop platforms.
@@ -198,6 +243,28 @@ class SkyImageService {
     }
   }
 
+  Future<Uint8List?> _fetchFromEsa(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasQuery) {
+      final params = uri.queryParameters;
+      final raDeg = double.tryParse(params['ra'] ?? '');
+      final decDeg = double.tryParse(params['dec'] ?? '');
+      final fovDeg = double.tryParse(params['fov'] ?? '');
+      final surveyId = params['hips'] ?? defaultSurveyId;
+
+      if (raDeg != null && decDeg != null && fovDeg != null) {
+        return await EsaHipsService.instance.fetchReprojectedCutout(
+          raHours: raDeg / 15.0,
+          decDegrees: decDeg,
+          fovDeg: fovDeg,
+          surveyId: surveyId,
+          client: _client,
+        );
+      }
+    }
+    return null;
+  }
+
   /// Fetches sky image bytes from memory cache, local disk cache, or CDS HiPS2FITS API.
   /// Automatically tries active CDS mirror endpoints if primary times out or returns HTTP errors.
   Future<Uint8List?> fetchSkyImage(
@@ -209,37 +276,93 @@ class SkyImageService {
   }) async {
     final effectiveBackoff = retryBackoff ?? this.retryBackoff;
     final cacheKey = normalizeCacheKey(url);
+    final diskDir = await _getCacheDirectory();
 
-    // 1. Check memory cache (fastest, 0ms)
-    if (_memCache.containsKey(cacheKey)) {
-      return _memCache[cacheKey];
+    // ----------------------------------------------------
+    // Scenario 1: ESA HEALPix is configured as the active primary
+    // ----------------------------------------------------
+    if (_provider == SkySurveyProvider.esaHealpix) {
+      final memKey = 'esa:$cacheKey';
+      if (_memCache.containsKey(memKey)) {
+        _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+        notifyListeners();
+        return _memCache[memKey];
+      }
+
+      File? esaCacheFile;
+      if (diskDir != null) {
+        esaCacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url, SkySurveyProvider.esaHealpix)));
+        try {
+          if (esaCacheFile.existsSync()) {
+            final bytes = await esaCacheFile.readAsBytes();
+            if (bytes.isNotEmpty) {
+              _addToMemCache(memKey, bytes);
+              try {
+                await esaCacheFile.setLastModified(DateTime.now());
+              } catch (_) {}
+              _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+              notifyListeners();
+              return bytes;
+            }
+          }
+        } catch (e) {
+          AppLogger.debug('ESA disk cache read error for $url: $e', tag: _tag);
+        }
+      }
+
+      final esaBytes = await _fetchFromEsa(url);
+      if (esaBytes != null && esaBytes.isNotEmpty) {
+        _addToMemCache(memKey, esaBytes);
+        if (esaCacheFile != null) {
+          Future.microtask(() async {
+            try {
+              await esaCacheFile!.writeAsBytes(esaBytes);
+              await pruneDiskCache();
+            } catch (e) {
+              AppLogger.debug('Failed writing ESA cache: $e', tag: _tag);
+            }
+          });
+        }
+        _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+        notifyListeners();
+        return esaBytes;
+      }
+
+      return null;
     }
 
-    // 2. Check disk cache
-    final diskDir = await _getCacheDirectory();
-    File? cacheFile;
+    // ----------------------------------------------------
+    // Scenario 2: CDS hips2fits is configured (with ESA fallback)
+    // ----------------------------------------------------
+    final cdsMemKey = 'cds:$cacheKey';
+    if (_memCache.containsKey(cdsMemKey)) {
+      _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
+      notifyListeners();
+      return _memCache[cdsMemKey];
+    }
+
+    File? cdsCacheFile;
     if (diskDir != null) {
-      cacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url)));
+      cdsCacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url, SkySurveyProvider.cdsHips2Fits)));
       try {
-        if (cacheFile.existsSync()) {
-          final bytes = await cacheFile.readAsBytes();
+        if (cdsCacheFile.existsSync()) {
+          final bytes = await cdsCacheFile.readAsBytes();
           if (bytes.isNotEmpty) {
-            _addToMemCache(cacheKey, bytes);
-            // Touch file to update LRU timestamp
+            _addToMemCache(cdsMemKey, bytes);
             try {
-              await cacheFile.setLastModified(DateTime.now());
-            } catch (e) {
-              AppLogger.debug('Failed to touch cached file: $e', tag: _tag);
-            }
+              await cdsCacheFile.setLastModified(DateTime.now());
+            } catch (_) {}
+            _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
+            notifyListeners();
             return bytes;
           }
         }
       } catch (e) {
-        AppLogger.debug('Disk cache read error for $url: $e', tag: _tag);
+        AppLogger.debug('CDS disk cache read error for $url: $e', tag: _tag);
       }
     }
 
-    // 3. Network fetch via CDS HiPS2FITS with mirror failover
+    // Attempt CDS fetch across mirrors
     final candidateUrls = getMirrorCandidateUrls(url);
     final totalAttempts = math.min(candidateUrls.length, maxRetries + 1);
 
@@ -256,20 +379,21 @@ class SkyImageService {
 
         if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
           final bytes = response.bodyBytes;
-          _addToMemCache(cacheKey, bytes);
+          _addToMemCache(cdsMemKey, bytes);
 
-          // Asynchronously persist to disk cache and enforce count cap
-          if (cacheFile != null) {
+          if (cdsCacheFile != null) {
             Future.microtask(() async {
               try {
-                await cacheFile!.writeAsBytes(bytes);
+                await cdsCacheFile!.writeAsBytes(bytes);
                 await pruneDiskCache();
               } catch (e) {
-                AppLogger.debug('Failed writing sky image to disk cache: $e', tag: _tag);
+                AppLogger.debug('Failed writing CDS image to disk cache: $e', tag: _tag);
               }
             });
           }
 
+          _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
+          notifyListeners();
           return bytes;
         } else if (response.statusCode == 404) {
           AppLogger.warning(
@@ -289,8 +413,10 @@ class SkyImageService {
           tag: _tag,
         );
         if (e is SocketException ||
+            e is http.ClientException ||
             e.toString().contains('timed out') ||
-            e.toString().contains('Failed host lookup')) {
+            e.toString().contains('Failed host lookup') ||
+            e.toString().contains('Network unavailable')) {
           AppLogger.warning(
             'CDS infrastructure unreachable ($e), advancing to ESA fallback',
             tag: _tag,
@@ -299,43 +425,62 @@ class SkyImageService {
         }
       }
 
-      // Small backoff before trying mirror or retrying (e.g. 500ms)
       if (attempt < totalAttempts - 1 && effectiveBackoff > Duration.zero) {
         await Future.delayed(effectiveBackoff * (attempt + 1));
       }
     }
 
-    // 4. Secondary Tier: Direct ESA ESASky static HEALPix tile fallback
-    final uri = Uri.tryParse(url);
-    if (uri != null && uri.hasQuery) {
-      final params = uri.queryParameters;
-      final raDeg = double.tryParse(params['ra'] ?? '');
-      final decDeg = double.tryParse(params['dec'] ?? '');
-      final fovDeg = double.tryParse(params['fov'] ?? '');
-      final surveyId = params['hips'] ?? defaultSurveyId;
+    // Fallback Tier: Direct ESA HEALPix tile sampler
+    final esaMemKey = 'esa:$cacheKey';
+    if (_memCache.containsKey(esaMemKey)) {
+      _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+      notifyListeners();
+      return _memCache[esaMemKey];
+    }
 
-      if (raDeg != null && decDeg != null && fovDeg != null) {
-        final esaBytes = await EsaHipsService.instance.fetchReprojectedCutout(
-          raHours: raDeg / 15.0,
-          decDegrees: decDeg,
-          fovDeg: fovDeg,
-          surveyId: surveyId,
-          client: _client,
-        );
-
-        if (esaBytes != null && esaBytes.isNotEmpty) {
-          _addToMemCache(cacheKey, esaBytes);
-          // Note: Per user request, skip disk caching for fallback tiles
-          return esaBytes;
+    File? esaFallbackCacheFile;
+    if (diskDir != null) {
+      esaFallbackCacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url, SkySurveyProvider.esaHealpix)));
+      try {
+        if (esaFallbackCacheFile.existsSync()) {
+          final bytes = await esaFallbackCacheFile.readAsBytes();
+          if (bytes.isNotEmpty) {
+            _addToMemCache(esaMemKey, bytes);
+            try {
+              await esaFallbackCacheFile.setLastModified(DateTime.now());
+            } catch (_) {}
+            _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+            notifyListeners();
+            return bytes;
+          }
         }
+      } catch (e) {
+        AppLogger.debug('ESA fallback disk cache read error for $url: $e', tag: _tag);
       }
+    }
+
+    final esaBytes = await _fetchFromEsa(url);
+    if (esaBytes != null && esaBytes.isNotEmpty) {
+      _addToMemCache(esaMemKey, esaBytes);
+      if (esaFallbackCacheFile != null) {
+        Future.microtask(() async {
+          try {
+            await esaFallbackCacheFile!.writeAsBytes(esaBytes);
+            await pruneDiskCache();
+          } catch (e) {
+            AppLogger.debug('Failed writing ESA fallback cache: $e', tag: _tag);
+          }
+        });
+      }
+      _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+      notifyListeners();
+      return esaBytes;
     }
 
     return null;
   }
 
-  void _addToMemCache(String url, Uint8List bytes) {
-    final key = normalizeCacheKey(url);
+  void _addToMemCache(String key, Uint8List bytes) {
     if (_memCache.length >= maxMemCacheEntries) {
       // Evict oldest entry
       _memCache.remove(_memCache.keys.first);
@@ -343,43 +488,47 @@ class SkyImageService {
     _memCache[key] = bytes;
   }
 
-  /// Prunes disk cache to ensure it does not exceed [maxEntries] (default: 100).
+  /// Prunes disk cache to ensure it stays within [maxSizeBytes] (default: 50 MB)
+  /// and does not exceed [maxEntries] (default: 100).
   /// Deletes the oldest files based on LRU last-modified timestamps.
-  Future<void> pruneDiskCache({int maxEntries = maxDiskCacheEntries}) async {
+  Future<void> pruneDiskCache({int? maxSizeBytes, int maxEntries = maxDiskCacheEntries}) async {
+    final effectiveMaxBytes = maxSizeBytes ?? _maxDiskCacheSizeBytes;
     final dir = await _getCacheDirectory();
     if (dir == null || !await dir.exists()) return;
 
     try {
-      final files = <File>[];
+      final fileList = <File>[];
+      final fileSizes = <File, int>{};
+      final fileTimestamps = <File, DateTime>{};
+      int totalBytes = 0;
+
       await for (final entity in dir.list(followLinks: false)) {
-        if (entity is File && entity.path.endsWith('.jpg')) {
-          files.add(entity);
+        if (entity is File && p.basename(entity.path).startsWith('sky_')) {
+          try {
+            final stat = await entity.stat();
+            fileList.add(entity);
+            fileSizes[entity] = stat.size;
+            fileTimestamps[entity] = stat.modified;
+            totalBytes += stat.size;
+          } catch (_) {}
         }
       }
 
-      if (files.length <= maxEntries) return;
+      if (totalBytes <= effectiveMaxBytes && fileList.length <= maxEntries) return;
 
-      final timestamps = <File, DateTime>{};
-      for (final f in files) {
-        try {
-          timestamps[f] = await f.lastModified();
-        } catch (e) {
-          AppLogger.debug('Could not read timestamp for ${f.path}: $e', tag: _tag);
-          timestamps[f] = DateTime.fromMillisecondsSinceEpoch(0);
-        }
-      }
-
-      // Sort oldest first (LRU eviction)
-      files.sort((a, b) {
-        final timeA = timestamps[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final timeB = timestamps[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
+      // Sort oldest modified first (LRU eviction)
+      fileList.sort((a, b) {
+        final timeA = fileTimestamps[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final timeB = fileTimestamps[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
         return timeA.compareTo(timeB);
       });
 
-      final excessCount = files.length - maxEntries;
-      for (var i = 0; i < excessCount; i++) {
+      for (final f in fileList) {
+        if (totalBytes <= effectiveMaxBytes && fileList.length <= maxEntries) break;
         try {
-          await files[i].delete();
+          final size = fileSizes[f] ?? 0;
+          await f.delete();
+          totalBytes -= size;
         } catch (e) {
           AppLogger.debug('Could not delete old cached sky image: $e', tag: _tag);
         }
@@ -397,7 +546,7 @@ class SkyImageService {
     var count = 0;
     try {
       await for (final entity in dir.list(followLinks: false)) {
-        if (entity is File && entity.path.endsWith('.jpg')) {
+        if (entity is File && p.basename(entity.path).startsWith('sky_')) {
           count++;
         }
       }
@@ -415,7 +564,7 @@ class SkyImageService {
     var totalBytes = 0;
     try {
       await for (final entity in dir.list(followLinks: false)) {
-        if (entity is File && entity.path.endsWith('.jpg')) {
+        if (entity is File && p.basename(entity.path).startsWith('sky_')) {
           try {
             totalBytes += await entity.length();
           } catch (e) {

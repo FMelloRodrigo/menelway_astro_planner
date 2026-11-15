@@ -56,6 +56,45 @@ void main() {
       );
     });
 
+    test('resolveMirrorBaseUrls includes STScI AWS and NASA/IPAC mirrors', () {
+      final dssMirrors = EsaHipsService.resolveMirrorBaseUrls('CDS/P/DSS2/color');
+      expect(dssMirrors, contains('https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor'));
+
+      final irMirrors = EsaHipsService.resolveMirrorBaseUrls('CDS/P/2MASS/color');
+      expect(irMirrors, contains('https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color'));
+
+      final psMirrors = EsaHipsService.resolveMirrorBaseUrls('CDS/P/PanSTARRS/DR1/color-z-zg-g');
+      expect(psMirrors, contains('https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/PanSTARRS'));
+    });
+
+    test('getPrioritizedBaseUrls places healthy mirror ahead of failing mirror', () async {
+      EsaHipsService.instance.clearMirrorStatus();
+      final initial = EsaHipsService.instance.getPrioritizedBaseUrls('CDS/P/DSS2/color');
+      expect(initial.first, equals('https://skies.esac.esa.int/DSSColor'));
+
+      // Simulate ESA failing and STScI succeeding via fetchReprojectedCutout
+      final mockClient = _MockEsaClient((request) async {
+        if (request.url.toString().contains('skies.esac.esa.int')) {
+          return http.Response('Service Unavailable', 503);
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      // Call fetchReprojectedCutout to trigger mirror outage marking
+      await EsaHipsService.instance.fetchReprojectedCutout(
+        raHours: 5.588,
+        decDegrees: -5.391,
+        fovDeg: 1.5,
+        client: mockClient,
+      );
+
+      // Now STScI should be prioritized first
+      final reprioritized = EsaHipsService.instance.getPrioritizedBaseUrls('CDS/P/DSS2/color');
+      expect(reprioritized.first, equals('https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor'));
+
+      EsaHipsService.instance.clearMirrorStatus();
+    });
+
     test('ang2pixNest correctly maps M42 coordinates at order 6', () {
       // M42: RA = 83.822°, Dec = -5.391°
       const raRad = 83.822 * 3.141592653589793 / 180.0;

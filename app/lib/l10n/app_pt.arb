@@ -474,5 +474,14 @@
     "placeholders": {
       "date": { "type": "String" }
     }
-  }
+  },
+  "settingsSectionSkySurvey": "Levantamento do Céu",
+  "settingsSkySurveyProvider": "Provedor do Levantamento",
+  "settingsSkySurveyProviderDesc": "Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O CDS hips2fits alterna automaticamente para o ESA HEALPix se indisponível.",
+  "settingsSkyCacheLimit": "Limite do Cache de Imagens",
+  "clearSkyCache": "Limpar Cache de Imagens do Céu",
+  "skyCacheCleared": "Cache de imagens do céu limpo com sucesso",
+  "providerFallbackLabel": "Reserva",
+  "providerCdsLabel": "CDS hips2fits",
+  "providerEsaLabel": "ESA HEALPix"
 }

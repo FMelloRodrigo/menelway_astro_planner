@@ -4,6 +4,7 @@ import 'core/astro_bridge.dart';
 import 'core/equipment_manager.dart';
 import 'core/observing_site_manager.dart';
 import 'core/settings_service.dart';
+import 'core/sky_image_service.dart';
 import 'l10n/app_localizations.dart';
 import 'models/filter_state.dart';
 import 'theme/astro_theme.dart';
@@ -13,6 +14,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AstroBridge.registerAsDefault();
   final initialSettings = await SettingsService.loadSettings();
+  SkyImageService.instance.init(
+    provider: SkySurveyProviderExtension.fromString(initialSettings.skySurveyProvider),
+    maxCacheSizeBytes: initialSettings.skyImageCacheSizeMb * 1024 * 1024,
+  );
   EquipmentManager.instance.init(
     savedProfiles: initialSettings.equipmentProfiles,
     savedActiveId: initialSettings.activeEquipmentProfileId,

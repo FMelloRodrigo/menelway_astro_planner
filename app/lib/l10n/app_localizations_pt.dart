@@ -1498,4 +1498,32 @@ class AppLocalizationsPt extends AppLocalizations {
   String resetToTodayTooltip(String date) {
     return 'Redefinir trajetória para a data da sessão ($date)';
   }
+
+  @override
+  String get settingsSectionSkySurvey => 'Levantamento do Céu';
+
+  @override
+  String get settingsSkySurveyProvider => 'Provedor do Levantamento';
+
+  @override
+  String get settingsSkySurveyProviderDesc =>
+      'Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O CDS hips2fits alterna automaticamente para o ESA HEALPix se indisponível.';
+
+  @override
+  String get settingsSkyCacheLimit => 'Limite do Cache de Imagens';
+
+  @override
+  String get clearSkyCache => 'Limpar Cache de Imagens do Céu';
+
+  @override
+  String get skyCacheCleared => 'Cache de imagens do céu limpo com sucesso';
+
+  @override
+  String get providerFallbackLabel => 'Reserva';
+
+  @override
+  String get providerCdsLabel => 'CDS hips2fits';
+
+  @override
+  String get providerEsaLabel => 'ESA HEALPix';
 }

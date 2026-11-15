@@ -854,5 +854,14 @@
     "placeholders": {
       "date": { "type": "String" }
     }
-  }
+  },
+  "settingsSectionSkySurvey": "Sky Survey Streaming",
+  "settingsSkySurveyProvider": "Sky Survey Provider",
+  "settingsSkySurveyProviderDesc": "Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.",
+  "settingsSkyCacheLimit": "Sky Image Cache Limit",
+  "clearSkyCache": "Clear Sky Image Cache",
+  "skyCacheCleared": "Sky image cache cleared successfully",
+  "providerFallbackLabel": "Fallback",
+  "providerCdsLabel": "CDS hips2fits",
+  "providerEsaLabel": "ESA HEALPix"
 }

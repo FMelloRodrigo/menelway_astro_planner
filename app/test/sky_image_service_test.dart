@@ -159,12 +159,57 @@ void main() {
       SkyImageService.instance.setClientForTesting(http.Client());
     });
 
-    test('pruneDiskCache respects entry limit', () async {
+    test('pruneDiskCache respects entry limit and byte size limit', () async {
       final service = SkyImageService.instance;
+      service.maxDiskCacheSizeBytes = 50 * 1024 * 1024;
+      expect(service.maxDiskCacheSizeBytes, equals(50 * 1024 * 1024));
+
       // pruneDiskCache should execute without throwing error
       await service.pruneDiskCache(maxEntries: 100);
       final count = await service.getDiskCacheCount();
       expect(count, lessThanOrEqualTo(100));
+    });
+
+    test('SkySurveyProviderExtension converts cleanly between enum and string ids', () {
+      expect(SkySurveyProvider.cdsHips2Fits.id, equals('cds'));
+      expect(SkySurveyProvider.esaHealpix.id, equals('esa'));
+      expect(SkySurveyProviderExtension.fromString('esa'), equals(SkySurveyProvider.esaHealpix));
+      expect(SkySurveyProviderExtension.fromString('cds'), equals(SkySurveyProvider.cdsHips2Fits));
+      expect(SkySurveyProviderExtension.fromString(null), equals(SkySurveyProvider.cdsHips2Fits));
+    });
+
+    test('Direct ESA provider bypasses CDS network requests entirely', () async {
+      await SkyImageService.instance.clearCache();
+      SkyImageService.instance.provider = SkySurveyProvider.esaHealpix;
+
+      final requestedUrls = <String>[];
+      final testClient = _MockHttpClient((request) async {
+        requestedUrls.add(request.url.toString());
+        return http.Response('Not Found', 404);
+      });
+
+      SkyImageService.instance.setClientForTesting(testClient);
+
+      final url = SkyImageService.buildHiPSUrl(
+        raHours: 5.588,
+        decDegrees: -5.391,
+        fovDeg: 1.5,
+      );
+
+      await SkyImageService.instance.fetchSkyImage(
+        url,
+        attemptTimeout: const Duration(seconds: 2),
+        retryBackoff: Duration.zero,
+      );
+
+      // Verify that no CDS URLs were requested, only ESA endpoints
+      expect(requestedUrls.any((u) => u.contains('unistra.fr')), isFalse);
+      expect(requestedUrls.any((u) => u.contains('skies.esac.esa.int')), isTrue);
+      expect(SkyImageService.instance.provider, equals(SkySurveyProvider.esaHealpix));
+
+      // Restore defaults
+      SkyImageService.instance.provider = SkySurveyProvider.cdsHips2Fits;
+      SkyImageService.instance.setClientForTesting(http.Client());
     });
   });
 }

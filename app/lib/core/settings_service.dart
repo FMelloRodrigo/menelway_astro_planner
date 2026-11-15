@@ -9,6 +9,7 @@ import '../models/filter_state.dart';
 import '../models/observing_list.dart';
 import '../models/observing_site.dart';
 import '../models/target_item.dart';
+import 'sky_image_service.dart';
 
 class AppSettingsData {
   final FilterState filters;
@@ -23,6 +24,8 @@ class AppSettingsData {
   final List<TargetItem>? favorites;
   final String? languageCode;
   final bool hasCompletedTutorial;
+  final String skySurveyProvider;
+  final int skyImageCacheSizeMb;
   final int schemaVersion;
 
   AppSettingsData({
@@ -38,6 +41,8 @@ class AppSettingsData {
     this.favorites,
     this.languageCode,
     this.hasCompletedTutorial = false,
+    this.skySurveyProvider = 'cds',
+    this.skyImageCacheSizeMb = 50,
     this.schemaVersion = SettingsService.currentSchemaVersion,
   });
 
@@ -54,6 +59,8 @@ class AppSettingsData {
     List<TargetItem>? favorites,
     String? languageCode,
     bool? hasCompletedTutorial,
+    String? skySurveyProvider,
+    int? skyImageCacheSizeMb,
     int? schemaVersion,
   }) {
     return AppSettingsData(
@@ -69,6 +76,8 @@ class AppSettingsData {
       favorites: favorites ?? this.favorites,
       languageCode: languageCode ?? this.languageCode,
       hasCompletedTutorial: hasCompletedTutorial ?? this.hasCompletedTutorial,
+      skySurveyProvider: skySurveyProvider ?? this.skySurveyProvider,
+      skyImageCacheSizeMb: skyImageCacheSizeMb ?? this.skyImageCacheSizeMb,
       schemaVersion: schemaVersion ?? this.schemaVersion,
     );
   }
@@ -266,6 +275,8 @@ class SettingsService {
 
       final languageCode = data['languageCode'] as String?;
       final hasCompletedTutorial = data['hasCompletedTutorial'] as bool? ?? false;
+      final skySurveyProvider = data['skySurveyProvider'] as String? ?? 'cds';
+      final skyImageCacheSizeMb = data['skyImageCacheSizeMb'] as int? ?? 50;
 
       List<TargetItem>? favorites;
       if (data.containsKey('favorites') && data['favorites'] is List) {
@@ -290,6 +301,8 @@ class SettingsService {
         favorites: favorites,
         languageCode: languageCode,
         hasCompletedTutorial: hasCompletedTutorial,
+        skySurveyProvider: skySurveyProvider,
+        skyImageCacheSizeMb: skyImageCacheSizeMb,
         schemaVersion: schemaVersion,
       );
     } catch (e, st) {
@@ -312,6 +325,8 @@ class SettingsService {
     List<TargetItem>? favorites,
     String? languageCode,
     bool? hasCompletedTutorial,
+    String? skySurveyProvider,
+    int? skyImageCacheSizeMb,
   }) async {
     try {
       final data = await _readSettingsJson();
@@ -350,6 +365,12 @@ class SettingsService {
       }
       if (hasCompletedTutorial != null) {
         data['hasCompletedTutorial'] = hasCompletedTutorial;
+      }
+      if (skySurveyProvider != null) {
+        data['skySurveyProvider'] = skySurveyProvider;
+      }
+      if (skyImageCacheSizeMb != null) {
+        data['skyImageCacheSizeMb'] = skyImageCacheSizeMb;
       }
 
       await _writeSettingsJson(data);
@@ -404,7 +425,8 @@ class SettingsService {
       if (await backupFile.exists()) {
         await backupFile.delete();
       }
-      AppLogger.info('Settings cleared to defaults', tag: _tag);
+      await SkyImageService.instance.clearCache();
+      AppLogger.info('Settings and sky cache cleared to defaults', tag: _tag);
     } catch (e, st) {
       AppLogger.error('Error clearing settings', tag: _tag, error: e, stackTrace: st);
     }

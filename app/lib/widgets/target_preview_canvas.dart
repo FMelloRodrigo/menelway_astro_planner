@@ -92,6 +92,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     _lastObservedPanX = _imageBasePanX;
     _lastObservedPanY = _imageBasePanY;
     EquipmentManager.instance.addListener(_onEquipmentStateChanged);
+    SkyImageService.instance.addListener(_onSkyServiceChanged);
     if (widget.target.catalog != 'Solar System') {
       _loadImage();
     }
@@ -101,7 +102,14 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
   void dispose() {
     _panDebounceTimer?.cancel();
     EquipmentManager.instance.removeListener(_onEquipmentStateChanged);
+    SkyImageService.instance.removeListener(_onSkyServiceChanged);
     super.dispose();
+  }
+
+  void _onSkyServiceChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onEquipmentStateChanged() {
@@ -331,6 +339,7 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
     final l10n = AppLocalizations.of(context);
     final palette = AstroPalette.of(context);
     final textColor = palette.textPrimary;
+    final textSubColor = palette.textSecondary;
     final accentColor = palette.accent;
     final borderColor = palette.border;
     final surfaceColor = palette.surfaceVariant;
@@ -618,30 +627,60 @@ class TargetPreviewCanvasState extends State<TargetPreviewCanvas> {
                     ),
                   );
                 }).toList(),
-                child: Container(
-                  height: 38,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: surfaceColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: borderColor),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.layers_rounded, size: 16, color: accentColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        SkyImageService.availableSurveys
-                            .firstWhere((s) => s.id == _selectedSurveyId,
-                                orElse: () => SkyImageService.availableSurveys.first)
-                            .label,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                child: Builder(
+                  builder: (context) {
+                    final String activeProviderLabel;
+                    if (SkyImageService.instance.provider == SkySurveyProvider.esaHealpix) {
+                      activeProviderLabel = 'ESA HEALPix';
+                    } else if (SkyImageService.instance.lastFulfillmentProvider == SkySurveyProvider.esaHealpix) {
+                      activeProviderLabel = 'ESA HEALPix (${l10n.providerFallbackLabel})';
+                    } else {
+                      activeProviderLabel = 'CDS hips2fits';
+                    }
+
+                    final survey = SkyImageService.availableSurveys.firstWhere(
+                      (s) => s.id == _selectedSurveyId,
+                      orElse: () => SkyImageService.availableSurveys.first,
+                    );
+
+                    return Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderColor),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: textColor.withValues(alpha: 0.7)),
-                    ],
-                  ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.layers_rounded, size: 16, color: accentColor),
+                          const SizedBox(width: 6),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                survey.label,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textColor, height: 1.1),
+                              ),
+                              Text(
+                                activeProviderLabel,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: textSubColor.withValues(alpha: 0.85),
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: textColor.withValues(alpha: 0.7)),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
 

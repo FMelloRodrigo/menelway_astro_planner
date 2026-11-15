@@ -9,6 +9,7 @@ import '../core/equipment_manager.dart';
 import '../core/favorites_manager.dart';
 import '../core/observing_site_manager.dart';
 import '../core/settings_service.dart';
+import '../core/sky_image_service.dart';
 import '../models/filter_state.dart';
 import '../models/night_summary.dart';
 import '../models/observing_list.dart';
@@ -319,7 +320,12 @@ class AppController extends ChangeNotifier {
   }
 
   /// Persists current application settings and user profile to storage.
-  void saveSettings({bool? isRedNightMode, String? languageCode}) {
+  void saveSettings({
+    bool? isRedNightMode,
+    String? languageCode,
+    String? skySurveyProvider,
+    int? skyImageCacheSizeMb,
+  }) {
     SettingsService.saveSettings(
       filters: _filters,
       isRedNightMode: isRedNightMode,
@@ -330,6 +336,8 @@ class AppController extends ChangeNotifier {
       activeObservingSiteId: siteManager.activeSiteId,
       favorites: favoritesManager.favorites,
       languageCode: languageCode,
+      skySurveyProvider: skySurveyProvider ?? SkyImageService.instance.provider.id,
+      skyImageCacheSizeMb: skyImageCacheSizeMb ?? (SkyImageService.instance.maxDiskCacheSizeBytes ~/ (1024 * 1024)),
     );
   }
 

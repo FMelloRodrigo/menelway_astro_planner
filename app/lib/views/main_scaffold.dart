@@ -5,6 +5,7 @@ import '../controllers/app_controller.dart';
 import '../core/astro_engine.dart';
 import '../core/settings_service.dart';
 import '../core/observing_site_manager.dart';
+import '../core/sky_image_service.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n_helpers.dart';
 import '../models/filter_state.dart';
@@ -1171,6 +1172,21 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                       });
                       _saveSettings();
                       _runFiltering();
+                    },
+                    skySurveyProvider: SkyImageService.instance.provider.id,
+                    onSkySurveyProviderChanged: (newProviderId) {
+                      final newProvider = SkySurveyProviderExtension.fromString(newProviderId);
+                      setState(() {
+                        SkyImageService.instance.provider = newProvider;
+                      });
+                      _saveSettings();
+                    },
+                    skyImageCacheSizeMb: SkyImageService.instance.maxDiskCacheSizeBytes ~/ (1024 * 1024),
+                    onSkyImageCacheSizeChanged: (newLimitMb) {
+                      setState(() {
+                        SkyImageService.instance.maxDiskCacheSizeBytes = newLimitMb * 1024 * 1024;
+                      });
+                      _saveSettings();
                     },
                     onResetFilters: () {
                       _resetFiltersOnly();

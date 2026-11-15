@@ -2659,6 +2659,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset trajectory to session date ({date})'**
   String resetToTodayTooltip(String date);
+
+  /// No description provided for @settingsSectionSkySurvey.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky Survey Streaming'**
+  String get settingsSectionSkySurvey;
+
+  /// No description provided for @settingsSkySurveyProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky Survey Provider'**
+  String get settingsSkySurveyProvider;
+
+  /// No description provided for @settingsSkySurveyProviderDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.'**
+  String get settingsSkySurveyProviderDesc;
+
+  /// No description provided for @settingsSkyCacheLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky Image Cache Limit'**
+  String get settingsSkyCacheLimit;
+
+  /// No description provided for @clearSkyCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Sky Image Cache'**
+  String get clearSkyCache;
+
+  /// No description provided for @skyCacheCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Sky image cache cleared successfully'**
+  String get skyCacheCleared;
+
+  /// No description provided for @providerFallbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Fallback'**
+  String get providerFallbackLabel;
+
+  /// No description provided for @providerCdsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CDS hips2fits'**
+  String get providerCdsLabel;
+
+  /// No description provided for @providerEsaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ESA HEALPix'**
+  String get providerEsaLabel;
 }
 
 class _AppLocalizationsDelegate

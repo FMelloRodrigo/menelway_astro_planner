@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/sky_image_service.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/astro_theme.dart';
 import 'about_dialog.dart';
@@ -12,6 +13,10 @@ class SettingsDialog extends StatefulWidget {
   final VoidCallback? onReplayTour;
   final int maxTargets;
   final ValueChanged<int>? onMaxTargetsChanged;
+  final String skySurveyProvider;
+  final ValueChanged<String>? onSkySurveyProviderChanged;
+  final int skyImageCacheSizeMb;
+  final ValueChanged<int>? onSkyImageCacheSizeChanged;
 
   const SettingsDialog({
     super.key,
@@ -20,6 +25,10 @@ class SettingsDialog extends StatefulWidget {
     this.onReplayTour,
     this.maxTargets = 20,
     this.onMaxTargetsChanged,
+    this.skySurveyProvider = 'cds',
+    this.onSkySurveyProviderChanged,
+    this.skyImageCacheSizeMb = 50,
+    this.onSkyImageCacheSizeChanged,
   });
 
   @override
@@ -28,11 +37,15 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   late int _selectedMaxTargets;
+  late String _selectedSkySurveyProvider;
+  late int _selectedSkyImageCacheSizeMb;
 
   @override
   void initState() {
     super.initState();
     _selectedMaxTargets = widget.maxTargets;
+    _selectedSkySurveyProvider = widget.skySurveyProvider;
+    _selectedSkyImageCacheSizeMb = widget.skyImageCacheSizeMb;
   }
 
   @override
@@ -40,6 +53,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.maxTargets != widget.maxTargets) {
       _selectedMaxTargets = widget.maxTargets;
+    }
+    if (oldWidget.skySurveyProvider != widget.skySurveyProvider) {
+      _selectedSkySurveyProvider = widget.skySurveyProvider;
+    }
+    if (oldWidget.skyImageCacheSizeMb != widget.skyImageCacheSizeMb) {
+      _selectedSkyImageCacheSizeMb = widget.skyImageCacheSizeMb;
     }
   }
 
@@ -211,6 +230,141 @@ class _SettingsDialogState extends State<SettingsDialog> {
                               ),
                             );
                           }).toList(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Section: Sky Survey Streaming & Cache
+                      _buildSectionCard(
+                        context: context,
+                        cardBgColor: cardBgColor,
+                        borderColor: borderColor,
+                        textColor: textColor,
+                        textSubColor: textSubColor,
+                        icon: Icons.public_rounded,
+                        iconColor: accentColor,
+                        title: l10n.settingsSectionSkySurvey,
+                        description: l10n.settingsSkySurveyProviderDesc,
+                        actionWidget: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.settingsSkySurveyProvider,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ChoiceChip(
+                                  label: Text("${l10n.providerCdsLabel} (Default)"),
+                                  selected: _selectedSkySurveyProvider == 'cds',
+                                  onSelected: widget.onSkySurveyProviderChanged != null
+                                      ? (selected) {
+                                          if (selected) {
+                                            setState(() => _selectedSkySurveyProvider = 'cds');
+                                            widget.onSkySurveyProviderChanged!('cds');
+                                          }
+                                        }
+                                      : null,
+                                  selectedColor: accentColor.withValues(alpha: 0.22),
+                                  backgroundColor: bgColor,
+                                  side: BorderSide(
+                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : borderColor,
+                                    width: _selectedSkySurveyProvider == 'cds' ? 1.5 : 1.0,
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : textColor,
+                                    fontWeight: _selectedSkySurveyProvider == 'cds' ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                ChoiceChip(
+                                  label: Text("${l10n.providerEsaLabel} (Direct)"),
+                                  selected: _selectedSkySurveyProvider == 'esa',
+                                  onSelected: widget.onSkySurveyProviderChanged != null
+                                      ? (selected) {
+                                          if (selected) {
+                                            setState(() => _selectedSkySurveyProvider = 'esa');
+                                            widget.onSkySurveyProviderChanged!('esa');
+                                          }
+                                        }
+                                      : null,
+                                  selectedColor: accentColor.withValues(alpha: 0.22),
+                                  backgroundColor: bgColor,
+                                  side: BorderSide(
+                                    color: _selectedSkySurveyProvider == 'esa' ? accentColor : borderColor,
+                                    width: _selectedSkySurveyProvider == 'esa' ? 1.5 : 1.0,
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: _selectedSkySurveyProvider == 'esa' ? accentColor : textColor,
+                                    fontWeight: _selectedSkySurveyProvider == 'esa' ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.settingsSkyCacheLimit,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [25, 50, 100, 200, 500].map((mb) {
+                                final isSelected = _selectedSkyImageCacheSizeMb == mb;
+                                return ChoiceChip(
+                                  label: Text(mb == 50 ? "$mb MB (Default)" : "$mb MB"),
+                                  selected: isSelected,
+                                  onSelected: widget.onSkyImageCacheSizeChanged != null
+                                      ? (selected) {
+                                          if (selected) {
+                                            setState(() => _selectedSkyImageCacheSizeMb = mb);
+                                            widget.onSkyImageCacheSizeChanged!(mb);
+                                          }
+                                        }
+                                      : null,
+                                  selectedColor: accentColor.withValues(alpha: 0.22),
+                                  backgroundColor: bgColor,
+                                  side: BorderSide(
+                                    color: isSelected ? accentColor : borderColor,
+                                    width: isSelected ? 1.5 : 1.0,
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? accentColor : textColor,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: textColor,
+                                side: BorderSide(color: borderColor),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.cleaning_services_rounded, size: 15),
+                              label: Text(l10n.clearSkyCache, style: const TextStyle(fontSize: 12)),
+                              onPressed: () async {
+                                await SkyImageService.instance.clearCache();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.skyCacheCleared),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
 

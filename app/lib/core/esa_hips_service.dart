@@ -41,6 +41,11 @@ class EsaHipsService {
   static const String dssBaseUrl = 'https://skies.esac.esa.int/DSSColor';
   static const String ir2massBaseUrl = 'https://skies.esac.esa.int/2MASSColor';
 
+  /// High-availability NASA / STScI / IPAC fallback mirrors (public domain, AWS Open Data).
+  static const String stsciDssBaseUrl = 'https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/DSSColor';
+  static const String stsciPanstarrsBaseUrl = 'https://stpubdata.s3.us-east-1.amazonaws.com/mast/skybackgrounds/PanSTARRS';
+  static const String irsa2massBaseUrl = 'https://irsa.ipac.caltech.edu/data/hips/CDS/2MASS/Color';
+
   /// Precomputed 8-bit deinterleave lookup table for Morton / Z-order curve decoding.
   final Uint8List _lut = Uint8List(256);
 
@@ -50,6 +55,15 @@ class EsaHipsService {
     }
   }
 
+  /// In-memory track of temporary mirror timeouts to prioritize healthy mirrors.
+  final Map<String, DateTime> _mirrorDownUntil = {};
+
+  /// Clears tracked mirror outage statuses (useful for testing or manual retry).
+  @visibleForTesting
+  void clearMirrorStatus() {
+    _mirrorDownUntil.clear();
+  }
+
   /// Maps a CDS survey identifier to an available ESA static mirror base URL.
   static String resolveEsaBaseUrl(String surveyId) {
     if (surveyId.contains('2MASS')) {
@@ -57,6 +71,47 @@ class EsaHipsService {
     }
     // Default to DSS2 Color optical survey
     return dssBaseUrl;
+  }
+
+  /// Returns available static mirrors in priority order (ESA primary, STScI AWS / NASA Caltech fallback).
+  static List<String> resolveMirrorBaseUrls(String surveyId) {
+    if (surveyId.contains('2MASS')) {
+      return const [
+        ir2massBaseUrl,
+        irsa2massBaseUrl,
+      ];
+    }
+    if (surveyId.contains('PanSTARRS') || surveyId.contains('Pan-STARRS')) {
+      return const [
+        'https://skies.esac.esa.int/Pan-STARRS-DR1-Color',
+        stsciPanstarrsBaseUrl,
+      ];
+    }
+    return const [
+      dssBaseUrl,
+      stsciDssBaseUrl,
+    ];
+  }
+
+  /// Returns mirror URLs ordered dynamically: currently healthy mirrors first, followed by
+  /// any mirrors currently in a cooling-off period.
+  List<String> getPrioritizedBaseUrls(String surveyId) {
+    final mirrors = resolveMirrorBaseUrls(surveyId);
+    final now = DateTime.now();
+
+    final healthy = <String>[];
+    final coolingDown = <String>[];
+
+    for (final m in mirrors) {
+      final until = _mirrorDownUntil[m];
+      if (until != null && now.isBefore(until)) {
+        coolingDown.add(m);
+      } else {
+        healthy.add(m);
+      }
+    }
+
+    return [...healthy, ...coolingDown];
   }
 
   /// Converts spherical coordinates (colatitude [theta] in [0, pi], longitude [phi] in [0, 2pi])
@@ -145,7 +200,7 @@ class EsaHipsService {
     http.Client? client,
   }) async {
     final effectiveClient = client ?? http.Client();
-    final baseUrl = resolveEsaBaseUrl(surveyId);
+    final baseUrls = getPrioritizedBaseUrls(surveyId);
 
     // Normalize coordinates
     var normRaHours = raHours % 24.0;
@@ -197,9 +252,9 @@ class EsaHipsService {
 
     if (requiredTileIndices.isEmpty) return null;
 
-    // 2. Concurrently download required tiles from ESA
+    // 2. Concurrently download required tiles from active mirrors
     final tileFutures = requiredTileIndices.map(
-      (pix) => _fetchAndDecodeTile(baseUrl, order, pix, effectiveClient),
+      (pix) => _fetchAndDecodeTile(baseUrls, order, pix, effectiveClient),
     );
     final downloadedTiles = await Future.wait(tileFutures);
 
@@ -304,41 +359,47 @@ class EsaHipsService {
     return null;
   }
 
-  /// Downloads and hardware-decodes a single static HEALPix tile from ESA.
+  /// Downloads and hardware-decodes a single static HEALPix tile across available mirrors.
   Future<_DecodedTile?> _fetchAndDecodeTile(
-    String baseUrl,
+    List<String> baseUrls,
     int order,
     int tilePix,
     http.Client client,
   ) async {
     final dirIdx = (tilePix ~/ 10000) * 10000;
-    final tileUrl = '$baseUrl/Norder$order/Dir$dirIdx/Npix$tilePix.jpg';
+    final path = '/Norder$order/Dir$dirIdx/Npix$tilePix.jpg';
 
-    try {
-      final response = await client.get(
-        Uri.parse(tileUrl),
-        headers: const {
-          'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
-          'Accept': 'image/jpeg,image/*,*/*',
-        },
-      ).timeout(const Duration(seconds: 4));
+    for (final baseUrl in baseUrls) {
+      final tileUrl = '$baseUrl$path';
+      try {
+        final response = await client.get(
+          Uri.parse(tileUrl),
+          headers: const {
+            'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
+            'Accept': 'image/jpeg,image/*,*/*',
+          },
+        ).timeout(const Duration(milliseconds: 2500));
 
-      if (response.statusCode == 200 && response.bodyBytes.length > 500) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final frame = await codec.getNextFrame();
-        final image = frame.image;
-        final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-        if (byteData != null) {
-          return _DecodedTile(
-            tilePix: tilePix,
-            rgba: byteData.buffer.asUint8List(),
-            width: image.width,
-            height: image.height,
-          );
+        if (response.statusCode == 200 && response.bodyBytes.length > 500) {
+          final codec = await ui.instantiateImageCodec(response.bodyBytes);
+          final frame = await codec.getNextFrame();
+          final image = frame.image;
+          final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+          if (byteData != null) {
+            return _DecodedTile(
+              tilePix: tilePix,
+              rgba: byteData.buffer.asUint8List(),
+              width: image.width,
+              height: image.height,
+            );
+          }
+        } else if (response.statusCode >= 500) {
+          _mirrorDownUntil[baseUrl] = DateTime.now().add(const Duration(minutes: 5));
         }
+      } catch (e) {
+        _mirrorDownUntil[baseUrl] = DateTime.now().add(const Duration(minutes: 5));
+        AppLogger.debug('Failed to fetch/decode tile from $tileUrl: $e', tag: _tag);
       }
-    } catch (e) {
-      AppLogger.debug('Failed to fetch/decode ESA tile ($tileUrl): $e', tag: _tag);
     }
     return null;
   }

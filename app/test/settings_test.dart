@@ -310,5 +310,17 @@ void main() {
         }
       }
     });
+
+    test('SettingsService persists and restores sky survey provider and cache size limit', () async {
+      await SettingsService.saveSettings(
+        filters: FilterState(),
+        skySurveyProvider: 'esa',
+        skyImageCacheSizeMb: 100,
+      );
+
+      final loaded = await SettingsService.loadSettings();
+      expect(loaded.skySurveyProvider, equals('esa'));
+      expect(loaded.skyImageCacheSizeMb, equals(100));
+    });
   });
 }
