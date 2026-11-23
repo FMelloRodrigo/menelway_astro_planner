@@ -312,15 +312,56 @@ void main() {
     });
 
     test('SettingsService persists and restores sky survey provider and cache size limit', () async {
+      await SettingsService.clearSettings();
+      final defaults = await SettingsService.loadSettings();
+      expect(defaults.skySurveyProvider, equals('esa'));
+      expect(defaults.skyImageCacheSizeMb, equals(50));
+
       await SettingsService.saveSettings(
         filters: FilterState(),
-        skySurveyProvider: 'esa',
+        skySurveyProvider: 'cds',
         skyImageCacheSizeMb: 100,
       );
 
       final loaded = await SettingsService.loadSettings();
-      expect(loaded.skySurveyProvider, equals('esa'));
+      expect(loaded.skySurveyProvider, equals('cds'));
       expect(loaded.skyImageCacheSizeMb, equals(100));
+    });
+
+    test('SettingsService migrates v1 cds provider setting to esa default', () async {
+      final settingsFile = await SettingsService.getSettingsFile();
+      await settingsFile.writeAsString('''{
+        "version": 1,
+        "skySurveyProvider": "cds",
+        "skyImageCacheSizeMb": 100
+      }''');
+
+      final migrated = await SettingsService.loadSettings();
+      expect(migrated.schemaVersion, equals(SettingsService.currentSchemaVersion));
+      expect(migrated.skySurveyProvider, equals('esa'));
+      expect(migrated.skyImageCacheSizeMb, equals(100));
+    });
+
+    test('SettingsService persists and restores showTargetThumbnails preference', () async {
+      await SettingsService.clearSettings();
+      var loaded = await SettingsService.loadSettings();
+      expect(loaded.showTargetThumbnails, isFalse);
+
+      await SettingsService.saveSettings(
+        filters: FilterState(),
+        showTargetThumbnails: true,
+      );
+
+      loaded = await SettingsService.loadSettings();
+      expect(loaded.showTargetThumbnails, isTrue);
+
+      await SettingsService.saveSettings(
+        filters: FilterState(),
+        showTargetThumbnails: false,
+      );
+
+      loaded = await SettingsService.loadSettings();
+      expect(loaded.showTargetThumbnails, isFalse);
     });
   });
 }

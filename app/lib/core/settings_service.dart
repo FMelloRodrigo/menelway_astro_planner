@@ -26,6 +26,7 @@ class AppSettingsData {
   final bool hasCompletedTutorial;
   final String skySurveyProvider;
   final int skyImageCacheSizeMb;
+  final bool showTargetThumbnails;
   final int schemaVersion;
 
   AppSettingsData({
@@ -41,8 +42,9 @@ class AppSettingsData {
     this.favorites,
     this.languageCode,
     this.hasCompletedTutorial = false,
-    this.skySurveyProvider = 'cds',
-    this.skyImageCacheSizeMb = 50,
+    this.skySurveyProvider = SkyImageService.defaultProviderId,
+    this.skyImageCacheSizeMb = SkyImageService.defaultMaxDiskCacheSizeMb,
+    this.showTargetThumbnails = false,
     this.schemaVersion = SettingsService.currentSchemaVersion,
   });
 
@@ -61,6 +63,7 @@ class AppSettingsData {
     bool? hasCompletedTutorial,
     String? skySurveyProvider,
     int? skyImageCacheSizeMb,
+    bool? showTargetThumbnails,
     int? schemaVersion,
   }) {
     return AppSettingsData(
@@ -78,6 +81,7 @@ class AppSettingsData {
       hasCompletedTutorial: hasCompletedTutorial ?? this.hasCompletedTutorial,
       skySurveyProvider: skySurveyProvider ?? this.skySurveyProvider,
       skyImageCacheSizeMb: skyImageCacheSizeMb ?? this.skyImageCacheSizeMb,
+      showTargetThumbnails: showTargetThumbnails ?? this.showTargetThumbnails,
       schemaVersion: schemaVersion ?? this.schemaVersion,
     );
   }
@@ -86,7 +90,7 @@ class AppSettingsData {
 class SettingsService {
   static const String settingsFileName = 'user_settings.json';
   static const String settingsBackupFileName = 'user_settings.json.bak';
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
 
   static const String _tag = 'SettingsService';
 
@@ -218,6 +222,9 @@ class SettingsService {
     final version = data['version'] as int? ?? 1;
     if (version < currentSchemaVersion) {
       AppLogger.info('Migrating settings schema from v$version to v$currentSchemaVersion', tag: _tag);
+      if (version < 2 && data['skySurveyProvider'] == 'cds') {
+        data['skySurveyProvider'] = SkyImageService.defaultProviderId;
+      }
       data['version'] = currentSchemaVersion;
     }
     return data;
@@ -275,8 +282,9 @@ class SettingsService {
 
       final languageCode = data['languageCode'] as String?;
       final hasCompletedTutorial = data['hasCompletedTutorial'] as bool? ?? false;
-      final skySurveyProvider = data['skySurveyProvider'] as String? ?? 'cds';
-      final skyImageCacheSizeMb = data['skyImageCacheSizeMb'] as int? ?? 50;
+      final skySurveyProvider = data['skySurveyProvider'] as String? ?? SkyImageService.defaultProviderId;
+      final skyImageCacheSizeMb = data['skyImageCacheSizeMb'] as int? ?? SkyImageService.defaultMaxDiskCacheSizeMb;
+      final showTargetThumbnails = data['showTargetThumbnails'] as bool? ?? false;
 
       List<TargetItem>? favorites;
       if (data.containsKey('favorites') && data['favorites'] is List) {
@@ -303,6 +311,7 @@ class SettingsService {
         hasCompletedTutorial: hasCompletedTutorial,
         skySurveyProvider: skySurveyProvider,
         skyImageCacheSizeMb: skyImageCacheSizeMb,
+        showTargetThumbnails: showTargetThumbnails,
         schemaVersion: schemaVersion,
       );
     } catch (e, st) {
@@ -327,6 +336,7 @@ class SettingsService {
     bool? hasCompletedTutorial,
     String? skySurveyProvider,
     int? skyImageCacheSizeMb,
+    bool? showTargetThumbnails,
   }) async {
     try {
       final data = await _readSettingsJson();
@@ -371,6 +381,9 @@ class SettingsService {
       }
       if (skyImageCacheSizeMb != null) {
         data['skyImageCacheSizeMb'] = skyImageCacheSizeMb;
+      }
+      if (showTargetThumbnails != null) {
+        data['showTargetThumbnails'] = showTargetThumbnails;
       }
 
       await _writeSettingsJson(data);

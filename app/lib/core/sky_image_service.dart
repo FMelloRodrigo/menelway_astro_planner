@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -33,8 +35,9 @@ extension SkySurveyProviderExtension on SkySurveyProvider {
   };
 
   static SkySurveyProvider fromString(String? str) {
+    if (str == 'cds') return SkySurveyProvider.cdsHips2Fits;
     if (str == 'esa') return SkySurveyProvider.esaHealpix;
-    return SkySurveyProvider.cdsHips2Fits;
+    return SkyImageService.defaultProvider;
   }
 }
 
@@ -44,7 +47,13 @@ class SkyImageService extends ChangeNotifier {
   static const String _tag = 'SkyImageService';
   static const MethodChannel _storageChannel = MethodChannel('com.astrotargets.app/storage');
 
-  SkySurveyProvider _provider = SkySurveyProvider.cdsHips2Fits;
+  static const SkySurveyProvider defaultProvider = SkySurveyProvider.esaHealpix;
+  static const String defaultProviderId = 'esa';
+  static const int defaultMaxDiskCacheSizeMb = 50;
+  static const int _bytesPerMb = 1024 * 1024;
+  static const int _minDiskCacheSizeBytes = 5 * _bytesPerMb;
+
+  SkySurveyProvider _provider = defaultProvider;
   SkySurveyProvider get provider => _provider;
   set provider(SkySurveyProvider val) {
     if (_provider != val) {
@@ -53,19 +62,19 @@ class SkyImageService extends ChangeNotifier {
     }
   }
 
-  SkySurveyProvider _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
+  SkySurveyProvider _lastFulfillmentProvider = defaultProvider;
   SkySurveyProvider get lastFulfillmentProvider => _lastFulfillmentProvider;
 
-  int _maxDiskCacheSizeBytes = 50 * 1024 * 1024; // 50 MB default
+  int _maxDiskCacheSizeBytes = defaultMaxDiskCacheSizeMb * _bytesPerMb;
   int get maxDiskCacheSizeBytes => _maxDiskCacheSizeBytes;
   set maxDiskCacheSizeBytes(int bytes) {
-    _maxDiskCacheSizeBytes = math.max(5 * 1024 * 1024, bytes);
+    _maxDiskCacheSizeBytes = math.max(_minDiskCacheSizeBytes, bytes);
   }
 
   void init({SkySurveyProvider? provider, int? maxCacheSizeBytes}) {
     if (provider != null) _provider = provider;
     if (maxCacheSizeBytes != null) {
-      _maxDiskCacheSizeBytes = math.max(5 * 1024 * 1024, maxCacheSizeBytes);
+      _maxDiskCacheSizeBytes = math.max(_minDiskCacheSizeBytes, maxCacheSizeBytes);
     }
   }
 
@@ -93,8 +102,9 @@ class SkyImageService extends ChangeNotifier {
   ];
 
   static const String defaultSurveyId = 'CDS/P/DSS2/color';
-  static const int maxMemCacheEntries = 30;
+  static const int maxMemCacheEntries = 60;
   static const int maxDiskCacheEntries = 100;
+  static const int maxConcurrentNetworkFetches = 4;
 
   /// Official CDS Strasbourg HiPS endpoints and active mirrors.
   static const String primaryEndpoint = 'https://alasky.cds.unistra.fr/hips-image-services/hips2fits';
@@ -112,6 +122,9 @@ class SkyImageService extends ChangeNotifier {
   static const Duration perAttemptTimeout = Duration(seconds: 4);
 
   final Map<String, Uint8List> _memCache = {};
+  final Map<String, Future<Uint8List?>> _inFlightRequests = {};
+  int _activeNetworkFetches = 0;
+  final Queue<Completer<void>> _networkWaitQueue = Queue<Completer<void>>();
   Directory? _diskCacheDir;
   bool _diskCacheInitialized = false;
 
@@ -267,15 +280,66 @@ class SkyImageService extends ChangeNotifier {
 
   /// Fetches sky image bytes from memory cache, local disk cache, or CDS HiPS2FITS API.
   /// Automatically tries active CDS mirror endpoints if primary times out or returns HTTP errors.
+  /// Deduplicates concurrent requests for the same cutout and bounds active network fetches.
   Future<Uint8List?> fetchSkyImage(
     String url, {
     Duration timeout = defaultTimeout,
     Duration attemptTimeout = perAttemptTimeout,
     int maxRetries = 2,
     Duration? retryBackoff,
+  }) {
+    final cacheKey = normalizeCacheKey(url);
+    final inFlightKey = '${_provider.id}:$cacheKey';
+    final existing = _inFlightRequests[inFlightKey];
+    if (existing != null) {
+      return existing;
+    }
+
+    final future = _fetchSkyImageInternal(
+      url,
+      cacheKey: cacheKey,
+      timeout: timeout,
+      attemptTimeout: attemptTimeout,
+      maxRetries: maxRetries,
+      retryBackoff: retryBackoff,
+    );
+    _inFlightRequests[inFlightKey] = future;
+    future.whenComplete(() {
+      if (identical(_inFlightRequests[inFlightKey], future)) {
+        _inFlightRequests.remove(inFlightKey);
+      }
+    });
+    return future;
+  }
+
+  Future<void> _acquireNetworkSlot() async {
+    if (_activeNetworkFetches < maxConcurrentNetworkFetches) {
+      _activeNetworkFetches++;
+      return;
+    }
+    final completer = Completer<void>();
+    _networkWaitQueue.addLast(completer);
+    await completer.future;
+  }
+
+  void _releaseNetworkSlot() {
+    if (_networkWaitQueue.isNotEmpty) {
+      final next = _networkWaitQueue.removeFirst();
+      next.complete();
+    } else if (_activeNetworkFetches > 0) {
+      _activeNetworkFetches--;
+    }
+  }
+
+  Future<Uint8List?> _fetchSkyImageInternal(
+    String url, {
+    required String cacheKey,
+    Duration timeout = defaultTimeout,
+    Duration attemptTimeout = perAttemptTimeout,
+    int maxRetries = 2,
+    Duration? retryBackoff,
   }) async {
     final effectiveBackoff = retryBackoff ?? this.retryBackoff;
-    final cacheKey = normalizeCacheKey(url);
     final diskDir = await _getCacheDirectory();
 
     // ----------------------------------------------------
@@ -284,9 +348,11 @@ class SkyImageService extends ChangeNotifier {
     if (_provider == SkySurveyProvider.esaHealpix) {
       final memKey = 'esa:$cacheKey';
       if (_memCache.containsKey(memKey)) {
+        final cached = _memCache.remove(memKey)!;
+        _memCache[memKey] = cached;
         _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
         notifyListeners();
-        return _memCache[memKey];
+        return cached;
       }
 
       File? esaCacheFile;
@@ -310,13 +376,19 @@ class SkyImageService extends ChangeNotifier {
         }
       }
 
-      final esaBytes = await _fetchFromEsa(url);
+      await _acquireNetworkSlot();
+      Uint8List? esaBytes;
+      try {
+        esaBytes = await _fetchFromEsa(url);
+      } finally {
+        _releaseNetworkSlot();
+      }
       if (esaBytes != null && esaBytes.isNotEmpty) {
         _addToMemCache(memKey, esaBytes);
         if (esaCacheFile != null) {
           Future.microtask(() async {
             try {
-              await esaCacheFile!.writeAsBytes(esaBytes);
+              await esaCacheFile!.writeAsBytes(esaBytes!);
               await pruneDiskCache();
             } catch (e) {
               AppLogger.debug('Failed writing ESA cache: $e', tag: _tag);
@@ -336,9 +408,11 @@ class SkyImageService extends ChangeNotifier {
     // ----------------------------------------------------
     final cdsMemKey = 'cds:$cacheKey';
     if (_memCache.containsKey(cdsMemKey)) {
+      final cached = _memCache.remove(cdsMemKey)!;
+      _memCache[cdsMemKey] = cached;
       _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
       notifyListeners();
-      return _memCache[cdsMemKey];
+      return cached;
     }
 
     File? cdsCacheFile;
@@ -362,127 +436,141 @@ class SkyImageService extends ChangeNotifier {
       }
     }
 
-    // Attempt CDS fetch across mirrors
-    final candidateUrls = getMirrorCandidateUrls(url);
-    final totalAttempts = math.min(candidateUrls.length, maxRetries + 1);
-
-    for (var attempt = 0; attempt < totalAttempts; attempt++) {
-      final candidateUrl = candidateUrls[attempt];
-      try {
-        final response = await _client.get(
-          Uri.parse(candidateUrl),
-          headers: const {
-            'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
-            'Accept': 'image/jpeg,image/*,*/*',
-          },
-        ).timeout(attemptTimeout);
-
-        if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          final bytes = response.bodyBytes;
-          _addToMemCache(cdsMemKey, bytes);
-
-          if (cdsCacheFile != null) {
-            Future.microtask(() async {
-              try {
-                await cdsCacheFile!.writeAsBytes(bytes);
-                await pruneDiskCache();
-              } catch (e) {
-                AppLogger.debug('Failed writing CDS image to disk cache: $e', tag: _tag);
-              }
-            });
-          }
-
-          _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
-          notifyListeners();
-          return bytes;
-        } else if (response.statusCode == 404) {
-          AppLogger.warning(
-            'CDS HiPS2FITS endpoint returned 404 Not Found ($candidateUrl), advancing to ESA fallback',
-            tag: _tag,
-          );
-          break;
-        } else {
-          AppLogger.warning(
-            'CDS HiPS2FITS endpoint attempt ${attempt + 1} returned HTTP ${response.statusCode} ($candidateUrl)',
-            tag: _tag,
-          );
-        }
-      } catch (e) {
-        AppLogger.debug(
-          'CDS HiPS2FITS fetch attempt ${attempt + 1} failed for ($candidateUrl): $e',
-          tag: _tag,
-        );
-        if (e is SocketException ||
-            e is http.ClientException ||
-            e.toString().contains('timed out') ||
-            e.toString().contains('Failed host lookup') ||
-            e.toString().contains('Network unavailable')) {
-          AppLogger.warning(
-            'CDS infrastructure unreachable ($e), advancing to ESA fallback',
-            tag: _tag,
-          );
-          break;
-        }
-      }
-
-      if (attempt < totalAttempts - 1 && effectiveBackoff > Duration.zero) {
-        await Future.delayed(effectiveBackoff * (attempt + 1));
-      }
-    }
-
-    // Fallback Tier: Direct ESA HEALPix tile sampler
+    // Check ESA disk/memory fallback before taking a network slot if CDS isn't cached
     final esaMemKey = 'esa:$cacheKey';
-    if (_memCache.containsKey(esaMemKey)) {
-      _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
-      notifyListeners();
-      return _memCache[esaMemKey];
-    }
-
     File? esaFallbackCacheFile;
     if (diskDir != null) {
       esaFallbackCacheFile = File(p.join(diskDir.path, _urlToCacheFilename(url, SkySurveyProvider.esaHealpix)));
-      try {
-        if (esaFallbackCacheFile.existsSync()) {
-          final bytes = await esaFallbackCacheFile.readAsBytes();
-          if (bytes.isNotEmpty) {
-            _addToMemCache(esaMemKey, bytes);
-            try {
-              await esaFallbackCacheFile.setLastModified(DateTime.now());
-            } catch (_) {}
-            _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+    }
+
+    await _acquireNetworkSlot();
+    try {
+      // Attempt CDS fetch across mirrors
+      final candidateUrls = getMirrorCandidateUrls(url);
+      final totalAttempts = math.min(candidateUrls.length, maxRetries + 1);
+
+      for (var attempt = 0; attempt < totalAttempts; attempt++) {
+        final candidateUrl = candidateUrls[attempt];
+        try {
+          final response = await _client.get(
+            Uri.parse(candidateUrl),
+            headers: const {
+              'User-Agent': 'AstroTargetsPlanner/1.0 (Astronomy Deep Sky Planner; contact: open-source)',
+              'Accept': 'image/jpeg,image/*,*/*',
+            },
+          ).timeout(attemptTimeout);
+
+          if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+            final bytes = response.bodyBytes;
+            _addToMemCache(cdsMemKey, bytes);
+
+            if (cdsCacheFile != null) {
+              Future.microtask(() async {
+                try {
+                  await cdsCacheFile!.writeAsBytes(bytes);
+                  await pruneDiskCache();
+                } catch (e) {
+                  AppLogger.debug('Failed writing CDS image to disk cache: $e', tag: _tag);
+                }
+              });
+            }
+
+            _lastFulfillmentProvider = SkySurveyProvider.cdsHips2Fits;
             notifyListeners();
             return bytes;
+          } else if (response.statusCode == 404) {
+            AppLogger.warning(
+              'CDS HiPS2FITS endpoint returned 404 Not Found ($candidateUrl), advancing to ESA fallback',
+              tag: _tag,
+            );
+            break;
+          } else {
+            AppLogger.warning(
+              'CDS HiPS2FITS endpoint attempt ${attempt + 1} returned HTTP ${response.statusCode} ($candidateUrl)',
+              tag: _tag,
+            );
+          }
+        } catch (e) {
+          AppLogger.debug(
+            'CDS HiPS2FITS fetch attempt ${attempt + 1} failed for ($candidateUrl): $e',
+            tag: _tag,
+          );
+          if (e is SocketException ||
+              e is TimeoutException ||
+              e is http.ClientException ||
+              e.toString().contains('timed out') ||
+              e.toString().contains('Failed host lookup') ||
+              e.toString().contains('Network unavailable')) {
+            AppLogger.warning(
+              'CDS infrastructure unreachable ($e), advancing to ESA fallback',
+              tag: _tag,
+            );
+            break;
           }
         }
-      } catch (e) {
-        AppLogger.debug('ESA fallback disk cache read error for $url: $e', tag: _tag);
-      }
-    }
 
-    final esaBytes = await _fetchFromEsa(url);
-    if (esaBytes != null && esaBytes.isNotEmpty) {
-      _addToMemCache(esaMemKey, esaBytes);
+        if (attempt < totalAttempts - 1 && effectiveBackoff > Duration.zero) {
+          await Future.delayed(effectiveBackoff * (attempt + 1));
+        }
+      }
+
+      // Fallback Tier: Direct ESA HEALPix tile sampler
+      if (_memCache.containsKey(esaMemKey)) {
+        final cached = _memCache.remove(esaMemKey)!;
+        _memCache[esaMemKey] = cached;
+        _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+        notifyListeners();
+        return cached;
+      }
+
       if (esaFallbackCacheFile != null) {
-        Future.microtask(() async {
-          try {
-            await esaFallbackCacheFile!.writeAsBytes(esaBytes);
-            await pruneDiskCache();
-          } catch (e) {
-            AppLogger.debug('Failed writing ESA fallback cache: $e', tag: _tag);
+        try {
+          if (esaFallbackCacheFile.existsSync()) {
+            final bytes = await esaFallbackCacheFile.readAsBytes();
+            if (bytes.isNotEmpty) {
+              _addToMemCache(esaMemKey, bytes);
+              try {
+                await esaFallbackCacheFile.setLastModified(DateTime.now());
+              } catch (_) {}
+              _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+              notifyListeners();
+              return bytes;
+            }
           }
-        });
+        } catch (e) {
+          AppLogger.debug('ESA fallback disk cache read error for $url: $e', tag: _tag);
+        }
       }
-      _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
-      notifyListeners();
-      return esaBytes;
-    }
 
-    return null;
+      final esaBytes = await _fetchFromEsa(url);
+      if (esaBytes != null && esaBytes.isNotEmpty) {
+        _addToMemCache(esaMemKey, esaBytes);
+        if (esaFallbackCacheFile != null) {
+          Future.microtask(() async {
+            try {
+              await esaFallbackCacheFile!.writeAsBytes(esaBytes);
+              await pruneDiskCache();
+            } catch (e) {
+              AppLogger.debug('Failed writing ESA fallback cache: $e', tag: _tag);
+            }
+          });
+        }
+        _lastFulfillmentProvider = SkySurveyProvider.esaHealpix;
+        notifyListeners();
+        return esaBytes;
+      }
+
+      return null;
+    } finally {
+      _releaseNetworkSlot();
+    }
   }
 
   void _addToMemCache(String key, Uint8List bytes) {
-    if (_memCache.length >= maxMemCacheEntries) {
-      // Evict oldest entry
+    if (_memCache.containsKey(key)) {
+      _memCache.remove(key);
+    } else if (_memCache.length >= maxMemCacheEntries) {
+      // Evict least-recently-used entry
       _memCache.remove(_memCache.keys.first);
     }
     _memCache[key] = bytes;

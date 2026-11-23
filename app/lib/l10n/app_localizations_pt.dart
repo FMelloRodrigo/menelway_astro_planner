@@ -1507,10 +1507,26 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsSkySurveyProviderDesc =>
-      'Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O CDS hips2fits alterna automaticamente para o ESA HEALPix se indisponível.';
+      'Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O ESA HEALPix (Direto) transmite blocos estáticos rápidos localmente; o CDS hips2fits é uma alternativa opcional no servidor com reserva automática para o ESA.';
 
   @override
   String get settingsSkyCacheLimit => 'Limite do Cache de Imagens';
+
+  @override
+  String skyCacheLimitSelected(int limitMb) {
+    return 'Limite ativo: $limitMb MB';
+  }
+
+  @override
+  String skyCacheUsageStatus(String usedMb, int limitMb, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count imagens',
+      one: '1 imagem',
+    );
+    return 'Cache atual: $usedMb MB / $limitMb MB ($_temp0)';
+  }
 
   @override
   String get clearSkyCache => 'Limpar Cache de Imagens do Céu';
@@ -1526,4 +1542,31 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get providerEsaLabel => 'ESA HEALPix';
+
+  @override
+  String get defaultTag => 'Padrão';
+
+  @override
+  String get directTag => 'Direto';
+
+  @override
+  String get settingsSectionTargetViewMode => 'Layout dos Cards de Alvos';
+
+  @override
+  String get targetViewModeDesc =>
+      'Escolha entre linhas compactas ou cards maiores com miniaturas transmitidas do levantamento do céu na aba Alvos.';
+
+  @override
+  String get targetViewCompactLabel => 'Lista Compacta (Padrão)';
+
+  @override
+  String get targetViewThumbnailCardsLabel => 'Cards com Miniaturas';
+
+  @override
+  String get switchToCompactListTooltip =>
+      'Alternar para visualização em lista compacta';
+
+  @override
+  String get switchToThumbnailCardsTooltip =>
+      'Alternar para cards com miniaturas dos alvos';
 }

@@ -34,6 +34,7 @@ class AppController extends ChangeNotifier {
   List<ObservingListModel> _observingLists = [];
 
   int _selectedTabIndex = 0;
+  bool _showTargetThumbnails;
   bool _isInitializing = true;
   bool _isLoadingTargets = false;
   bool _isLoadingPlanets = false;
@@ -53,12 +54,14 @@ class AppController extends ChangeNotifier {
     ObservingSiteManager? siteManager,
     FavoritesManager? favoritesManager,
     FilterState? initialFilters,
+    bool initialShowTargetThumbnails = false,
     this.enableIsolate = true,
   })  : engine = engine ?? AstroEngine.instance,
         equipmentManager = equipmentManager ?? EquipmentManager.instance,
         siteManager = siteManager ?? ObservingSiteManager.instance,
         favoritesManager = favoritesManager ?? FavoritesManager.instance,
-        _filters = initialFilters ?? FilterState() {
+        _filters = initialFilters ?? FilterState(),
+        _showTargetThumbnails = initialShowTargetThumbnails {
     this.favoritesManager.addListener(_onFavoritesChanged);
     this.siteManager.addListener(_onObservingSiteChanged);
   }
@@ -71,6 +74,7 @@ class AppController extends ChangeNotifier {
   List<TargetItem> get brightStars => _brightStars;
   List<ObservingListModel> get observingLists => _observingLists;
   int get selectedTabIndex => _selectedTabIndex;
+  bool get showTargetThumbnails => _showTargetThumbnails;
   bool get isInitializing => _isInitializing;
   bool get isLoadingTargets => _isLoadingTargets;
   bool get isLoadingPlanets => _isLoadingPlanets;
@@ -87,11 +91,22 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Toggles whether target cards in Targets view show streamed sky thumbnails.
+  void setShowTargetThumbnails(bool value) {
+    if (_showTargetThumbnails != value) {
+      _showTargetThumbnails = value;
+      notifyListeners();
+    }
+  }
+
   /// Bootstraps database handles, ephemeris calculations, and initial target filters.
   Future<void> bootstrap({AppSettingsData? initialSettings}) async {
     try {
       _isInitializing = true;
       _initError = null;
+      if (initialSettings != null) {
+        _showTargetThumbnails = initialSettings.showTargetThumbnails;
+      }
       notifyListeners();
 
       final dbPath = await CatalogManager.getDatabasePath();
@@ -325,6 +340,7 @@ class AppController extends ChangeNotifier {
     String? languageCode,
     String? skySurveyProvider,
     int? skyImageCacheSizeMb,
+    bool? showTargetThumbnails,
   }) {
     SettingsService.saveSettings(
       filters: _filters,
@@ -338,6 +354,7 @@ class AppController extends ChangeNotifier {
       languageCode: languageCode,
       skySurveyProvider: skySurveyProvider ?? SkyImageService.instance.provider.id,
       skyImageCacheSizeMb: skyImageCacheSizeMb ?? (SkyImageService.instance.maxDiskCacheSizeBytes ~/ (1024 * 1024)),
+      showTargetThumbnails: showTargetThumbnails ?? _showTargetThumbnails,
     );
   }
 
@@ -368,8 +385,9 @@ class AppController extends ChangeNotifier {
     // 4. Reset night mode if enabled
     onResetNightMode?.call();
 
-    // 5. Reset in-memory filters and ephemeris
+    // 5. Reset in-memory filters, preferences, and ephemeris
     _filters = FilterState();
+    _showTargetThumbnails = false;
     _lastEphemerisFilters = null;
     _observingLists = [];
     _planets = [];

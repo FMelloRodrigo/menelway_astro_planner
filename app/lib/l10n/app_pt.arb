@@ -477,11 +477,21 @@
   },
   "settingsSectionSkySurvey": "Levantamento do Céu",
   "settingsSkySurveyProvider": "Provedor do Levantamento",
-  "settingsSkySurveyProviderDesc": "Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O CDS hips2fits alterna automaticamente para o ESA HEALPix se indisponível.",
+  "settingsSkySurveyProviderDesc": "Selecione o mecanismo de transmissão de imagem para fundos astronômicos. O ESA HEALPix (Direto) transmite blocos estáticos rápidos localmente; o CDS hips2fits é uma alternativa opcional no servidor com reserva automática para o ESA.",
   "settingsSkyCacheLimit": "Limite do Cache de Imagens",
+  "skyCacheLimitSelected": "Limite ativo: {limitMb} MB",
+  "skyCacheUsageStatus": "Cache atual: {usedMb} MB / {limitMb} MB ({count, plural, =1{1 imagem} other{{count} imagens}})",
   "clearSkyCache": "Limpar Cache de Imagens do Céu",
   "skyCacheCleared": "Cache de imagens do céu limpo com sucesso",
   "providerFallbackLabel": "Reserva",
   "providerCdsLabel": "CDS hips2fits",
-  "providerEsaLabel": "ESA HEALPix"
+  "providerEsaLabel": "ESA HEALPix",
+  "defaultTag": "Padrão",
+  "directTag": "Direto",
+  "settingsSectionTargetViewMode": "Layout dos Cards de Alvos",
+  "targetViewModeDesc": "Escolha entre linhas compactas ou cards maiores com miniaturas transmitidas do levantamento do céu na aba Alvos.",
+  "targetViewCompactLabel": "Lista Compacta (Padrão)",
+  "targetViewThumbnailCardsLabel": "Cards com Miniaturas",
+  "switchToCompactListTooltip": "Alternar para visualização em lista compacta",
+  "switchToThumbnailCardsTooltip": "Alternar para cards com miniaturas dos alvos"
 }

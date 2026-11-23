@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:app/core/sky_image_service.dart';
@@ -82,6 +83,7 @@ void main() {
 
     test('fetchSkyImage fails over to mirror when primary endpoint returns error', () async {
       await SkyImageService.instance.clearCache();
+      SkyImageService.instance.provider = SkySurveyProvider.cdsHips2Fits;
       final requestedUrls = <String>[];
       final fakeBytes = [255, 216, 255, 224, 0, 16]; // JPEG magic header bytes
 
@@ -117,12 +119,14 @@ void main() {
       expect(requestedUrls[0], contains('alasky.cds.unistra.fr'));
       expect(requestedUrls[1], contains('alaskybis.cds.unistra.fr'));
 
-      // Restore client
+      // Restore client and default provider
+      SkyImageService.instance.provider = SkyImageService.defaultProvider;
       SkyImageService.instance.setClientForTesting(http.Client());
     });
 
     test('fetchSkyImage falls back to ESA static tiles when CDS returns 404', () async {
       await SkyImageService.instance.clearCache();
+      SkyImageService.instance.provider = SkySurveyProvider.cdsHips2Fits;
       final requestedUrls = <String>[];
 
       final testClient = _MockHttpClient((request) async {
@@ -155,7 +159,44 @@ void main() {
       expect(requestedUrls.any((u) => u.contains('unistra.fr')), isTrue);
       expect(requestedUrls.any((u) => u.contains('skies.esac.esa.int')), isTrue);
 
-      // Restore client
+      // Restore client and default provider
+      SkyImageService.instance.provider = SkyImageService.defaultProvider;
+      SkyImageService.instance.setClientForTesting(http.Client());
+    });
+
+    test('fetchSkyImage breaks immediately to ESA fallback on TimeoutException', () async {
+      await SkyImageService.instance.clearCache();
+      SkyImageService.instance.provider = SkySurveyProvider.cdsHips2Fits;
+      final requestedUrls = <String>[];
+
+      final testClient = _MockHttpClient((request) async {
+        requestedUrls.add(request.url.toString());
+        if (request.url.host.contains('unistra.fr')) {
+          throw TimeoutException('Future not completed', const Duration(seconds: 4));
+        }
+        return http.Response('Not Found', 404);
+      });
+
+      SkyImageService.instance.setClientForTesting(testClient);
+
+      final url = SkyImageService.buildHiPSUrl(
+        raHours: 5.588,
+        decDegrees: -5.391,
+        fovDeg: 1.5,
+      );
+
+      await SkyImageService.instance.fetchSkyImage(
+        url,
+        attemptTimeout: const Duration(seconds: 1),
+        retryBackoff: Duration.zero,
+      );
+
+      // Should hit only 1 CDS endpoint before breaking out to ESA fallback
+      final cdsRequests = requestedUrls.where((u) => u.contains('unistra.fr')).length;
+      expect(cdsRequests, equals(1));
+      expect(requestedUrls.any((u) => u.contains('skies.esac.esa.int')), isTrue);
+
+      SkyImageService.instance.provider = SkyImageService.defaultProvider;
       SkyImageService.instance.setClientForTesting(http.Client());
     });
 
@@ -175,7 +216,7 @@ void main() {
       expect(SkySurveyProvider.esaHealpix.id, equals('esa'));
       expect(SkySurveyProviderExtension.fromString('esa'), equals(SkySurveyProvider.esaHealpix));
       expect(SkySurveyProviderExtension.fromString('cds'), equals(SkySurveyProvider.cdsHips2Fits));
-      expect(SkySurveyProviderExtension.fromString(null), equals(SkySurveyProvider.cdsHips2Fits));
+      expect(SkySurveyProviderExtension.fromString(null), equals(SkySurveyProvider.esaHealpix));
     });
 
     test('Direct ESA provider bypasses CDS network requests entirely', () async {
@@ -208,7 +249,7 @@ void main() {
       expect(SkyImageService.instance.provider, equals(SkySurveyProvider.esaHealpix));
 
       // Restore defaults
-      SkyImageService.instance.provider = SkySurveyProvider.cdsHips2Fits;
+      SkyImageService.instance.provider = SkyImageService.defaultProvider;
       SkyImageService.instance.setClientForTesting(http.Client());
     });
   });

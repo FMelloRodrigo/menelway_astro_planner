@@ -857,11 +857,33 @@
   },
   "settingsSectionSkySurvey": "Sky Survey Streaming",
   "settingsSkySurveyProvider": "Sky Survey Provider",
-  "settingsSkySurveyProviderDesc": "Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.",
+  "settingsSkySurveyProviderDesc": "Select the image streaming engine for astronomical backgrounds. ESA HEALPix (Direct) streams fast static survey tiles locally; CDS hips2fits is an optional server-side alternative with automatic ESA fallback.",
   "settingsSkyCacheLimit": "Sky Image Cache Limit",
+  "skyCacheLimitSelected": "Active limit: {limitMb} MB",
+  "@skyCacheLimitSelected": {
+    "placeholders": {
+      "limitMb": { "type": "int" }
+    }
+  },
+  "skyCacheUsageStatus": "Current cache: {usedMb} MB / {limitMb} MB ({count, plural, =1{1 image} other{{count} images}})",
+  "@skyCacheUsageStatus": {
+    "placeholders": {
+      "usedMb": { "type": "String" },
+      "limitMb": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
   "clearSkyCache": "Clear Sky Image Cache",
   "skyCacheCleared": "Sky image cache cleared successfully",
   "providerFallbackLabel": "Fallback",
   "providerCdsLabel": "CDS hips2fits",
-  "providerEsaLabel": "ESA HEALPix"
+  "providerEsaLabel": "ESA HEALPix",
+  "defaultTag": "Default",
+  "directTag": "Direct",
+  "settingsSectionTargetViewMode": "Target Card Layout",
+  "targetViewModeDesc": "Choose between compact target rows or larger cards featuring streamed sky survey thumbnails in Targets.",
+  "targetViewCompactLabel": "Compact List (Default)",
+  "targetViewThumbnailCardsLabel": "Cards with Thumbnails",
+  "switchToCompactListTooltip": "Switch to compact list view",
+  "switchToThumbnailCardsTooltip": "Switch to cards with target thumbnails"
 }

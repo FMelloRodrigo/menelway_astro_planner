@@ -1498,10 +1498,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSkySurveyProviderDesc =>
-      'Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.';
+      'Select the image streaming engine for astronomical backgrounds. ESA HEALPix (Direct) streams fast static survey tiles locally; CDS hips2fits is an optional server-side alternative with automatic ESA fallback.';
 
   @override
   String get settingsSkyCacheLimit => 'Sky Image Cache Limit';
+
+  @override
+  String skyCacheLimitSelected(int limitMb) {
+    return 'Active limit: $limitMb MB';
+  }
+
+  @override
+  String skyCacheUsageStatus(String usedMb, int limitMb, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count images',
+      one: '1 image',
+    );
+    return 'Current cache: $usedMb MB / $limitMb MB ($_temp0)';
+  }
 
   @override
   String get clearSkyCache => 'Clear Sky Image Cache';
@@ -1517,4 +1533,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerEsaLabel => 'ESA HEALPix';
+
+  @override
+  String get defaultTag => 'Default';
+
+  @override
+  String get directTag => 'Direct';
+
+  @override
+  String get settingsSectionTargetViewMode => 'Target Card Layout';
+
+  @override
+  String get targetViewModeDesc =>
+      'Choose between compact target rows or larger cards featuring streamed sky survey thumbnails in Targets.';
+
+  @override
+  String get targetViewCompactLabel => 'Compact List (Default)';
+
+  @override
+  String get targetViewThumbnailCardsLabel => 'Cards with Thumbnails';
+
+  @override
+  String get switchToCompactListTooltip => 'Switch to compact list view';
+
+  @override
+  String get switchToThumbnailCardsTooltip =>
+      'Switch to cards with target thumbnails';
 }

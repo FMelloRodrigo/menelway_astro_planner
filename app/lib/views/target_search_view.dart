@@ -10,6 +10,7 @@ import '../models/night_summary.dart';
 import '../models/observing_list.dart';
 import '../models/target_item.dart';
 import '../theme/astro_theme.dart';
+import '../widgets/target_sky_thumbnail.dart';
 import 'filter_dialog.dart';
 import 'target_details_sheet.dart';
 
@@ -33,6 +34,8 @@ class TargetSearchView extends StatefulWidget {
   final void Function(FilterState updated) onFilterChanged;
   final void Function(int listId, int dsoId, String notes) onAddToList;
   final GlobalKey? filterButtonKey;
+  final bool showTargetThumbnails;
+  final ValueChanged<bool>? onShowTargetThumbnailsChanged;
 
   /// Debounce delay for general target search queries to prevent premature execution while typing.
   static const Duration searchDebounceDelay = Duration(milliseconds: 600);
@@ -52,6 +55,8 @@ class TargetSearchView extends StatefulWidget {
     required this.onFilterChanged,
     required this.onAddToList,
     this.filterButtonKey,
+    this.showTargetThumbnails = false,
+    this.onShowTargetThumbnailsChanged,
   });
 
   @override
@@ -65,6 +70,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   TargetItem? _selectedTarget;
   Timer? _debounceTimer;
   bool _hideOutsideFilters = false;
+  late bool _showThumbnails;
   String _lastSubmittedQuery = '';
 
   SortMode get _effectiveSortMode {
@@ -77,6 +83,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   @override
   void initState() {
     super.initState();
+    _showThumbnails = widget.showTargetThumbnails;
     _searchController.text = widget.filters.searchQuery;
     _lastSubmittedQuery = widget.filters.searchQuery;
     if (widget.filters.searchQuery.isNotEmpty) {
@@ -90,6 +97,9 @@ class _TargetSearchViewState extends State<TargetSearchView> {
   @override
   void didUpdateWidget(TargetSearchView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.showTargetThumbnails != oldWidget.showTargetThumbnails) {
+      _showThumbnails = widget.showTargetThumbnails;
+    }
     if (widget.filters.searchQuery != oldWidget.filters.searchQuery) {
       // Only synchronize controller text if the change originated externally (e.g. filter reset)
       // and not from active user typing in this view.
@@ -480,18 +490,60 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 ),
               );
 
+              final viewModeToggle = Tooltip(
+                message: _showThumbnails
+                    ? l10n.switchToCompactListTooltip
+                    : l10n.switchToThumbnailCardsTooltip,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: const ValueKey('target_view_mode_toggle'),
+                    onTap: () {
+                      final next = !_showThumbnails;
+                      setState(() => _showThumbnails = next);
+                      widget.onShowTargetThumbnailsChanged?.call(next);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: topBarElementHeight,
+                      height: topBarElementHeight,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _showThumbnails
+                            ? accentColor.withValues(alpha: 0.18)
+                            : palette.surfaceVariant,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _showThumbnails ? accentColor : palette.border,
+                          width: _showThumbnails ? 1.5 : 1.0,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.art_track_rounded,
+                        size: 22,
+                        color: _showThumbnails
+                            ? accentColor
+                            : textColor.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+
               return Column(
                 children: [
                   if (isNarrow) ...[
                     // Mobile: Full-width search bar
                     searchField,
                     const SizedBox(height: 8),
-                    // Mobile: Second row for Filters & Sort side-by-side
+                    // Mobile: Second row for Filters, Sort & View Mode Toggle
                     Row(
                       children: [
                         Expanded(child: filterButton),
                         const SizedBox(width: 8),
                         Expanded(child: sortDropdown),
+                        const SizedBox(width: 8),
+                        viewModeToggle,
                       ],
                     ),
                   ] else ...[
@@ -503,6 +555,8 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                         filterButton,
                         const SizedBox(width: 10),
                         sortDropdown,
+                        const SizedBox(width: 10),
+                        viewModeToggle,
                       ],
                     ),
                   ],
@@ -683,12 +737,12 @@ class _TargetSearchViewState extends State<TargetSearchView> {
     final accentColor = palette.accent;
 
     final card = Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: _showThumbnails ? 10 : 8),
       color: isSelected
           ? palette.surfaceVariant
           : palette.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(_showThumbnails ? 12 : 10),
         side: BorderSide(
           color: isSelected
               ? accentColor
@@ -697,7 +751,7 @@ class _TargetSearchViewState extends State<TargetSearchView> {
         ),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(_showThumbnails ? 12 : 10),
         onTap: () async {
           if (_selectedTarget?.id == target.id) {
             setState(() => _selectedTarget = null);
@@ -733,11 +787,11 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 Text(
                   target.displayName,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: _showThumbnails ? 15.5 : 15,
                     fontWeight: FontWeight.w700,
                     color: textColor,
                   ),
-                  maxLines: 1,
+                  maxLines: _showThumbnails ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
@@ -835,6 +889,20 @@ class _TargetSearchViewState extends State<TargetSearchView> {
                 windowSpanText = startStr;
                 windowSpanTooltip = l10n.visibleFromTooltip(startStr);
               }
+            }
+
+            if (_showThumbnails) {
+              return _buildThumbnailCardContent(
+                target: target,
+                isNarrow: isNarrow,
+                targetHeader: targetHeader,
+                selectionIndicator: selectionIndicator,
+                durationPill: durationPill,
+                windowSpanText: windowSpanText,
+                windowSpanTooltip: windowSpanTooltip,
+                textColor: textColor,
+                l10n: l10n,
+              );
             }
 
             if (isNarrow) {
@@ -987,6 +1055,120 @@ class _TargetSearchViewState extends State<TargetSearchView> {
       return Opacity(opacity: 0.78, child: card);
     }
     return card;
+  }
+
+  Widget _buildThumbnailCardContent({
+    required TargetItem target,
+    required bool isNarrow,
+    required Widget targetHeader,
+    required Widget selectionIndicator,
+    required Widget durationPill,
+    required String windowSpanText,
+    required String windowSpanTooltip,
+    required Color textColor,
+    required AppLocalizations l10n,
+  }) {
+    final thumbnailSize = isNarrow ? 92.0 : 112.0;
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TargetSkyThumbnail(
+            target: target,
+            size: thumbnailSize,
+            isRedNightMode: widget.isRedNightMode,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: targetHeader),
+                    const SizedBox(width: 8),
+                    selectionIndicator,
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.trending_up_rounded, size: 14, color: AstroColors.starGold),
+                        const SizedBox(width: 4),
+                        Text(
+                          target.peakAltitudeDeg > 0
+                              ? l10n.peakAltitudeShort(target.peakAltitudeDeg.toStringAsFixed(0))
+                              : l10n.belowHorizon,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Tooltip(
+                      message: windowSpanTooltip,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: textColor.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            windowSpanText,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: textColor.withValues(alpha: 0.75),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.brightness_2_rounded,
+                          size: 13,
+                          color: textColor.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.moonSeparationShort(target.minMoonSepDeg.toStringAsFixed(0)),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: textColor.withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [durationPill],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSummaryChip(String label, IconData icon) {

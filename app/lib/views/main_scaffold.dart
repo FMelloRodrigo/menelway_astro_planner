@@ -88,6 +88,7 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
       _controller = AppController(
         engine: widget.engine,
         initialFilters: widget.initialSettings?.filters,
+        initialShowTargetThumbnails: widget.initialSettings?.showTargetThumbnails ?? false,
       );
       _controller.bootstrap(initialSettings: widget.initialSettings).then((_) {
         if (mounted && widget.initialSettings?.hasCompletedTutorial != true) {
@@ -1186,6 +1187,12 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                       setState(() {
                         SkyImageService.instance.maxDiskCacheSizeBytes = newLimitMb * 1024 * 1024;
                       });
+                      SkyImageService.instance.pruneDiskCache();
+                      _saveSettings();
+                    },
+                    showTargetThumbnails: _controller.showTargetThumbnails,
+                    onShowTargetThumbnailsChanged: (showThumbnails) {
+                      _controller.setShowTargetThumbnails(showThumbnails);
                       _saveSettings();
                     },
                     onResetFilters: () {
@@ -1354,6 +1361,11 @@ class _MainScaffoldState extends State<MainScaffold> with WidgetsBindingObserver
                   isLoading: _isLoadingTargets,
                   isRedNightMode: widget.isRedNightMode,
                   availableLists: _observingLists,
+                  showTargetThumbnails: _controller.showTargetThumbnails,
+                  onShowTargetThumbnailsChanged: (showThumbnails) {
+                    _controller.setShowTargetThumbnails(showThumbnails);
+                    _saveSettings();
+                  },
                   onFilterChanged: (updated) {
                     setState(() {
                       _filters = updated;

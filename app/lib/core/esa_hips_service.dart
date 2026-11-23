@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -83,7 +82,6 @@ class EsaHipsService {
     }
     if (surveyId.contains('PanSTARRS') || surveyId.contains('Pan-STARRS')) {
       return const [
-        'https://skies.esac.esa.int/Pan-STARRS-DR1-Color',
         stsciPanstarrsBaseUrl,
       ];
     }

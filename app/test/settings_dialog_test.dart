@@ -204,4 +204,121 @@ void main() {
     expect(tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '20 (Default)')).selected, isTrue);
     expect(tester.widget<ChoiceChip>(chip50Finder).selected, isFalse);
   });
+
+  testWidgets('SettingsDialog toggles Target Card Layout between compact and thumbnail cards', (tester) async {
+    bool? updatedShowThumbnails;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => SettingsDialog(
+                    showTargetThumbnails: false,
+                    onShowTargetThumbnailsChanged: (val) {
+                      updatedShowThumbnails = val;
+                    },
+                    onResetFilters: () {},
+                    onCleanAllData: () {},
+                  ),
+                );
+              },
+              child: const Text('Open Settings'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    final compactChipFinder = find.widgetWithText(ChoiceChip, 'Compact List (Default)');
+    final thumbChipFinder = find.widgetWithText(ChoiceChip, 'Cards with Thumbnails');
+
+    await tester.ensureVisible(thumbChipFinder);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(compactChipFinder).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(thumbChipFinder).selected, isFalse);
+
+    await tester.tap(thumbChipFinder);
+    await tester.pumpAndSettle();
+
+    expect(updatedShowThumbnails, isTrue);
+    expect(tester.widget<ChoiceChip>(thumbChipFinder).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(compactChipFinder).selected, isFalse);
+
+    await tester.ensureVisible(compactChipFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(compactChipFinder);
+    await tester.pumpAndSettle();
+
+    expect(updatedShowThumbnails, isFalse);
+    expect(tester.widget<ChoiceChip>(compactChipFinder).selected, isTrue);
+  });
+
+  testWidgets('SettingsDialog defaults to ESA HEALPix (Direct) and displays active sky cache limit and usage', (tester) async {
+    String? updatedProvider;
+    int? updatedCacheLimitMb;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (_) => SettingsDialog(
+                    onSkySurveyProviderChanged: (val) => updatedProvider = val,
+                    onSkyImageCacheSizeChanged: (mb) => updatedCacheLimitMb = mb,
+                    onResetFilters: () {},
+                    onCleanAllData: () {},
+                  ),
+                );
+              },
+              child: const Text('Open Settings'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open Settings'));
+    await tester.pumpAndSettle();
+
+    final esaChipFinder = find.widgetWithText(ChoiceChip, 'ESA HEALPix (Direct, Default)');
+    final cdsChipFinder = find.widgetWithText(ChoiceChip, 'CDS hips2fits');
+
+    await tester.ensureVisible(esaChipFinder);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<ChoiceChip>(esaChipFinder).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(cdsChipFinder).selected, isFalse);
+    expect(find.text('Active limit: 50 MB'), findsOneWidget);
+    expect(find.textContaining('Current cache:'), findsOneWidget);
+    expect(find.textContaining('/ 50 MB'), findsOneWidget);
+
+    await tester.tap(cdsChipFinder);
+    await tester.pumpAndSettle();
+    expect(updatedProvider, equals('cds'));
+
+    final chip100Finder = find.widgetWithText(ChoiceChip, '100 MB');
+    await tester.ensureVisible(chip100Finder);
+    await tester.tap(chip100Finder);
+    await tester.pumpAndSettle();
+
+    expect(updatedCacheLimitMb, equals(100));
+    expect(find.text('Active limit: 100 MB'), findsOneWidget);
+    expect(find.textContaining('/ 100 MB'), findsOneWidget);
+  });
 }

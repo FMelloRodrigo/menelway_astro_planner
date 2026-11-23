@@ -2675,7 +2675,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSkySurveyProviderDesc.
   ///
   /// In en, this message translates to:
-  /// **'Select the image streaming engine for astronomical backgrounds. CDS hips2fits automatically falls back to ESA HEALPix if unavailable.'**
+  /// **'Select the image streaming engine for astronomical backgrounds. ESA HEALPix (Direct) streams fast static survey tiles locally; CDS hips2fits is an optional server-side alternative with automatic ESA fallback.'**
   String get settingsSkySurveyProviderDesc;
 
   /// No description provided for @settingsSkyCacheLimit.
@@ -2683,6 +2683,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sky Image Cache Limit'**
   String get settingsSkyCacheLimit;
+
+  /// No description provided for @skyCacheLimitSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Active limit: {limitMb} MB'**
+  String skyCacheLimitSelected(int limitMb);
+
+  /// No description provided for @skyCacheUsageStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Current cache: {usedMb} MB / {limitMb} MB ({count, plural, =1{1 image} other{{count} images}})'**
+  String skyCacheUsageStatus(String usedMb, int limitMb, int count);
 
   /// No description provided for @clearSkyCache.
   ///
@@ -2713,6 +2725,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ESA HEALPix'**
   String get providerEsaLabel;
+
+  /// No description provided for @defaultTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get defaultTag;
+
+  /// No description provided for @directTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get directTag;
+
+  /// No description provided for @settingsSectionTargetViewMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Card Layout'**
+  String get settingsSectionTargetViewMode;
+
+  /// No description provided for @targetViewModeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose between compact target rows or larger cards featuring streamed sky survey thumbnails in Targets.'**
+  String get targetViewModeDesc;
+
+  /// No description provided for @targetViewCompactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact List (Default)'**
+  String get targetViewCompactLabel;
+
+  /// No description provided for @targetViewThumbnailCardsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards with Thumbnails'**
+  String get targetViewThumbnailCardsLabel;
+
+  /// No description provided for @switchToCompactListTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to compact list view'**
+  String get switchToCompactListTooltip;
+
+  /// No description provided for @switchToThumbnailCardsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to cards with target thumbnails'**
+  String get switchToThumbnailCardsTooltip;
 }
 
 class _AppLocalizationsDelegate

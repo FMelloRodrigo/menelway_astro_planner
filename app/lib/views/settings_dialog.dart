@@ -17,6 +17,8 @@ class SettingsDialog extends StatefulWidget {
   final ValueChanged<String>? onSkySurveyProviderChanged;
   final int skyImageCacheSizeMb;
   final ValueChanged<int>? onSkyImageCacheSizeChanged;
+  final bool showTargetThumbnails;
+  final ValueChanged<bool>? onShowTargetThumbnailsChanged;
 
   const SettingsDialog({
     super.key,
@@ -25,10 +27,12 @@ class SettingsDialog extends StatefulWidget {
     this.onReplayTour,
     this.maxTargets = 20,
     this.onMaxTargetsChanged,
-    this.skySurveyProvider = 'cds',
+    this.skySurveyProvider = SkyImageService.defaultProviderId,
     this.onSkySurveyProviderChanged,
-    this.skyImageCacheSizeMb = 50,
+    this.skyImageCacheSizeMb = SkyImageService.defaultMaxDiskCacheSizeMb,
     this.onSkyImageCacheSizeChanged,
+    this.showTargetThumbnails = false,
+    this.onShowTargetThumbnailsChanged,
   });
 
   @override
@@ -36,9 +40,16 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
+  static const List<int> _skyCacheSizePresetsMb = [25, 50, 100, 200, 500];
+  static const int _bytesPerMb = 1024 * 1024;
+
   late int _selectedMaxTargets;
   late String _selectedSkySurveyProvider;
   late int _selectedSkyImageCacheSizeMb;
+  late bool _selectedShowTargetThumbnails;
+  int _diskCacheSizeBytes = 0;
+  int _diskCacheCount = 0;
+  bool _isLoadingCacheStats = true;
 
   @override
   void initState() {
@@ -46,6 +57,19 @@ class _SettingsDialogState extends State<SettingsDialog> {
     _selectedMaxTargets = widget.maxTargets;
     _selectedSkySurveyProvider = widget.skySurveyProvider;
     _selectedSkyImageCacheSizeMb = widget.skyImageCacheSizeMb;
+    _selectedShowTargetThumbnails = widget.showTargetThumbnails;
+    _refreshCacheStats();
+  }
+
+  Future<void> _refreshCacheStats() async {
+    final sizeBytes = await SkyImageService.instance.getDiskCacheSizeBytes();
+    final count = await SkyImageService.instance.getDiskCacheCount();
+    if (!mounted) return;
+    setState(() {
+      _diskCacheSizeBytes = sizeBytes;
+      _diskCacheCount = count;
+      _isLoadingCacheStats = false;
+    });
   }
 
   @override
@@ -59,6 +83,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
     if (oldWidget.skyImageCacheSizeMb != widget.skyImageCacheSizeMb) {
       _selectedSkyImageCacheSizeMb = widget.skyImageCacheSizeMb;
+    }
+    if (oldWidget.showTargetThumbnails != widget.showTargetThumbnails) {
+      _selectedShowTargetThumbnails = widget.showTargetThumbnails;
     }
   }
 
@@ -235,6 +262,83 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
                       const SizedBox(height: 14),
 
+                      // Section: Target Card Layout
+                      _buildSectionCard(
+                        context: context,
+                        cardBgColor: cardBgColor,
+                        borderColor: borderColor,
+                        textColor: textColor,
+                        textSubColor: textSubColor,
+                        icon: Icons.art_track_rounded,
+                        iconColor: accentColor,
+                        title: l10n.settingsSectionTargetViewMode,
+                        description: l10n.targetViewModeDesc,
+                        actionWidget: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              avatar: Icon(
+                                Icons.view_list_rounded,
+                                size: 16,
+                                color: !_selectedShowTargetThumbnails ? accentColor : textSubColor,
+                              ),
+                              label: Text(l10n.targetViewCompactLabel),
+                              selected: !_selectedShowTargetThumbnails,
+                              onSelected: widget.onShowTargetThumbnailsChanged != null
+                                  ? (selected) {
+                                      if (selected) {
+                                        setState(() => _selectedShowTargetThumbnails = false);
+                                        widget.onShowTargetThumbnailsChanged!(false);
+                                      }
+                                    }
+                                  : null,
+                              selectedColor: accentColor.withValues(alpha: 0.22),
+                              backgroundColor: bgColor,
+                              side: BorderSide(
+                                color: !_selectedShowTargetThumbnails ? accentColor : borderColor,
+                                width: !_selectedShowTargetThumbnails ? 1.5 : 1.0,
+                              ),
+                              labelStyle: TextStyle(
+                                color: !_selectedShowTargetThumbnails ? accentColor : textColor,
+                                fontWeight: !_selectedShowTargetThumbnails ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                            ChoiceChip(
+                              avatar: Icon(
+                                Icons.art_track_rounded,
+                                size: 16,
+                                color: _selectedShowTargetThumbnails ? accentColor : textSubColor,
+                              ),
+                              label: Text(l10n.targetViewThumbnailCardsLabel),
+                              selected: _selectedShowTargetThumbnails,
+                              onSelected: widget.onShowTargetThumbnailsChanged != null
+                                  ? (selected) {
+                                      if (selected) {
+                                        setState(() => _selectedShowTargetThumbnails = true);
+                                        widget.onShowTargetThumbnailsChanged!(true);
+                                      }
+                                    }
+                                  : null,
+                              selectedColor: accentColor.withValues(alpha: 0.22),
+                              backgroundColor: bgColor,
+                              side: BorderSide(
+                                color: _selectedShowTargetThumbnails ? accentColor : borderColor,
+                                width: _selectedShowTargetThumbnails ? 1.5 : 1.0,
+                              ),
+                              labelStyle: TextStyle(
+                                color: _selectedShowTargetThumbnails ? accentColor : textColor,
+                                fontWeight: _selectedShowTargetThumbnails ? FontWeight.bold : FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
                       // Section: Sky Survey Streaming & Cache
                       _buildSectionCard(
                         context: context,
@@ -259,30 +363,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                               runSpacing: 8,
                               children: [
                                 ChoiceChip(
-                                  label: Text("${l10n.providerCdsLabel} (Default)"),
-                                  selected: _selectedSkySurveyProvider == 'cds',
-                                  onSelected: widget.onSkySurveyProviderChanged != null
-                                      ? (selected) {
-                                          if (selected) {
-                                            setState(() => _selectedSkySurveyProvider = 'cds');
-                                            widget.onSkySurveyProviderChanged!('cds');
-                                          }
-                                        }
-                                      : null,
-                                  selectedColor: accentColor.withValues(alpha: 0.22),
-                                  backgroundColor: bgColor,
-                                  side: BorderSide(
-                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : borderColor,
-                                    width: _selectedSkySurveyProvider == 'cds' ? 1.5 : 1.0,
-                                  ),
-                                  labelStyle: TextStyle(
-                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : textColor,
-                                    fontWeight: _selectedSkySurveyProvider == 'cds' ? FontWeight.bold : FontWeight.w500,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                ChoiceChip(
-                                  label: Text("${l10n.providerEsaLabel} (Direct)"),
+                                  label: Text("${l10n.providerEsaLabel} (${l10n.directTag}, ${l10n.defaultTag})"),
                                   selected: _selectedSkySurveyProvider == 'esa',
                                   onSelected: widget.onSkySurveyProviderChanged != null
                                       ? (selected) {
@@ -304,27 +385,80 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                     fontSize: 12,
                                   ),
                                 ),
+                                ChoiceChip(
+                                  label: Text(l10n.providerCdsLabel),
+                                  selected: _selectedSkySurveyProvider == 'cds',
+                                  onSelected: widget.onSkySurveyProviderChanged != null
+                                      ? (selected) {
+                                          if (selected) {
+                                            setState(() => _selectedSkySurveyProvider = 'cds');
+                                            widget.onSkySurveyProviderChanged!('cds');
+                                          }
+                                        }
+                                      : null,
+                                  selectedColor: accentColor.withValues(alpha: 0.22),
+                                  backgroundColor: bgColor,
+                                  side: BorderSide(
+                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : borderColor,
+                                    width: _selectedSkySurveyProvider == 'cds' ? 1.5 : 1.0,
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: _selectedSkySurveyProvider == 'cds' ? accentColor : textColor,
+                                    fontWeight: _selectedSkySurveyProvider == 'cds' ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            Text(
-                              l10n.settingsSkyCacheLimit,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  l10n.settingsSkyCacheLimit,
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: accentColor.withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                                  ),
+                                  child: Text(
+                                    l10n.skyCacheLimitSelected(_selectedSkyImageCacheSizeMb),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: accentColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 6),
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
-                              children: [25, 50, 100, 200, 500].map((mb) {
+                              children: _skyCacheSizePresetsMb.map((mb) {
                                 final isSelected = _selectedSkyImageCacheSizeMb == mb;
                                 return ChoiceChip(
-                                  label: Text(mb == 50 ? "$mb MB (Default)" : "$mb MB"),
+                                  label: Text(
+                                    mb == SkyImageService.defaultMaxDiskCacheSizeMb
+                                        ? "$mb MB (${l10n.defaultTag})"
+                                        : "$mb MB",
+                                  ),
                                   selected: isSelected,
                                   onSelected: widget.onSkyImageCacheSizeChanged != null
                                       ? (selected) {
                                           if (selected) {
                                             setState(() => _selectedSkyImageCacheSizeMb = mb);
                                             widget.onSkyImageCacheSizeChanged!(mb);
+                                            SkyImageService.instance.pruneDiskCache(
+                                              maxSizeBytes: mb * _bytesPerMb,
+                                            ).then((_) => _refreshCacheStats());
                                           }
                                         }
                                       : null,
@@ -342,6 +476,34 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                 );
                               }).toList(),
                             ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: bgColor,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.sd_storage_outlined, size: 14, color: textSubColor),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      _isLoadingCacheStats
+                                          ? l10n.skyCacheUsageStatus('...', _selectedSkyImageCacheSizeMb, 0)
+                                          : l10n.skyCacheUsageStatus(
+                                              (_diskCacheSizeBytes / _bytesPerMb).toStringAsFixed(1),
+                                              _selectedSkyImageCacheSizeMb,
+                                              _diskCacheCount,
+                                            ),
+                                      style: TextStyle(fontSize: 11.5, color: textSubColor),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
@@ -354,6 +516,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                               label: Text(l10n.clearSkyCache, style: const TextStyle(fontSize: 12)),
                               onPressed: () async {
                                 await SkyImageService.instance.clearCache();
+                                await _refreshCacheStats();
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
